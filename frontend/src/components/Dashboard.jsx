@@ -266,7 +266,6 @@ export default function Dashboard() {
           <div>
             <h2 style={styles.sectionTitle}>Jóvenes con Recomendación</h2>
             <KPICard
-              title="Jóvenes con Recomendación"
               meta={100}
               actual={kpiJovenes.real}
               potencial={kpiJovenes.real}
@@ -326,7 +325,6 @@ export default function Dashboard() {
           <div>
             <h2 style={styles.sectionTitle}>Adultos con Recomendación</h2>
             <KPICard
-              title="Adultos con Recomendación"
               meta={390}
               actual={kpiAdultos.real}
               potencial={kpiAdultos.real}
@@ -384,7 +382,6 @@ export default function Dashboard() {
           <div>
             <h2 style={styles.sectionTitle}>Misioneros en el Campo</h2>
             <KPICard
-              title="Misioneros en el Campo"
               meta={19}
               actual={kpiMisioneros?.real ?? 0}
               potencial={kpiMisioneros?.real ?? 0}
@@ -401,57 +398,26 @@ export default function Dashboard() {
             />
             {detalleMisionerosOpen && (
               <div style={{background:'#f9fafb',border:'1px solid #ddd',borderRadius:8,padding:16,marginTop:8}}>
-                {kpiMisioneros?.personas?.length > 0 && (<>
-                  <strong style={{fontSize:14}}>Misioneros en el campo ({kpiMisioneros.real}):</strong>
-                  <table style={{width:'100%',borderCollapse:'collapse',marginTop:8,fontSize:13}}>
-                    <thead>
-                      <tr style={{background:'#f3f4f6',textAlign:'left'}}>
-                        <th style={{padding:'6px 8px'}}>Nombre</th>
-                        <th style={{padding:'6px 8px'}}>Misión</th>
-                        <th style={{padding:'6px 8px'}}>Comenzó</th>
-                        <th style={{padding:'6px 8px'}}>Término</th>
-                        <th style={{padding:'6px 8px'}}>Unidad</th>
+                <table style={{width:'100%',borderCollapse:'collapse',marginTop:8}}>
+                  <thead>
+                    <tr style={{background:'#f3f4f6',borderBottom:'1px solid #ddd'}}>
+                      <th style={{textAlign:'left',padding:'5px 8px'}}>Nombre</th>
+                      <th style={{textAlign:'left',padding:'5px 8px'}}>Comienzo</th>
+                      <th style={{textAlign:'left',padding:'5px 8px'}}>Término esperado</th>
+                      <th style={{textAlign:'left',padding:'5px 8px'}}>Unidad actual</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kpiMisioneros.personas_servicio.map((p, i) => (
+                      <tr key={i} style={{borderBottom:'1px solid #e5e7eb',background:'#f8faff'}}>
+                        <td style={{padding:'5px 8px'}}>{p.nombre}</td>
+                        <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.comenzo || '-'}</td>
+                        <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.termino_esperado || '-'}</td>
+                        <td style={{padding:'5px 8px',fontSize:12,color:'#1e40af'}}>{p.unidad_actual || '-'}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {kpiMisioneros.personas.map((p, i) => (
-                        <tr key={i} style={{borderBottom:'1px solid #e5e7eb'}}>
-                          <td style={{padding:'5px 8px'}}>{p.nombre}</td>
-                          <td style={{padding:'5px 8px',fontSize:12,color:'#374151'}}>{p.mision || '-'}</td>
-                          <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.comenzo || '-'}</td>
-                          <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.termino_esperado || '-'}</td>
-                          <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.unidad_actual || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>)}
-                {kpiMisioneros?.personas_servicio?.length > 0 && (
-                  <div style={{marginTop:16}}>
-                    <strong style={{fontSize:14}}>Misioneros de servicio a la Iglesia ({kpiMisioneros.sub_servicio}):</strong>
-                    <table style={{width:'100%',borderCollapse:'collapse',marginTop:8,fontSize:13}}>
-                      <thead>
-                        <tr style={{background:'#eff6ff',textAlign:'left'}}>
-                          <th style={{padding:'6px 8px'}}>Nombre</th>
-                          <th style={{padding:'6px 8px'}}>Comenzó</th>
-                          <th style={{padding:'6px 8px'}}>Término</th>
-                          <th style={{padding:'6px 8px'}}>Unidad</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {kpiMisioneros.personas_servicio.map((p, i) => (
-                          <tr key={i} style={{borderBottom:'1px solid #e5e7eb',background:'#f8faff'}}>
-                            <td style={{padding:'5px 8px'}}>{p.nombre}</td>
-                            <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.comenzo || '-'}</td>
-                            <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.termino_esperado || '-'}</td>
-                            <td style={{padding:'5px 8px',fontSize:12,color:'#1e40af'}}>{p.unidad_actual || '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                <button onClick={() => setDetalleMisionerosOpen(false)} style={{marginTop:10,padding:'4px 12px',borderRadius:6,border:'1px solid #ddd',background:'#fff',cursor:'pointer'}}>Cerrar</button>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -460,7 +426,6 @@ export default function Dashboard() {
           <div>
             <h2 style={styles.sectionTitle}>Asistencia Sacramental</h2>
             <KPICard
-              title="Asistencia Sacramental"
               meta={550}
               actual={kpiAsistencia?.real ?? 0}
               potencial={kpiAsistencia?.real ?? 0}
