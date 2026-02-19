@@ -16,4 +16,4 @@ RUN pip install --upgrade pip \
 COPY backend /app
 ENV PYTHONUNBUFFERED=1
 EXPOSE $PORT
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "$PORT"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]

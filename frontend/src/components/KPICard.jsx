@@ -13,7 +13,6 @@ export default function KPICard({ title, meta, actual, potencial, comentario, un
   return (
     <div style={{ ...styles.card, borderTop: `4px solid ${color}` }}>
       <div style={styles.header}>
-        <h3 style={styles.title}>{title}</h3>
         <span style={styles.meta}>Meta: {meta}</span>
       </div>
       <div style={styles.values}>
@@ -76,15 +75,9 @@ const styles = {
   },
   header: {
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     marginBottom: '15px'
-  },
-  title: {
-    margin: 0,
-    fontSize: '18px',
-    color: '#333',
-    fontWeight: '600'
   },
   meta: {
     fontSize: '16px',
