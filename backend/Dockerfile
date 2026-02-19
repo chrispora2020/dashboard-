@@ -8,7 +8,7 @@ RUN apt-get update \
 	 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY ./requirements.txt /app/requirements.txt
+COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip \
 	&& pip install --no-cache-dir \
 	   --trusted-host pypi.org --trusted-host files.pythonhosted.org --trusted-host pypi.python.org \
