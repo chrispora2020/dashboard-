@@ -1,0 +1,59 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: kpi_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    environment:
+      DATABASE_URL: postgresql+psycopg2://appuser:secret@postgres:5432/kpi_db
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: supersecretkey
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000"
+
+  worker:
+    build: ./backend
+    command: celery -A app.celery_app.celery worker --loglevel=info
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    environment:
+      DATABASE_URL: postgresql+psycopg2://appuser:secret@postgres:5432/kpi_db
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: supersecretkey
+    depends_on:
+      - backend
+      - redis
+
+  frontend:
+    build: ./frontend
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
