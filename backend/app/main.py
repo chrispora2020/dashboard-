@@ -37,3 +37,13 @@ app.include_router(jovenes_router, prefix="/api")
 app.include_router(adultos_router, prefix="/api")
 app.include_router(misioneros_router, prefix="/api")
 app.include_router(asistencia_router, prefix="/api")
+
+
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "Dashboard API running", "docs": "/docs"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}

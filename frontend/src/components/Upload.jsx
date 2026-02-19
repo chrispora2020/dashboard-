@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useEffect, useState } from 'react'
+import API_BASE from '../config'
 
 export default function Upload() {
   const [files, setFiles] = useState([])
@@ -12,7 +13,7 @@ export default function Upload() {
 
   async function fetchFiles() {
     try {
-      const { data } = await axios.get('http://localhost:8000/api/files')
+      const { data } = await axios.get(`${API_BASE}/api/files`)
       setFiles(data)
     } catch (e) {
       console.error(e)
@@ -32,7 +33,7 @@ export default function Upload() {
         formData.append('files', file)
       }
 
-      await axios.post('http://localhost:8000/api/files', formData, {
+      await axios.post(`${API_BASE}/api/files`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
 

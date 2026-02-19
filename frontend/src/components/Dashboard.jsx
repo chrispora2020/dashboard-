@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useEffect, useState } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import API_BASE from '../config'
 import KPICard from './KPICard'
 
 export default function Dashboard() {
@@ -31,7 +32,7 @@ export default function Dashboard() {
     setDetalleOpen(kpi.id)
     setDetalleKPI(null)
     try {
-      const { data } = await axios.get(`http://localhost:8000/api/kpis/${kpi.id}?periodo=${periodoActual}`)
+      const { data } = await axios.get(`${API_BASE}/api/kpis/${kpi.id}?periodo=${periodoActual}`)
       setDetalleKPI(data)
     } catch (err) {
       setDetalleKPI({potenciales:[],reales:[]})
@@ -50,7 +51,7 @@ export default function Dashboard() {
 
   async function fetchJovenesKPI() {
     try {
-      const { data } = await axios.get('http://localhost:8000/api/jovenes/kpi')
+      const { data } = await axios.get(`${API_BASE}/api/jovenes/kpi`)
       setKpiJovenes(data)
     } catch (e) {
       setKpiJovenes(null)
@@ -59,7 +60,7 @@ export default function Dashboard() {
 
   async function fetchAdultosKPI() {
     try {
-      const { data } = await axios.get('http://localhost:8000/api/adultos/kpi')
+      const { data } = await axios.get(`${API_BASE}/api/adultos/kpi`)
       setKpiAdultos(data)
     } catch (e) {
       setKpiAdultos(null)
@@ -68,7 +69,7 @@ export default function Dashboard() {
 
   async function fetchMisionerosKPI() {
     try {
-      const { data } = await axios.get('http://localhost:8000/api/misioneros/kpi')
+      const { data } = await axios.get(`${API_BASE}/api/misioneros/kpi`)
       setKpiMisioneros(data)
     } catch (e) {
       setKpiMisioneros(null)
@@ -77,7 +78,7 @@ export default function Dashboard() {
 
   async function fetchAsistenciaKPI() {
     try {
-      const { data } = await axios.get(`http://localhost:8000/api/asistencia/kpi?periodo=${periodoActual}`)
+      const { data } = await axios.get(`${API_BASE}/api/asistencia/kpi?periodo=${periodoActual}`)
       setKpiAsistencia(data)
       setAsistenciaInput(data.real > 0 ? String(data.real) : '')
     } catch (e) {
@@ -90,7 +91,7 @@ export default function Dashboard() {
     if (isNaN(val) || val < 0) return
     setAsistenciaSaving(true)
     try {
-      await axios.post('http://localhost:8000/api/asistencia/registrar', { periodo: periodoActual, valor: val })
+      await axios.post(`${API_BASE}/api/asistencia/registrar`, { periodo: periodoActual, valor: val })
       await fetchAsistenciaKPI()
     } catch (e) {
       alert('Error al guardar: ' + (e.response?.data?.detail || e.message))
@@ -105,7 +106,7 @@ export default function Dashboard() {
 
     try {
       // Fetch resumen de KPIs
-      const { data } = await axios.get(`http://localhost:8000/api/kpis/resumen?periodo=${periodoActual}`)
+      const { data } = await axios.get(`${API_BASE}/api/kpis/resumen?periodo=${periodoActual}`)
       
       console.log('KPIs data received:', data)
       
@@ -147,7 +148,7 @@ export default function Dashboard() {
 
   async function fetchTrend(indicadorId) {
     try {
-      const { data } = await axios.get(`http://localhost:8000/api/kpis/${indicadorId}/tendencia?periodo=${periodoActual}`)
+      const { data } = await axios.get(`${API_BASE}/api/kpis/${indicadorId}/tendencia?periodo=${periodoActual}`)
       
       const mapped = data.tendencia.map(t => ({
         periodo: t.periodo_nombre,

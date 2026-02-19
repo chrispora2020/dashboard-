@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useState } from 'react'
+import API_BASE from '../config'
 
 export default function Login({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false)
@@ -20,8 +21,8 @@ export default function Login({ onLogin }) {
         ? { email, password, name }
         : { email, password }
       
-      console.log('Sending request to:', `http://localhost:8000${endpoint}`, payload)
-      const { data } = await axios.post(`http://localhost:8000${endpoint}`, payload)
+      console.log('Sending request to:', `${API_BASE}${endpoint}`, payload)
+      const { data } = await axios.post(`${API_BASE}${endpoint}`, payload)
       console.log('Response from backend:', data)
       
       if (data.access_token) {

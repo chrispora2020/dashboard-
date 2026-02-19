@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useState } from 'react'
+import API_BASE from '../config'
 
 export default function UploadConversos({ onUploadComplete }) {
   const [file, setFile] = useState(null)
@@ -68,7 +69,7 @@ export default function UploadConversos({ onUploadComplete }) {
       console.log('Uploading file:', file.name)
 
       const { data } = await axios.post(
-        'http://localhost:8000/api/conversos/upload',
+        `${API_BASE}/api/conversos/upload`,
         formData,
         {
           headers: {

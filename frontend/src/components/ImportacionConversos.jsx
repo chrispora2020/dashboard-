@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useState } from 'react'
+import API_BASE from '../config'
 import MapeoColumnas from './MapeoColumnas'
 
 export default function ImportacionConversos() {
@@ -43,7 +44,7 @@ export default function ImportacionConversos() {
     try {
       // El backend ya hace el mapeo automático, solo llamamos a confirmar
       const result = await axios.post(
-        `http://localhost:8000/api/conversos/confirmar/${data.file_id}`
+        `${API_BASE}/api/conversos/confirmar/${data.file_id}`
       )
 
       console.log('Importación completada automáticamente:', result.data)
@@ -72,7 +73,7 @@ export default function ImportacionConversos() {
 
     try {
       const { data } = await axios.post(
-        `http://localhost:8000/api/conversos/confirmar/${uploadData.file_id}`
+        `${API_BASE}/api/conversos/confirmar/${uploadData.file_id}`
       )
 
       console.log('Importación confirmada:', data)
@@ -103,11 +104,11 @@ export default function ImportacionConversos() {
     const fd = new FormData()
     fd.append('file', file)
     try {
-      const { data } = await axios.post('http://localhost:8000/api/conversos/upload', fd)
+      const { data } = await axios.post(`${API_BASE}/api/conversos/upload`, fd)
       // auto-confirm
       setStep('procesando')
       setImporting(true)
-      await axios.post(`http://localhost:8000/api/conversos/confirmar/${data.file_id}`)
+      await axios.post(`${API_BASE}/api/conversos/confirmar/${data.file_id}`)
       setTimeout(() => { window.location.href = '/' }, 800)
     } catch (err) {
       setConversoError(err.response?.data?.detail || err.message || 'Error al importar')
@@ -123,7 +124,7 @@ export default function ImportacionConversos() {
     const fd = new FormData()
     fd.append('file', file)
     try {
-      const { data } = await axios.post('http://localhost:8000/api/jovenes/upload', fd)
+      const { data } = await axios.post(`${API_BASE}/api/jovenes/upload`, fd)
       setJovenResult(data)
       setJovenFile(null)
     } catch (err) {
@@ -141,7 +142,7 @@ export default function ImportacionConversos() {
     const fd = new FormData()
     fd.append('file', file)
     try {
-      const { data } = await axios.post('http://localhost:8000/api/adultos/upload', fd)
+      const { data } = await axios.post(`${API_BASE}/api/adultos/upload`, fd)
       setAdultoResult(data)
       setAdultoFile(null)
     } catch (err) {
@@ -159,7 +160,7 @@ export default function ImportacionConversos() {
     const fd = new FormData()
     fd.append('file', file)
     try {
-      const { data } = await axios.post('http://localhost:8000/api/misioneros/upload', fd)
+      const { data } = await axios.post(`${API_BASE}/api/misioneros/upload`, fd)
       setMisioneroResult(data)
       setMisioneroFile(null)
     } catch (err) {
@@ -186,7 +187,7 @@ export default function ImportacionConversos() {
       fd.append('file', file)
       try {
         const { data } = await axios.post(
-          `http://localhost:8000/api/asistencia/upload?periodo=${periodo}`, fd
+          `${API_BASE}/api/asistencia/upload?periodo=${periodo}`, fd
         )
         setAsResult(data)
         setAsFile(null)
