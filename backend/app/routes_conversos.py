@@ -329,12 +329,21 @@ async def confirmar_importacion(
     # Esto asegura que cada importación reemplaza completamente los datos anteriores
     db_session.query(PersonaConverso).delete()
     db_session.query(MapeoColumna).delete()
-    # Borrar archivos anteriores excepto el actual y los referenciados por jóvenes
-    from .models import PdfFile as PdfFileModel, JovenRecomendacion
-    jovenes_file_ids = {j.archivo_fuente_id for j in db_session.query(JovenRecomendacion.archivo_fuente_id).all() if j.archivo_fuente_id}
+    # Borrar archivos anteriores excepto el actual y los referenciados por CUALQUIER tabla que tenga FK a pdf_files
+    from .models import PdfFile as PdfFileModel, JovenRecomendacion, AdultoRecomendacion, MisioneroCampo
+    ids_en_uso = set()
+    for row in db_session.query(JovenRecomendacion.archivo_fuente_id).all():
+        if row.archivo_fuente_id:
+            ids_en_uso.add(row.archivo_fuente_id)
+    for row in db_session.query(AdultoRecomendacion.archivo_fuente_id).all():
+        if row.archivo_fuente_id:
+            ids_en_uso.add(row.archivo_fuente_id)
+    for row in db_session.query(MisioneroCampo.archivo_fuente_id).all():
+        if row.archivo_fuente_id:
+            ids_en_uso.add(row.archivo_fuente_id)
     db_session.query(PdfFileModel).filter(
         PdfFileModel.id != file_id,
-        ~PdfFileModel.id.in_(jovenes_file_ids)
+        ~PdfFileModel.id.in_(ids_en_uso)
     ).delete(synchronize_session='fetch')
     db_session.commit()
 
@@ -456,11 +465,19 @@ async def confirmar_importacion(
                 if col_dst:
                     val = row.get(col_src, None)
                     # Convertir fechas a ISO si corresponde
-                    if col_dst in ['fecha_confirmacion', 'fecha_nacimiento'] and val and isinstance(val, str):
-                        try:
-                            val = dateparser.parse(val, dayfirst=True).date()
-                        except Exception:
-                            advertencias.append(f'Fila {idx+1}: fecha inválida en {col_dst} ({val})')
+                    if col_dst in ['fecha_confirmacion', 'fecha_nacimiento'] and val is not None:
+                        if hasattr(val, 'date') and callable(val.date):
+                            val = val.date()  # datetime / pandas.Timestamp → date
+                        elif isinstance(val, date):
+                            pass  # ya es date
+                        elif isinstance(val, str) and val.strip():
+                            try:
+                                val_norm = ' '.join(val.split())
+                                val = dateparser.parse(val_norm, dayfirst=True).date()
+                            except Exception:
+                                advertencias.append(f'Fila {idx+1}: fecha inválida en {col_dst} ({val})')
+                                val = None
+                        else:
                             val = None
                     datos[col_dst] = val
             # Saltar si la fila es encabezado (ej: contiene 'nombre' o 'fecha' en vez de datos)
@@ -684,12 +701,21 @@ async def import_conversos_directo(
         # --- Limpiar datos previos ---
         db_session.query(PersonaConverso).delete()
         db_session.query(MapeoColumna).delete()
-        from .models import JovenRecomendacion
-        jovenes_file_ids = {j.archivo_fuente_id for j in db_session.query(JovenRecomendacion.archivo_fuente_id).all() if j.archivo_fuente_id}
-        from .models import PdfFile as PdfFileModel
+        # Proteger IDs referenciados por CUALQUIER tabla con FK a pdf_files
+        from .models import JovenRecomendacion, AdultoRecomendacion, MisioneroCampo, PdfFile as PdfFileModel
+        ids_en_uso = set()
+        for row in db_session.query(JovenRecomendacion.archivo_fuente_id).all():
+            if row.archivo_fuente_id:
+                ids_en_uso.add(row.archivo_fuente_id)
+        for row in db_session.query(AdultoRecomendacion.archivo_fuente_id).all():
+            if row.archivo_fuente_id:
+                ids_en_uso.add(row.archivo_fuente_id)
+        for row in db_session.query(MisioneroCampo.archivo_fuente_id).all():
+            if row.archivo_fuente_id:
+                ids_en_uso.add(row.archivo_fuente_id)
         db_session.query(PdfFileModel).filter(
             PdfFileModel.id != file_id,
-            ~PdfFileModel.id.in_(jovenes_file_ids)
+            ~PdfFileModel.id.in_(ids_en_uso)
         ).delete(synchronize_session='fetch')
         db_session.commit()
 
@@ -760,11 +786,21 @@ async def import_conversos_directo(
                 for col_src, col_dst in mapeo_dict.items():
                     if col_dst:
                         val = row.get(col_src, None)
-                        if col_dst in ['fecha_confirmacion', 'fecha_nacimiento'] and val and isinstance(val, str):
-                            try:
-                                val = dateparser.parse(val, dayfirst=True).date()
-                            except Exception:
-                                advertencias.append(f'Fila {idx+1}: fecha inválida en {col_dst} ({val})')
+                        if col_dst in ['fecha_confirmacion', 'fecha_nacimiento'] and val is not None:
+                            # Manejar objetos date/datetime/Timestamp de pandas directamente
+                            if hasattr(val, 'date') and callable(val.date):
+                                val = val.date()  # datetime / pandas.Timestamp → date
+                            elif isinstance(val, date):
+                                pass  # ya es date, no hacer nada
+                            elif isinstance(val, str) and val.strip():
+                                try:
+                                    # Normalizar espacios en la cadena (no-break spaces, etc.)
+                                    val_norm = ' '.join(val.split())
+                                    val = dateparser.parse(val_norm, dayfirst=True).date()
+                                except Exception:
+                                    advertencias.append(f'Fila {idx+1}: fecha inválida en {col_dst} ({val})')
+                                    val = None
+                            else:
                                 val = None
                         datos[col_dst] = val
 

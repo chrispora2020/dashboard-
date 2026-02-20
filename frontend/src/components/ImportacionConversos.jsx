@@ -287,9 +287,12 @@ export default function ImportacionConversos() {
                 <strong>✓ Importados: {conversoResult.total} conversos</strong>
                 <p style={{margin:'4px 0 0 0',fontSize:13}}>(reemplaza todos los datos anteriores)</p>
                 {conversoResult.advertencias && conversoResult.advertencias.length > 0 && (
-                  <p style={{margin:'4px 0 0 0',fontSize:12,color:'#92400e'}}>⚠ {conversoResult.advertencias.length} advertencia(s)</p>
+                  <p style={{margin:'4px 0 0 0',fontSize:12,color:'#92400e'}}>⚠ {conversoResult.advertencias.length} advertencia(s) — los datos fueron importados igualmente</p>
                 )}
-                <button onClick={() => { setConversoResult(null); setConversoFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
+                <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
+                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#7c3aed', color:'#fff', borderColor:'#7c3aed'}}>Ver Dashboard</button>
+                  <button onClick={() => { setConversoResult(null); setConversoFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
+                </div>
               </div>
             ) : (
               <>
