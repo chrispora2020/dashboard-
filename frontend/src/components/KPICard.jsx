@@ -1,37 +1,38 @@
 export default function KPICard({ title, meta, actual, potencial, comentario, unit = '', color = '#667eea', onDetalleClick }) {
-  const esBautismos = potencial != null && potencial === actual;
-  const denominator = (!esBautismos && potencial != null && potencial > 0) ? potencial : meta;
-  const percentage = denominator > 0 ? Math.round((actual / denominator) * 100) : 0;
-  const status = percentage >= 90 ? 'green' : percentage >= 70 ? 'orange' : 'red';
-  const falta = Math.max(0, meta - actual);
+  const esPorcentaje = (unit === '%' || meta === 100) && potencial != null
+  const esBautismos = !esPorcentaje
+  const denominator = esPorcentaje ? potencial : meta
+  const percentage = denominator > 0 ? Math.round((actual / denominator) * 100) : 0
+  const status = percentage >= 90 ? 'green' : percentage >= 70 ? 'orange' : 'red'
+  const falta = esPorcentaje
+    ? Math.max(0, 100 - percentage)
+    : Math.max(0, meta - actual)
 
   const statusColors = {
     green: '#10b981',
     orange: '#f59e0b',
     red: '#ef4444'
-  };
+  }
   const statusBg = {
     green: '#f0fdf4',
     orange: '#fffbeb',
     red: '#fef2f2'
-  };
+  }
 
   return (
     <div style={{ ...styles.card, borderTop: `4px solid ${color}`, borderLeft: `1px solid ${statusColors[status]}22` }}>
-      {/* Título (solo cuando se pasa) */}
       {title && (
         <div style={styles.titleRow}>
           <span style={{ ...styles.titleText, borderLeft: `3px solid ${color}` }}>{title}</span>
         </div>
       )}
 
-      {/* Meta con ícono de objetivo */}
       <div style={styles.metaRow}>
         <span style={styles.metaIcon}>🎯</span>
         <span style={styles.metaLabel}>Meta</span>
-        <span style={{ ...styles.metaValue, color }}>{meta}</span>
+        <span style={{ ...styles.metaValue, color }}>{esPorcentaje ? `${meta}%` : meta}</span>
         {!esBautismos && falta > 0 && (
-          <span style={styles.faltaChip}>faltan {falta}</span>
+          <span style={styles.faltaChip}>faltan {esPorcentaje ? `${falta}%` : falta}</span>
         )}
       </div>
 
@@ -62,19 +63,18 @@ export default function KPICard({ title, meta, actual, potencial, comentario, un
         )}
       </div>
 
-      {/* Barra de progreso mejorada */}
       <div style={styles.progressContainer}>
         <div style={{ ...styles.progressBar, width: `${Math.min(percentage, 100)}%`, background: statusColors[status] }} />
       </div>
       <div style={styles.progressLabels}>
         <span style={{ fontSize: 10, color: '#9ca3af' }}>0</span>
-        <span style={{ fontSize: 10, color: '#9ca3af' }}>{Math.round(meta / 2)}</span>
-        <span style={{ fontSize: 10, color: color, fontWeight: 600 }}>{meta}</span>
+        <span style={{ fontSize: 10, color: '#9ca3af' }}>{esPorcentaje ? '50%' : Math.round(meta / 2)}</span>
+        <span style={{ fontSize: 10, color, fontWeight: 600 }}>{esPorcentaje ? '100%' : meta}</span>
       </div>
 
       <div style={{ ...styles.footer, background: statusBg[status], borderRadius: 6, padding: '6px 10px', marginTop: 8 }}>
         <span style={{ ...styles.badge, background: statusColors[status] }}>
-          {esBautismos ? `${percentage}% vs Meta` : `${percentage}%`}
+          {esBautismos ? `${percentage}% vs Meta` : `${percentage}% de potencial`}
         </span>
         <span style={{ ...styles.status, color: statusColors[status], fontWeight: 600 }}>
           {status === 'green' ? '✓ En Meta' : status === 'orange' ? '⚠ Alerta' : '✗ Bajo'}
@@ -90,7 +90,7 @@ export default function KPICard({ title, meta, actual, potencial, comentario, un
         </div>
       )}
     </div>
-  );
+  )
 }
 
 const styles = {
@@ -217,4 +217,4 @@ const styles = {
     borderRadius: 6,
     padding: '5px 8px'
   }
-};
+}
