@@ -104,15 +104,23 @@ export default function ImportacionConversos() {
     const fd = new FormData()
     fd.append('file', file)
     try {
+      console.log('Subiendo archivo de conversos:', file.name)
       const { data } = await axios.post(`${API_BASE}/api/conversos/upload`, fd)
+      console.log('Archivo subido con éxito:', data)
+
       // auto-confirm
       setStep('procesando')
       setImporting(true)
+      console.log('Confirmando importación para file_id:', data.file_id)
       await axios.post(`${API_BASE}/api/conversos/confirmar/${data.file_id}`)
+      console.log('Importación confirmada, redirigiendo al dashboard')
       setTimeout(() => { window.location.href = '/' }, 800)
     } catch (err) {
+      console.error('Error al importar archivo de conversos:', err)
       setConversoError(err.response?.data?.detail || err.message || 'Error al importar')
+    } finally {
       setConversoUploading(false)
+      setImporting(false)
     }
   }
 
