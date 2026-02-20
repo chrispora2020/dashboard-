@@ -13,6 +13,7 @@ export default function ImportacionConversos() {
   // Conversos upload state
   const [conversoFile, setConversoFile] = useState(null)
   const [conversoUploading, setConversoUploading] = useState(false)
+  const [conversoResult, setConversoResult] = useState(null)
   const [conversoError, setConversoError] = useState('')
 
   // Jóvenes upload state
@@ -94,6 +95,7 @@ export default function ImportacionConversos() {
     setMapeoData(null)
     setImportResult(null)
     setConversoFile(null)
+    setConversoResult(null)
     setConversoError('')
   }
 
@@ -101,26 +103,20 @@ export default function ImportacionConversos() {
     if (!file) return
     setConversoUploading(true)
     setConversoError('')
+    setConversoResult(null)
     const fd = new FormData()
     fd.append('file', file)
     try {
-      console.log('Subiendo archivo de conversos:', file.name)
-      const { data } = await axios.post(`${API_BASE}/api/conversos/upload`, fd)
-      console.log('Archivo subido con éxito:', data)
-
-      // auto-confirm
-      setStep('procesando')
-      setImporting(true)
-      console.log('Confirmando importación para file_id:', data.file_id)
-      await axios.post(`${API_BASE}/api/conversos/confirmar/${data.file_id}`)
-      console.log('Importación confirmada, redirigiendo al dashboard')
-      setTimeout(() => { window.location.href = '/' }, 800)
+      console.log('[CONVERSOS] Subiendo e importando:', file.name)
+      const { data } = await axios.post(`${API_BASE}/api/conversos/import`, fd)
+      console.log('[CONVERSOS] Importación completada:', data)
+      setConversoResult(data)
+      setConversoFile(null)
     } catch (err) {
-      console.error('Error al importar archivo de conversos:', err)
+      console.error('[CONVERSOS] Error al importar:', err)
       setConversoError(err.response?.data?.detail || err.message || 'Error al importar')
     } finally {
       setConversoUploading(false)
-      setImporting(false)
     }
   }
 
@@ -286,27 +282,40 @@ export default function ImportacionConversos() {
               <h3 style={cardStyles.cardTitle}>Lista de Nuevos Conversos</h3>
               <p style={cardStyles.cardDesc}>Columnas esperadas: Nombre, Fecha de confirmación, Unidad, Sacerdocio, Estado de recomendación</p>
             </div>
-            <div style={cardStyles.fileRow}>
-              <label style={cardStyles.fileLabel}>
-                <input
-                  type="file"
-                  accept=".pdf,.csv,.xlsx,.xls"
-                  style={{display:'none'}}
-                  onChange={e => { setConversoFile(e.target.files[0] || null); setConversoError('') }}
-                  disabled={conversoUploading}
-                />
-                <span style={cardStyles.fileBtn}>{conversoFile ? '📄 ' + conversoFile.name : '📂 Elegir archivo'}</span>
-              </label>
-              <button
-                onClick={() => handleConversoUpload(conversoFile)}
-                disabled={!conversoFile || conversoUploading}
-                style={{...cardStyles.importBtn, background: conversoFile && !conversoUploading ? '#7c3aed' : '#c4b5fd'}}
-              >
-                {conversoUploading ? '⏳ Importando...' : 'Importar'}
-              </button>
-            </div>
-            {conversoFile && !conversoUploading && (
-              <p style={cardStyles.fileHint}>Archivo seleccionado: <strong>{conversoFile.name}</strong></p>
+            {conversoResult ? (
+              <div style={cardStyles.successBox}>
+                <strong>✓ Importados: {conversoResult.total} conversos</strong>
+                <p style={{margin:'4px 0 0 0',fontSize:13}}>(reemplaza todos los datos anteriores)</p>
+                {conversoResult.advertencias && conversoResult.advertencias.length > 0 && (
+                  <p style={{margin:'4px 0 0 0',fontSize:12,color:'#92400e'}}>⚠ {conversoResult.advertencias.length} advertencia(s)</p>
+                )}
+                <button onClick={() => { setConversoResult(null); setConversoFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
+              </div>
+            ) : (
+              <>
+                <div style={cardStyles.fileRow}>
+                  <label style={cardStyles.fileLabel}>
+                    <input
+                      type="file"
+                      accept=".pdf,.csv,.xlsx,.xls"
+                      style={{display:'none'}}
+                      onChange={e => { setConversoFile(e.target.files[0] || null); setConversoError('') }}
+                      disabled={conversoUploading}
+                    />
+                    <span style={cardStyles.fileBtn}>{conversoFile ? '📄 ' + conversoFile.name : '📂 Elegir archivo'}</span>
+                  </label>
+                  <button
+                    onClick={() => handleConversoUpload(conversoFile)}
+                    disabled={!conversoFile || conversoUploading}
+                    style={{...cardStyles.importBtn, background: conversoFile && !conversoUploading ? '#7c3aed' : '#c4b5fd'}}
+                  >
+                    {conversoUploading ? '⏳ Importando...' : 'Importar'}
+                  </button>
+                </div>
+                {conversoFile && !conversoUploading && (
+                  <p style={cardStyles.fileHint}>Archivo seleccionado: <strong>{conversoFile.name}</strong></p>
+                )}
+              </>
             )}
             {conversoError && <p style={cardStyles.errorText}>⚠ {conversoError}</p>}
           </div>

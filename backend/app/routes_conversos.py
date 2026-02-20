@@ -622,6 +622,276 @@ async def confirmar_importacion(
     )
 
 
+# === IMPORT DIRECTO (SIN DISCO) ===
+
+@router.post('/import')
+async def import_conversos_directo(
+    file: UploadFile = File(...),
+    db_session: Session = Depends(db.get_db)
+):
+    """
+    Importa conversos en un solo paso: lee el archivo en memoria, procesa y guarda.
+    No requiere almacenamiento en disco (compatible con Render y plataformas efímeras).
+    """
+    import os, re
+    from dateutil import parser as dateparser
+
+    fname_lower = file.filename.lower() if file.filename else ''
+    allowed_extensions = ('.pdf', '.csv', '.xls', '.xlsx')
+    if not fname_lower.endswith(allowed_extensions):
+        raise HTTPException(
+            status_code=400,
+            detail="Tipo de archivo no soportado. Use PDF, CSV o Excel (.xlsx)"
+        )
+
+    try:
+        contents = await file.read()
+
+        # --- Parsear archivo en memoria ---
+        if fname_lower.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(contents))
+        elif fname_lower.endswith('.pdf'):
+            with pdfplumber.open(io.BytesIO(contents)) as pdf:
+                all_tables = []
+                for page in pdf.pages:
+                    tables = page.extract_tables()
+                    if tables:
+                        for table in tables:
+                            all_tables.extend(table)
+                if not all_tables:
+                    raise HTTPException(status_code=400, detail="No se encontraron tablas en el PDF")
+                headers = all_tables[0]
+                clean_headers = [h if h is not None else f"col_{i+1}" for i, h in enumerate(headers)]
+                raw_rows = all_tables[1:]
+                merged_rows = _merge_pdf_continuation_rows(raw_rows, len(clean_headers))
+                df = pd.DataFrame(merged_rows, columns=clean_headers)
+        else:
+            df = pd.read_excel(io.BytesIO(contents))
+
+        # --- Registrar en PdfFile (para archivo_fuente_id) ---
+        pdf_file = PdfFile(
+            filename=file.filename,
+            mime=file.content_type,
+            size_bytes=len(contents),
+            status='processing',
+            file_metadata={'total_filas': len(df), 'columnas': list(df.columns)}
+        )
+        db_session.add(pdf_file)
+        db_session.commit()
+        db_session.refresh(pdf_file)
+        file_id = pdf_file.id
+
+        # --- Limpiar datos previos ---
+        db_session.query(PersonaConverso).delete()
+        db_session.query(MapeoColumna).delete()
+        from .models import JovenRecomendacion
+        jovenes_file_ids = {j.archivo_fuente_id for j in db_session.query(JovenRecomendacion.archivo_fuente_id).all() if j.archivo_fuente_id}
+        from .models import PdfFile as PdfFileModel
+        db_session.query(PdfFileModel).filter(
+            PdfFileModel.id != file_id,
+            ~PdfFileModel.id.in_(jovenes_file_ids)
+        ).delete(synchronize_session='fetch')
+        db_session.commit()
+
+        # --- Auto-mapeo ---
+        mapeo_dict = {}
+        mapeo_generico = {
+            'col_1': 'nombre_preferencia',
+            'col_2': 'edad_al_confirmar',
+            'col_3': 'sacerdocio',
+            'col_4': 'estado_recomendacion_raw',
+            'col_5': 'llamamientos',
+            'col_6': 'unidad',
+            'col_7': 'fecha_confirmacion'
+        }
+        for col in df.columns:
+            if col in mapeo_generico:
+                mapeo_dict[col] = mapeo_generico[col]
+
+        variantes_mapeo = {
+            'nombre_preferencia': ['nombre preferencia', 'nombre_preferencia'],
+            'sacerdocio': ['sacerdocio'],
+            'estado_recomendacion_raw': ['estado recomendacion', 'estado_recomendacion', 'estado_recomendacion_raw'],
+            'llamamientos': ['llamamientos'],
+            'unidad': ['unidad'],
+            'fecha_confirmacion': ['fecha confirmacion', 'fecha_confirmación', 'fecha de la confirmacion'],
+            'fecha_nacimiento': ['fecha nacimiento', 'fecha_nacimiento'],
+            'sexo': ['sexo', 'edad']
+        }
+        for col in df.columns:
+            if col not in mapeo_dict:
+                col_norm = str(col).strip().lower()
+                for campo, variantes_lista in variantes_mapeo.items():
+                    if any(col_norm == v for v in variantes_lista):
+                        mapeo_dict[col] = campo
+                        break
+
+        primera_col = df.columns[0] if len(df.columns) > 0 else None
+        if primera_col and primera_col not in mapeo_dict:
+            mapeo_dict[primera_col] = 'nombre_preferencia'
+
+        print(f"[IMPORT] Columnas: {list(df.columns)}")
+        print(f"[IMPORT] Mapeo final: {mapeo_dict}")
+        print(f"[IMPORT] Total filas en df: {len(df)}")
+
+        # --- Procesar filas ---
+        errores = []
+        advertencias = []
+        personas_importadas = 0
+
+        FILAS_IGNORAR = ['nombre', 'lista', 'recuento', 'total', 'subtotal', 'suma',
+                         'count', 'header', 'encabezado', 'nombre preferencia', 'barrio']
+        SACERDOCIO_MASCULINO = ['no ha sido ordenado', 'aarónico', 'aaronico', 'elder', 'melquisedec',
+                                'presbítero', 'presbitero', 'sumo sacerdote', 'diácono', 'diacono', 'maestro']
+        PALABRAS_SACERDOCIO_SCAN = ['aarónico', 'aaronico', 'elder', 'melquisedec',
+                                    'presbítero', 'presbitero', 'sumo sacerdote',
+                                    'diácono', 'diacono', 'maestro',
+                                    'no ha sido ordenado', 'no ha sido', 'no ordenado', 'sin ordenar']
+        PALABRAS_REC_SCAN = ['activa', 'vigente', 'valida', 'válida', 'activo',
+                             'vencida', 'pendiente', 'sin recomendación', 'sin recomendacion']
+        PALABRAS_RECOMENDACION = ['activa', 'vigente', 'valida', 'válida', 'activo']
+
+        for idx, row in df.iterrows():
+            try:
+                if all((str(x).strip() == '' or pd.isna(x)) for x in row.values):
+                    continue
+
+                datos = {}
+                for col_src, col_dst in mapeo_dict.items():
+                    if col_dst:
+                        val = row.get(col_src, None)
+                        if col_dst in ['fecha_confirmacion', 'fecha_nacimiento'] and val and isinstance(val, str):
+                            try:
+                                val = dateparser.parse(val, dayfirst=True).date()
+                            except Exception:
+                                advertencias.append(f'Fila {idx+1}: fecha inválida en {col_dst} ({val})')
+                                val = None
+                        datos[col_dst] = val
+
+                if datos.get('nombre_preferencia') and '\n' in str(datos['nombre_preferencia']):
+                    partes = [p.strip() for p in str(datos['nombre_preferencia']).split('\n') if p.strip()]
+                    datos['nombre_preferencia'] = ' '.join(partes)
+
+                nombre_val = str(datos.get('nombre_preferencia', '')).strip().lower()
+                if any(nombre_val.startswith(p) for p in FILAS_IGNORAR):
+                    continue
+                if nombre_val.replace('.', '').replace(',', '').isdigit():
+                    continue
+                if not datos.get('nombre_preferencia'):
+                    advertencias.append(f'Fila {idx+1} sin nombre_preferencia, omitida')
+                    continue
+
+                # Normalizar strings
+                for campo_str in ['sacerdocio', 'estado_recomendacion_raw', 'llamamientos', 'unidad', 'sexo']:
+                    if datos.get(campo_str) and isinstance(datos[campo_str], str):
+                        datos[campo_str] = ' '.join(datos[campo_str].split()).strip()
+                for campo_str in ['sacerdocio', 'estado_recomendacion_raw', 'llamamientos', 'unidad', 'sexo', 'nombre_preferencia']:
+                    if str(datos.get(campo_str, '')).strip().lower() in ('none', 'nan'):
+                        datos[campo_str] = None
+
+                # Rescate de columnas desplazadas
+                sacer_actual = str(datos.get('sacerdocio') or '').strip().lower()
+                rec_actual   = str(datos.get('estado_recomendacion_raw') or '').strip().lower()
+                for cell_val in row.values:
+                    cell_str = ' '.join(str(cell_val).split()).strip()
+                    cell_lower = cell_str.lower()
+                    if cell_lower in ('none', 'nan', ''):
+                        continue
+                    if not sacer_actual and any(p in cell_lower for p in PALABRAS_SACERDOCIO_SCAN):
+                        datos['sacerdocio'] = cell_str
+                        sacer_actual = cell_lower
+                    if not rec_actual and any(p in cell_lower for p in PALABRAS_REC_SCAN):
+                        datos['estado_recomendacion_raw'] = cell_str
+                        rec_actual = cell_lower
+
+                sexo_norm = normalizar_sexo(datos.get('sexo'))
+                sacerdocio_raw = str(datos.get('sacerdocio') or '').strip()
+                rec_raw_actual = str(datos.get('estado_recomendacion_raw') or '').strip().lower()
+                if sacerdocio_raw.lower() in PALABRAS_RECOMENDACION and not rec_raw_actual:
+                    datos['estado_recomendacion_raw'] = sacerdocio_raw
+                    datos['sacerdocio'] = None
+                    sacerdocio_raw = ''
+
+                sacerdocio_raw_lower = sacerdocio_raw.lower()
+                sacerdocio_norm, esta_ordenado = normalizar_sacerdocio(sacerdocio_raw)
+
+                if sexo_norm is None:
+                    if any(pal in sacerdocio_raw_lower for pal in SACERDOCIO_MASCULINO):
+                        sexo_norm = 'M'
+
+                tiene_recomendacion, estado_recomendacion_cat = normalizar_estado_recomendacion(
+                    datos.get('estado_recomendacion_raw')
+                )
+                raw_rec = str(datos.get('estado_recomendacion_raw') or '').lower()
+                if tiene_recomendacion is None:
+                    if 'activa' in raw_rec or 'vigente' in raw_rec or 'valida' in raw_rec or 'válida' in raw_rec:
+                        tiene_recomendacion = True
+                    elif raw_rec and raw_rec not in ['', 'nan', 'none']:
+                        tiene_recomendacion = False
+
+                # Edad
+                edad_cruda = datos.get('edad_al_confirmar')
+                edad_val = None
+                if edad_cruda is not None:
+                    try:
+                        edad_val = int(str(edad_cruda).strip())
+                    except Exception:
+                        edad_val = None
+                if edad_val is None:
+                    edad_val = 18
+
+                # Fecha confirmación fallback
+                if not datos.get('fecha_confirmacion'):
+                    try:
+                        m = re.search(r"(\d{1,2} \w{3} \d{4})", str(row.values))
+                        if m:
+                            datos['fecha_confirmacion'] = dateparser.parse(m.group(1), dayfirst=True).date()
+                        else:
+                            datos['fecha_confirmacion'] = datetime.now().date()
+                    except Exception:
+                        datos['fecha_confirmacion'] = datetime.now().date()
+
+                print(f"[IMPORT] Fila {idx+1}: {datos.get('nombre_preferencia')} | sacerdocio='{sacerdocio_raw}' | rec='{datos.get('estado_recomendacion_raw')}' | tiene_rec={tiene_recomendacion}")
+                converso = PersonaConverso(
+                    id=None,
+                    nombre_preferencia=datos.get('nombre_preferencia', ''),
+                    sacerdocio=datos.get('sacerdocio'),
+                    estado_recomendacion_raw=datos.get('estado_recomendacion_raw'),
+                    llamamientos=datos.get('llamamientos'),
+                    unidad=datos.get('unidad'),
+                    fecha_confirmacion=datos.get('fecha_confirmacion'),
+                    fecha_nacimiento=datos.get('fecha_nacimiento'),
+                    sexo=sexo_norm,
+                    edad_al_confirmar=edad_val,
+                    tiene_recomendacion=tiene_recomendacion,
+                    sacerdocio_normalizado=sacerdocio_norm,
+                    esta_ordenado=esta_ordenado,
+                    archivo_fuente_id=file_id,
+                    fila_numero=idx + 1
+                )
+                db_session.add(converso)
+                personas_importadas += 1
+            except Exception as e:
+                errores.append(f'Fila {idx+1}: {str(e)}')
+                print(f"[IMPORT] Error fila {idx+1}: {str(e)}")
+
+        pdf_file.status = 'processed'
+        db_session.commit()
+        print(f"[IMPORT] Total personas importadas: {personas_importadas}")
+
+        return {
+            'ok': True,
+            'total': personas_importadas,
+            'mensaje': f'{personas_importadas} conversos importados correctamente',
+            'advertencias': errores + advertencias
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error procesando archivo: {str(e)}")
+
+
 # === ENRIQUECIMIENTO ===
 
 @router.get('/pendientes-enriquecimiento', response_model=List[PersonaConversoOut])
