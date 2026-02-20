@@ -3,6 +3,23 @@ import { useState } from 'react'
 import API_BASE from '../config'
 import MapeoColumnas from './MapeoColumnas'
 
+function normalizarNombreArchivo(nombre) {
+  return (nombre || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+function detectarTipoLista(nombreArchivo) {
+  const n = normalizarNombreArchivo(nombreArchivo)
+  if (n.includes('converso')) return 'conversos'
+  if (n.includes('joven')) return 'jovenes'
+  if (n.includes('adult')) return 'adultos'
+  if (n.includes('mision')) return 'misioneros'
+  if (n.includes('asistencia') || n.includes('sacramental')) return 'asistencia'
+  return null
+}
+
 export default function ImportacionConversos() {
   const [step, setStep] = useState('upload') // 'upload', 'procesando', 'mapeo', 'confirmacion', 'completado'
   const [uploadData, setUploadData] = useState(null)
@@ -33,6 +50,11 @@ export default function ImportacionConversos() {
   const [misioneroUploading, setMisioneroUploading] = useState(false)
   const [misioneroResult, setMisioneroResult] = useState(null)
   const [misioneroError, setMisioneroError] = useState('')
+
+  // Carga masiva
+  const [loteFiles, setLoteFiles] = useState([])
+  const [loteUploading, setLoteUploading] = useState(false)
+  const [loteResults, setLoteResults] = useState([])
 
   const handleUploadComplete = async (data) => {
     console.log('Upload completado:', data)
@@ -174,6 +196,66 @@ export default function ImportacionConversos() {
     }
   }
 
+  const handleAsistenciaUploadSimple = async (file, periodo = '2026') => {
+    if (!file) return
+    const fd = new FormData()
+    fd.append('file', file)
+    const { data } = await axios.post(`${API_BASE}/api/asistencia/upload?periodo=${periodo}`, fd)
+    return data
+  }
+
+  const handleLoteUpload = async () => {
+    if (!loteFiles.length) return
+    setLoteUploading(true)
+    setLoteResults([])
+
+    const results = []
+    for (const file of loteFiles) {
+      const tipo = detectarTipoLista(file.name)
+      if (!tipo) {
+        results.push({ archivo: file.name, tipo: 'desconocido', ok: false, mensaje: 'No se pudo identificar tipo por nombre' })
+        continue
+      }
+
+      try {
+        const fd = new FormData()
+        fd.append('file', file)
+
+        if (tipo === 'conversos') {
+          const { data } = await axios.post(`${API_BASE}/api/conversos/import`, fd)
+          setConversoResult(data)
+          setConversoError('')
+        } else if (tipo === 'jovenes') {
+          const { data } = await axios.post(`${API_BASE}/api/jovenes/upload`, fd)
+          setJovenResult(data)
+          setJovenError('')
+        } else if (tipo === 'adultos') {
+          const { data } = await axios.post(`${API_BASE}/api/adultos/upload`, fd)
+          setAdultoResult(data)
+          setAdultoError('')
+        } else if (tipo === 'misioneros') {
+          const { data } = await axios.post(`${API_BASE}/api/misioneros/upload`, fd)
+          setMisioneroResult(data)
+          setMisioneroError('')
+        } else if (tipo === 'asistencia') {
+          await handleAsistenciaUploadSimple(file, '2026')
+        }
+
+        results.push({ archivo: file.name, tipo, ok: true, mensaje: 'Importado correctamente' })
+      } catch (err) {
+        results.push({
+          archivo: file.name,
+          tipo,
+          ok: false,
+          mensaje: err.response?.data?.detail || err.message || 'Error al importar'
+        })
+      }
+    }
+
+    setLoteResults(results)
+    setLoteUploading(false)
+  }
+
   // ── Asistencia Sacramental sub-component ──────────────────────────────────
   function AsistenciaCard() {
     const [asFile, setAsFile] = useState(null)
@@ -232,9 +314,14 @@ export default function ImportacionConversos() {
                 ))}
               </ul>
             )}
-            <button onClick={() => { setAsResult(null); setAsFile(null) }} style={cardStyles.resetBtn}>
-              Cargar otro archivo
-            </button>
+            <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
+              <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#be185d', color:'#fff', borderColor:'#be185d'}}>
+                Ver Dashboard
+              </button>
+              <button onClick={() => { setAsResult(null); setAsFile(null) }} style={cardStyles.resetBtn}>
+                Cargar otro archivo
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -274,6 +361,59 @@ export default function ImportacionConversos() {
         <p style={cardStyles.pageSubtitle}>Cada lista es independiente. Cargá el archivo correspondiente en la sección que corresponde.</p>
 
         <div style={cardStyles.grid}>
+
+          {/* Carga Masiva */}
+          <div style={{...cardStyles.card, border:'2px dashed #cbd5e1', background:'#f8fafc'}}>
+            <div style={cardStyles.cardHeader}>
+              <span style={{...cardStyles.badge, background:'#e2e8f0', color:'#1e293b'}}>Carga Masiva</span>
+              <h3 style={cardStyles.cardTitle}>Una sola entrada para multiples listas</h3>
+              <p style={cardStyles.cardDesc}>
+                Selecciona varios archivos y se procesan uno a uno.
+                Para auto-detectar: conversos, jovenes, adultos, misioneros, asistencia.
+              </p>
+            </div>
+            <div style={cardStyles.fileRow}>
+              <label style={cardStyles.fileLabel}>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.csv,.xlsx,.xls,.txt"
+                  style={{display:'none'}}
+                  onChange={e => {
+                    setLoteFiles(Array.from(e.target.files || []))
+                    setLoteResults([])
+                  }}
+                  disabled={loteUploading}
+                />
+                <span style={cardStyles.fileBtn}>
+                  {loteFiles.length ? `${loteFiles.length} archivo(s) seleccionados` : 'Elegir multiples archivos'}
+                </span>
+              </label>
+              <button
+                onClick={handleLoteUpload}
+                disabled={!loteFiles.length || loteUploading}
+                style={{...cardStyles.importBtn, background: loteFiles.length && !loteUploading ? '#334155' : '#94a3b8'}}
+              >
+                {loteUploading ? 'Procesando...' : 'Procesar todo'}
+              </button>
+            </div>
+            {loteFiles.length > 0 && (
+              <p style={cardStyles.fileHint}>Archivos: {loteFiles.map(f => f.name).join(' | ')}</p>
+            )}
+            {loteResults.length > 0 && (
+              <div style={{fontSize:12}}>
+                {loteResults.map((r, i) => (
+                  <div key={`${r.archivo}-${i}`} style={{color: r.ok ? '#166534' : '#b91c1c'}}>
+                    {r.ok ? 'OK' : 'ERROR'} [{r.tipo}] {r.archivo}: {r.mensaje}
+                  </div>
+                ))}
+                <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
+                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#334155', color:'#fff', borderColor:'#334155'}}>Ver Dashboard</button>
+                  <button onClick={() => { setLoteFiles([]); setLoteResults([]) }} style={cardStyles.resetBtn}>Limpiar</button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* ── Conversos ── */}
           <div style={cardStyles.card}>
@@ -334,7 +474,10 @@ export default function ImportacionConversos() {
               <div style={cardStyles.successBox}>
                 <strong>✓ Importados: {adultoResult.importados} adultos</strong>
                 <p style={{margin:'4px 0 0 0',fontSize:13}}>(reemplaza todos los datos anteriores)</p>
-                <button onClick={() => { setAdultoResult(null); setAdultoFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
+                <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
+                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#d97706', color:'#fff', borderColor:'#d97706'}}>Ver Dashboard</button>
+                  <button onClick={() => { setAdultoResult(null); setAdultoFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
+                </div>
               </div>
             ) : (
               <>
@@ -378,7 +521,10 @@ export default function ImportacionConversos() {
                 {misioneroResult.mision_servicio > 0 && (
                   <p style={{margin:'4px 0 0 0',fontSize:13}}>Misión de servicio a la Iglesia: <strong>{misioneroResult.mision_servicio}</strong></p>
                 )}
-                <button onClick={() => { setMisioneroResult(null); setMisioneroFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
+                <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
+                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#1d4ed8', color:'#fff', borderColor:'#1d4ed8'}}>Ver Dashboard</button>
+                  <button onClick={() => { setMisioneroResult(null); setMisioneroFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
+                </div>
               </div>
             ) : (
               <>
@@ -423,7 +569,10 @@ export default function ImportacionConversos() {
               <div style={cardStyles.successBox}>
                 <strong>✓ Importados: {jovenResult.importados} jóvenes</strong>
                 <p style={{margin:'4px 0 0 0',fontSize:13}}>(reemplaza todos los datos anteriores)</p>
-                <button onClick={() => { setJovenResult(null); setJovenFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
+                <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
+                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#16a34a', color:'#fff', borderColor:'#16a34a'}}>Ver Dashboard</button>
+                  <button onClick={() => { setJovenResult(null); setJovenFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
+                </div>
               </div>
             ) : (
               <>
