@@ -1,5 +1,5 @@
 export default function KPICard({ title, meta, actual, potencial, comentario, unit = '', color = '#667eea', onDetalleClick }) {
-  const esPorcentaje = (unit === '%' || meta === 100) && potencial != null
+  const esPorcentaje = unit === '%' && potencial != null
   const esBautismos = !esPorcentaje
   const denominator = esPorcentaje ? potencial : meta
   const percentage = denominator > 0 ? Math.round((actual / denominator) * 100) : 0
