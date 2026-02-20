@@ -70,8 +70,10 @@ export default function Dashboard() {
   async function fetchMisionerosKPI() {
     try {
       const { data } = await axios.get(`${API_BASE}/api/misioneros/kpi`)
+      console.log('[MISIONEROS KPI]', JSON.stringify(data, null, 2))
       setKpiMisioneros(data)
     } catch (e) {
+      console.error('[MISIONEROS KPI] Error:', e)
       setKpiMisioneros(null)
     }
   }
@@ -399,26 +401,61 @@ export default function Dashboard() {
             />
             {detalleMisionerosOpen && (
               <div style={{background:'#f9fafb',border:'1px solid #ddd',borderRadius:8,padding:16,marginTop:8}}>
-                <table style={{width:'100%',borderCollapse:'collapse',marginTop:8}}>
-                  <thead>
-                    <tr style={{background:'#f3f4f6',borderBottom:'1px solid #ddd'}}>
-                      <th style={{textAlign:'left',padding:'5px 8px'}}>Nombre</th>
-                      <th style={{textAlign:'left',padding:'5px 8px'}}>Comienzo</th>
-                      <th style={{textAlign:'left',padding:'5px 8px'}}>Término esperado</th>
-                      <th style={{textAlign:'left',padding:'5px 8px'}}>Unidad actual</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {kpiMisioneros.personas_servicio.map((p, i) => (
-                      <tr key={i} style={{borderBottom:'1px solid #e5e7eb',background:'#f8faff'}}>
-                        <td style={{padding:'5px 8px'}}>{p.nombre}</td>
-                        <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.comenzo || '-'}</td>
-                        <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.termino_esperado || '-'}</td>
-                        <td style={{padding:'5px 8px',fontSize:12,color:'#1e40af'}}>{p.unidad_actual || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {/* Misioneros en el Campo */}
+                {(kpiMisioneros.personas?.length > 0) && (
+                  <>
+                    <strong style={{fontSize:13,color:'#1e3a5f'}}>En el Campo ({kpiMisioneros.personas.length})</strong>
+                    <table style={{width:'100%',borderCollapse:'collapse',marginTop:6,marginBottom:16}}>
+                      <thead>
+                        <tr style={{background:'#f3f4f6',borderBottom:'1px solid #ddd'}}>
+                          <th style={{textAlign:'left',padding:'5px 8px',fontSize:12}}>Nombre</th>
+                          <th style={{textAlign:'left',padding:'5px 8px',fontSize:12}}>Misión</th>
+                          <th style={{textAlign:'left',padding:'5px 8px',fontSize:12}}>Comienzo</th>
+                          <th style={{textAlign:'left',padding:'5px 8px',fontSize:12}}>Término esp.</th>
+                          <th style={{textAlign:'left',padding:'5px 8px',fontSize:12}}>Unidad actual</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {kpiMisioneros.personas.map((p, i) => (
+                          <tr key={i} style={{borderBottom:'1px solid #e5e7eb'}}>
+                            <td style={{padding:'5px 8px',fontSize:13}}>{p.nombre}</td>
+                            <td style={{padding:'5px 8px',fontSize:12,color:'#2563eb'}}>{p.mision || '-'}</td>
+                            <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.comenzo || '-'}</td>
+                            <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.termino_esperado || '-'}</td>
+                            <td style={{padding:'5px 8px',fontSize:12,color:'#1e40af'}}>{p.unidad_actual || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                )}
+                {/* Misioneros de Servicio a la Iglesia */}
+                {(kpiMisioneros.personas_servicio?.length > 0) && (
+                  <>
+                    <strong style={{fontSize:13,color:'#6b21a8'}}>Servicio a la Iglesia ({kpiMisioneros.personas_servicio.length})</strong>
+                    <table style={{width:'100%',borderCollapse:'collapse',marginTop:6}}>
+                      <thead>
+                        <tr style={{background:'#f5f3ff',borderBottom:'1px solid #ddd'}}>
+                          <th style={{textAlign:'left',padding:'5px 8px',fontSize:12}}>Nombre</th>
+                          <th style={{textAlign:'left',padding:'5px 8px',fontSize:12}}>Comienzo</th>
+                          <th style={{textAlign:'left',padding:'5px 8px',fontSize:12}}>Término esp.</th>
+                          <th style={{textAlign:'left',padding:'5px 8px',fontSize:12}}>Unidad actual</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {kpiMisioneros.personas_servicio.map((p, i) => (
+                          <tr key={i} style={{borderBottom:'1px solid #e5e7eb',background:'#faf5ff'}}>
+                            <td style={{padding:'5px 8px',fontSize:13}}>{p.nombre}</td>
+                            <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.comenzo || '-'}</td>
+                            <td style={{padding:'5px 8px',fontSize:12,color:'#666'}}>{p.termino_esperado || '-'}</td>
+                            <td style={{padding:'5px 8px',fontSize:12,color:'#6b21a8'}}>{p.unidad_actual || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                )}
+                <button onClick={() => setDetalleMisionerosOpen(false)} style={{marginTop:12,padding:'4px 12px',borderRadius:6,border:'1px solid #ddd',background:'#fff',cursor:'pointer'}}>Cerrar</button>
               </div>
             )}
           </div>

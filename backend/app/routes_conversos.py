@@ -163,14 +163,13 @@ async def upload_archivo(
     """
     Sube archivo CSV/Excel y detecta columnas automáticamente
     """
-    # Validar tipo de archivo
-    allowed_types = ['application/pdf', 'text/csv', 'application/vnd.ms-excel', 
-                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
-    
-    if file.content_type not in allowed_types:
+    # Validar tipo de archivo por extensión (más confiable que content_type que varía por navegador)
+    fname_lower = file.filename.lower() if file.filename else ''
+    allowed_extensions = ('.pdf', '.csv', '.xls', '.xlsx')
+    if not fname_lower.endswith(allowed_extensions):
         raise HTTPException(
             status_code=400,
-            detail=f"Tipo de archivo no soportado. Use PDF, CSV o Excel"
+            detail=f"Tipo de archivo no soportado. Use PDF, CSV o Excel (.xlsx)"
         )
     
     import os
@@ -350,10 +349,8 @@ async def confirmar_importacion(
     columnas = archivo.file_metadata.get('columnas', [])
     total_filas = archivo.file_metadata.get('total_filas', 0)
 
-    # Buscar archivo en disco (asume que está en ./data o similar, si no está en S3)
-    # Si no se guarda el archivo, se debe volver a leer del storage temporal
-    # Aquí se asume que el archivo está en la carpeta local 'uploads' con el nombre original
-    file_path = os.path.join('uploads', archivo.filename)
+    # Buscar archivo en disco - usar ruta absoluta consistente con el upload
+    file_path = os.path.join('/app/uploads', archivo.filename)
     df = None
     try:
         if archivo.filename.endswith('.csv') and os.path.exists(file_path):

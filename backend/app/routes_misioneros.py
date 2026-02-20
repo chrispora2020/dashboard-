@@ -107,41 +107,74 @@ def _parse_misioneros_pdf(content: bytes) -> list[dict]:
 def _parse_misioneros_txt(text: str) -> list[dict]:
     """
     Parsea el texto copiado del portal de miembros.
-    Formato: Apellido(s), Nombre(s)  [Misión]  DD mes YYYY  DD mes YYYY  Barrio/Rama ...
-    Las líneas largas pueden estar partidas (ej: "México City Southeast\nMission ...").
+    Formato: Apellido(s), Nombre(s)  [Misión]  DD mes YYYY  DD mes YYYY  Unidad
+    Algunos nombres de misión se parten en dos líneas (ej. "México City Southeast\nMission ...").
     """
-    MONTHS = r'(?:ene|feb|mar|abr|may|jun|jul|ago|sept?|oct|nov|dic)'
-    DATE_RE = re.compile(rf'\d{{1,2}} {MONTHS}\.? \d{{4}}', re.IGNORECASE)
+    import unicodedata
 
-    # Países/lugares que inician el nombre de una misión real
-    MISSION_COUNTRIES = {
-        'bolivia','méxico','mexico','brasil','brazil','perú','peru','ecuador',
-        'argentina','chile','colombia','paraguay','uruguay','venezuela',
-        'guatemala','costa','panamá','panama','honduras','nicaragua','el',
-        'estados','usa','usa','canada','canadá','españa','spain','italia',
-        'france','francia','portugal','germany','alemania','australia',
-        'filipinas','philippines','japón','japan','corea','korea',
+    # ── 1. Normalizar espacios: U+00A0, tabs, espacios múltiples → espacio simple ──
+    # El portal copia con non-breaking spaces que rompen el regex
+    text = text.replace('\u00a0', ' ').replace('\t', ' ')
+    # Normalizar caracteres unicode compuestos (acentos)
+    text = unicodedata.normalize('NFC', text)
+
+    # ── 2. Regex de fechas flexible ──
+    MONTHS = (
+        r'(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?'
+        r'|jul(?:io)?|ago(?:sto)?|sep(?:t(?:iembre)?)?|set|oct(?:ubre)?'
+        r'|nov(?:iembre)?|dic(?:iembre)?)'
+    )
+    DATE_RE = re.compile(rf'\d{{1,2}} +{MONTHS}\.? +\d{{4}}', re.IGNORECASE)
+
+    SERV_KEYWORDS = ('misión de servicio', 'mision de servicio')
+    SERV_LABEL    = 'Misión de servicio a la Iglesia'
+
+    # Palabras que indican inicio de nombre de misión (país u otro indicador)
+    MISSION_START = {
+        'bolivia', 'méxico', 'mexico', 'brasil', 'brazil', 'perú', 'peru',
+        'ecuador', 'argentina', 'chile', 'colombia', 'paraguay', 'uruguay',
+        'venezuela', 'guatemala', 'costa', 'panamá', 'panama', 'honduras',
+        'nicaragua', 'el', 'estados', 'usa', 'canada', 'canadá', 'españa',
+        'spain', 'italia', 'france', 'francia', 'portugal', 'germany',
+        'alemania', 'australia', 'filipinas', 'philippines', 'japón', 'japan',
+        'corea', 'korea', 'utah', 'california', 'new', 'ciudad', 'north',
+        'south', 'east', 'west', 'misión', 'mision', 'mission',
     }
 
-    # Paso 1: unir líneas partidas
-    # Una línea "nueva" siempre empieza con "Apellido(s), " → tiene coma antes del primer espacio-after-word
+    # ── 3. Unir líneas partidas ──
+    # Una nueva entrada siempre empieza con "Apellido(s), " — coma en los primeros 45
+    # caracteres, sin dígitos antes de la coma, no empieza con país/Mission.
+    def _is_new_entry(ln: str) -> bool:
+        if not ln or not re.match(r'^[A-ZÁÉÍÓÚÑÜ]', ln):
+            return False
+        comma_pos = ln.find(',')
+        if comma_pos < 1 or comma_pos > 45:
+            return False
+        before = ln[:comma_pos]
+        if any(c.isdigit() for c in before):
+            return False
+        first = ln.split()[0].lower().rstrip('.,') if ln.split() else ''
+        return first not in MISSION_START
+
+    SKIP_LINES = {'mi plan', 'unidad actual', 'término esperado', 'termino esperado',
+                  'comenzó', 'comenzo', 'misión', 'mision', 'nombre'}
+
     raw_lines = text.split('\n')
     joined: list[str] = []
     current = ''
     for raw in raw_lines:
-        line = raw.strip()
+        line = re.sub(r' {2,}', ' ', raw.strip())   # colapsar múltiples espacios
         if not line:
             continue
-        lower = line.lower()
-        # Saltar cabecera
-        if 'nombre' in lower and ('misión' in lower or 'mision' in lower):
+        low = line.lower()
+        # Saltar encabezados de tabla y labels sueltos
+        if low in SKIP_LINES:
             continue
-        if lower in ('mi plan', 'unidad actual', 'término esperado'):
+        if 'nombre' in low and ('misión' in low or 'mision' in low):
             continue
-        # Nueva entrada: tiene coma Y empieza con mayúscula
-        has_comma = ',' in line
-        starts_cap = bool(re.match(r'^[A-ZÁÉÍÓÚÑÜ]', line))
-        if has_comma and starts_cap:
+        if low.startswith('misioneros de') or 'estaca' in low:
+            continue
+        if _is_new_entry(line):
             if current:
                 joined.append(current)
             current = line
@@ -150,49 +183,68 @@ def _parse_misioneros_txt(text: str) -> list[dict]:
     if current:
         joined.append(current)
 
+    print(f"[MISIONEROS TXT] {len(joined)} entradas después de unir líneas")
+
+    # ── 4. Parsear cada entrada ──
     filas = []
     for i, line in enumerate(joined):
+        # Colapsar espacios que pudieran haber quedado
+        line = re.sub(r' {2,}', ' ', line)
         dates = list(DATE_RE.finditer(line))
-        if len(dates) < 2:
+        print(f"[MISIONEROS TXT] [{i+1}] fechas={len(dates)} → {line[:100]!r}")
+
+        if len(dates) < 1:
+            print(f"[MISIONEROS TXT]   → sin fechas, omitida")
             continue
 
-        comenzo        = dates[0].group()
-        termino        = dates[1].group()
-        before         = line[:dates[0].start()].strip()
-        unidad         = line[dates[1].end():].strip()
-        # Quitar "Mi plan" si quedó pegado al final de unidad
+        comenzo = dates[0].group().strip()
+        if len(dates) >= 2:
+            termino = dates[1].group().strip()
+            before  = line[:dates[0].start()].strip()
+            unidad  = line[dates[1].end():].strip()
+        else:
+            termino = ''
+            before  = line[:dates[0].start()].strip()
+            unidad  = line[dates[0].end():].strip()
+
+        # Quitar "Mi plan" que a veces queda al final
         unidad = re.sub(r'\s*mi plan\s*$', '', unidad, flags=re.IGNORECASE).strip()
 
         nombre = before
         mision = ''
 
-        # Caso 1: servicio a la Iglesia (texto fijo)
-        SERV = 'Misión de servicio a la Iglesia'
-        idx = before.lower().find('misión de servicio')
-        if idx == -1:
-            idx = before.lower().find('mision de servicio')
-        if idx >= 0:
-            nombre = before[:idx].strip().rstrip(',').strip()
-            mision = SERV
+        # ── Detectar tipo de misión ──
+        low_before = before.lower()
+        serv_idx = -1
+        for kw in SERV_KEYWORDS:
+            idx = low_before.find(kw)
+            if idx >= 0:
+                serv_idx = idx
+                break
+
+        if serv_idx >= 0:
+            # Misión de servicio a la Iglesia
+            nombre = before[:serv_idx].strip().rstrip(',').strip()
+            mision = SERV_LABEL
         else:
-            # Caso 2: misión real que termina con "Mission"
+            # Misión real: separar nombre de misión
             comma_idx = before.find(',')
             if comma_idx >= 0:
                 after_comma = before[comma_idx + 1:].strip()
                 words = after_comma.split()
-                # Buscar primera palabra que sea un país/lugar conocido → inicio de misión
+                # Buscar dónde empieza el nombre de la misión (primera palabra de país/lugar)
                 country_idx = None
                 for j, w in enumerate(words):
-                    if w.lower().rstrip('.') in MISSION_COUNTRIES:
+                    if w.lower().rstrip('.,') in MISSION_START:
                         country_idx = j
                         break
                 if country_idx is not None:
-                    given = ' '.join(words[:country_idx])
+                    given  = ' '.join(words[:country_idx])
                     mision = ' '.join(words[country_idx:])
                     nombre = f"{before[:comma_idx].strip()}, {given}".strip(', ')
                 else:
-                    # Fallback: asumir 2 nombres propios tras la coma
-                    given = ' '.join(words[:2])
+                    # Sin misión identificable: 2 primeros tokens tras la coma son nombre
+                    given  = ' '.join(words[:2])
                     mision = ' '.join(words[2:])
                     nombre = f"{before[:comma_idx].strip()}, {given}".strip(', ')
 
@@ -204,8 +256,9 @@ def _parse_misioneros_txt(text: str) -> list[dict]:
             'unidad_actual':    unidad,
             'fila_numero':      i + 1,
         })
+        print(f"[MISIONEROS TXT]   → nombre={nombre!r} mision={mision!r}")
 
-    print(f"[MISIONEROS TXT] Total filas parseadas: {len(filas)}")
+    print(f"[MISIONEROS TXT] Total parseadas: {len(filas)}")
     return filas
 
 
