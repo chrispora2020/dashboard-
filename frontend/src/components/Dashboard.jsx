@@ -186,10 +186,10 @@ export default function Dashboard() {
             onChange={(e) => setPeriodoActual(e.target.value)}
           >
             <option value="2026">2026 - Año completo</option>
-            <option value="2026-Q1">2026 - Q1</option>
-            <option value="2026-Q2">2026 - Q2</option>
-            <option value="2026-Q3">2026 - Q3</option>
-            <option value="2026-Q4">2026 - Q4</option>
+            <option value="Q1 2026">2026 - Q1</option>
+            <option value="Q2 2026">2026 - Q2</option>
+            <option value="Q3 2026">2026 - Q3</option>
+            <option value="Q4 2026">2026 - Q4</option>
           </select>
         </div>
       </div>
