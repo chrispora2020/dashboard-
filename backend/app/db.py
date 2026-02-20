@@ -4,10 +4,18 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.pool import StaticPool
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+IS_RENDER = os.getenv("RENDER", "").lower() == "true"
 
 # SQLite necesita check_same_thread=False para funcionar con FastAPI (async/multihilo)
 # PostgreSQL no usa connect_args ni StaticPool
 if DATABASE_URL.startswith("sqlite"):
+    # En Render, SQLite en filesystem local no es persistente entre reinicios/deploys.
+    # Fallar temprano evita perder usuarios/datos silenciosamente.
+    if IS_RENDER:
+        raise RuntimeError(
+            "DATABASE_URL apunta a SQLite en Render. "
+            "Configura una DB persistente (PostgreSQL) en la variable DATABASE_URL."
+        )
     engine = create_engine(
         DATABASE_URL,
         connect_args={"check_same_thread": False},

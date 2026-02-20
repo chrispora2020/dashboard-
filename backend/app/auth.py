@@ -5,6 +5,7 @@ from jose import jwt
 
 JWT_SECRET = os.getenv("JWT_SECRET", "changeme")
 JWT_ALGO = "HS256"
+JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", str(60 * 24 * 7)))
 
 
 def hash_password(password: str) -> str:
@@ -19,7 +20,7 @@ def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(pwd_bytes, hashed_bytes)
 
 
-def create_access_token(subject: str, expires_delta: int = 60 * 24) -> str:
+def create_access_token(subject: str, expires_delta: int = JWT_EXPIRE_MINUTES) -> str:
     expire = datetime.utcnow() + timedelta(minutes=expires_delta)
     to_encode = {"exp": expire, "sub": str(subject)}
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGO)
