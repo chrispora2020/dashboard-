@@ -107,158 +107,132 @@ def _parse_misioneros_pdf(content: bytes) -> list[dict]:
 def _parse_misioneros_txt(text: str) -> list[dict]:
     """
     Parsea el texto copiado del portal de miembros.
-    Formato: Apellido(s), Nombre(s)  [Misión]  DD mes YYYY  DD mes YYYY  Unidad
-    Algunos nombres de misión se parten en dos líneas (ej. "México City Southeast\nMission ...").
+    El portal pega con U+00A0 (non-breaking space) en lugar de espacios normales.
     """
     import unicodedata
 
-    # ── 1. Normalizar espacios: U+00A0, tabs, espacios múltiples → espacio simple ──
-    # El portal copia con non-breaking spaces que rompen el regex
-    text = text.replace('\u00a0', ' ').replace('\t', ' ')
-    # Normalizar caracteres unicode compuestos (acentos)
-    text = unicodedata.normalize('NFC', text)
+    # ── Paso 1: normalización TOTAL de todo tipo de espacio unicode ──────────
+    normalized = ''
+    for ch in text:
+        if unicodedata.category(ch) == 'Zs' or ch in ('\t', '\r'):
+            normalized += ' '
+        else:
+            normalized += ch
+    text = normalized
 
-    # ── 2. Regex de fechas flexible ──
-    MONTHS = (
-        r'(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?'
-        r'|jul(?:io)?|ago(?:sto)?|sep(?:t(?:iembre)?)?|set|oct(?:ubre)?'
-        r'|nov(?:iembre)?|dic(?:iembre)?)'
-    )
-    DATE_RE = re.compile(rf'\d{{1,2}} +{MONTHS}\.? +\d{{4}}', re.IGNORECASE)
+    # ── Paso 2: Regex de fechas — usa \s+ para capturar cualquier espacio ────
+    MONTHS = (r'(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?'
+              r'|jul(?:io)?|ago(?:sto)?|sep(?:t(?:iembre)?)?|set|oct(?:ubre)?'
+              r'|nov(?:iembre)?|dic(?:iembre)?)')
+    DATE_RE = re.compile(rf'\b\d{{1,2}}\s+{MONTHS}\.?\s+\d{{4}}\b', re.IGNORECASE)
 
-    SERV_KEYWORDS = ('misión de servicio', 'mision de servicio')
-    SERV_LABEL    = 'Misión de servicio a la Iglesia'
-
-    # Palabras que indican inicio de nombre de misión (país u otro indicador)
+    SERV_LABEL = 'Misión de servicio a la Iglesia'
     MISSION_START = {
-        'bolivia', 'méxico', 'mexico', 'brasil', 'brazil', 'perú', 'peru',
-        'ecuador', 'argentina', 'chile', 'colombia', 'paraguay', 'uruguay',
-        'venezuela', 'guatemala', 'costa', 'panamá', 'panama', 'honduras',
-        'nicaragua', 'el', 'estados', 'usa', 'canada', 'canadá', 'españa',
-        'spain', 'italia', 'france', 'francia', 'portugal', 'germany',
-        'alemania', 'australia', 'filipinas', 'philippines', 'japón', 'japan',
-        'corea', 'korea', 'utah', 'california', 'new', 'ciudad', 'north',
-        'south', 'east', 'west', 'misión', 'mision', 'mission',
+        'bolivia','méxico','mexico','brasil','brazil','perú','peru','ecuador',
+        'argentina','chile','colombia','paraguay','uruguay','venezuela',
+        'guatemala','costa','panamá','panama','honduras','nicaragua',
+        'estados','usa','canada','canadá','españa','spain','alemania',
+        'australia','filipinas','japan','corea','korea','misión','mision','mission',
+        'north','south','east','west','ciudad','new','el',
     }
 
-    # ── 3. Unir líneas partidas ──
-    # Una nueva entrada siempre empieza con "Apellido(s), " — coma en los primeros 45
-    # caracteres, sin dígitos antes de la coma, no empieza con país/Mission.
-    def _is_new_entry(ln: str) -> bool:
+    # ── Paso 3: unir líneas partidas ─────────────────────────────────────────
+    def is_new_entry(ln: str) -> bool:
+        ln = ln.strip()
         if not ln or not re.match(r'^[A-ZÁÉÍÓÚÑÜ]', ln):
             return False
-        comma_pos = ln.find(',')
-        if comma_pos < 1 or comma_pos > 45:
+        ci = ln.find(',')
+        if ci < 1 or ci > 45:
             return False
-        before = ln[:comma_pos]
-        if any(c.isdigit() for c in before):
+        if any(c.isdigit() for c in ln[:ci]):
             return False
         first = ln.split()[0].lower().rstrip('.,') if ln.split() else ''
         return first not in MISSION_START
 
-    SKIP_LINES = {'mi plan', 'unidad actual', 'término esperado', 'termino esperado',
-                  'comenzó', 'comenzo', 'misión', 'mision', 'nombre'}
+    SKIP = {'mi plan', 'unidad actual', 'término esperado', 'termino esperado',
+            'comenzó', 'comenzo', 'misión', 'mision', 'nombre'}
 
-    raw_lines = text.split('\n')
-    joined: list[str] = []
-    current = ''
-    for raw in raw_lines:
-        line = re.sub(r' {2,}', ' ', raw.strip())   # colapsar múltiples espacios
-        if not line:
+    blocks: list[str] = []
+    cur = ''
+    for raw in text.split('\n'):
+        ln = raw.strip()
+        if not ln:
             continue
-        low = line.lower()
-        # Saltar encabezados de tabla y labels sueltos
-        if low in SKIP_LINES:
+        low = ln.lower()
+        if low in SKIP:
             continue
         if 'nombre' in low and ('misión' in low or 'mision' in low):
             continue
-        if low.startswith('misioneros de') or 'estaca' in low:
+        if re.match(r'^misioneros\s+(de|en)\b', low):
             continue
-        if _is_new_entry(line):
-            if current:
-                joined.append(current)
-            current = line
+        if is_new_entry(ln):
+            if cur:
+                blocks.append(cur)
+            cur = ln
         else:
-            current = (current + ' ' + line).strip() if current else line
-    if current:
-        joined.append(current)
+            cur = (cur + ' ' + ln).strip() if cur else ln
+    if cur:
+        blocks.append(cur)
 
-    print(f"[MISIONEROS TXT] {len(joined)} entradas después de unir líneas")
+    print(f"[MIS TXT] {len(blocks)} bloques")
 
-    # ── 4. Parsear cada entrada ──
+    # ── Paso 4: parsear cada bloque ───────────────────────────────────────────
     filas = []
-    for i, line in enumerate(joined):
-        # Colapsar espacios que pudieran haber quedado
-        line = re.sub(r' {2,}', ' ', line)
-        dates = list(DATE_RE.finditer(line))
-        print(f"[MISIONEROS TXT] [{i+1}] fechas={len(dates)} → {line[:100]!r}")
+    for i, block in enumerate(blocks):
+        # colapsar múltiples espacios que quedaron
+        block = re.sub(r'  +', ' ', block).strip()
+        dates = list(DATE_RE.finditer(block))
+        print(f"[MIS TXT] [{i+1}] {len(dates)} fechas | {block[:90]!r}")
 
-        if len(dates) < 1:
-            print(f"[MISIONEROS TXT]   → sin fechas, omitida")
+        if not dates:
+            print(f"[MIS TXT]   → sin fechas, omitido")
             continue
 
-        comenzo = dates[0].group().strip()
+        comenzo = dates[0].group(0).strip()
         if len(dates) >= 2:
-            termino = dates[1].group().strip()
-            before  = line[:dates[0].start()].strip()
-            unidad  = line[dates[1].end():].strip()
+            termino = dates[1].group(0).strip()
+            before  = block[:dates[0].start()].strip()
+            unidad  = block[dates[1].end():].strip()
         else:
             termino = ''
-            before  = line[:dates[0].start()].strip()
-            unidad  = line[dates[0].end():].strip()
+            before  = block[:dates[0].start()].strip()
+            unidad  = block[dates[0].end():].strip()
 
-        # Quitar "Mi plan" que a veces queda al final
         unidad = re.sub(r'\s*mi plan\s*$', '', unidad, flags=re.IGNORECASE).strip()
 
         nombre = before
         mision = ''
+        low_b  = before.lower()
 
-        # ── Detectar tipo de misión ──
-        low_before = before.lower()
-        serv_idx = -1
-        for kw in SERV_KEYWORDS:
-            idx = low_before.find(kw)
-            if idx >= 0:
-                serv_idx = idx
-                break
-
-        if serv_idx >= 0:
-            # Misión de servicio a la Iglesia
-            nombre = before[:serv_idx].strip().rstrip(',').strip()
+        if 'servicio a la iglesia' in low_b:
+            si = re.search(r'misi[oó]n\s+de\s+servicio', before, re.IGNORECASE)
+            cut = si.start() if si else len(before)
+            nombre = before[:cut].strip().rstrip(',').strip()
             mision = SERV_LABEL
         else:
-            # Misión real: separar nombre de misión
-            comma_idx = before.find(',')
-            if comma_idx >= 0:
-                after_comma = before[comma_idx + 1:].strip()
-                words = after_comma.split()
-                # Buscar dónde empieza el nombre de la misión (primera palabra de país/lugar)
-                country_idx = None
-                for j, w in enumerate(words):
-                    if w.lower().rstrip('.,') in MISSION_START:
-                        country_idx = j
-                        break
-                if country_idx is not None:
-                    given  = ' '.join(words[:country_idx])
-                    mision = ' '.join(words[country_idx:])
-                    nombre = f"{before[:comma_idx].strip()}, {given}".strip(', ')
+            ci = before.find(',')
+            if ci >= 0:
+                words = before[ci + 1:].strip().split()
+                cidx = next((j for j, w in enumerate(words)
+                             if w.lower().rstrip('.,') in MISSION_START), None)
+                if cidx is not None:
+                    nombre = f"{before[:ci].strip()}, {' '.join(words[:cidx])}".strip(', ')
+                    mision = ' '.join(words[cidx:])
                 else:
-                    # Sin misión identificable: 2 primeros tokens tras la coma son nombre
-                    given  = ' '.join(words[:2])
+                    nombre = f"{before[:ci].strip()}, {' '.join(words[:2])}".strip(', ')
                     mision = ' '.join(words[2:])
-                    nombre = f"{before[:comma_idx].strip()}, {given}".strip(', ')
 
         filas.append({
-            'nombre':           nombre.strip(),
-            'mision':           mision.strip(),
-            'comenzo':          comenzo,
+            'nombre': nombre.strip(),
+            'mision': mision.strip(),
+            'comenzo': comenzo,
             'termino_esperado': termino,
-            'unidad_actual':    unidad,
-            'fila_numero':      i + 1,
+            'unidad_actual': unidad,
+            'fila_numero': i + 1,
         })
-        print(f"[MISIONEROS TXT]   → nombre={nombre!r} mision={mision!r}")
+        print(f"[MIS TXT]   OK → {nombre.strip()!r} | {mision.strip()!r}")
 
-    print(f"[MISIONEROS TXT] Total parseadas: {len(filas)}")
+    print(f"[MIS TXT] Total: {len(filas)}")
     return filas
 
 
