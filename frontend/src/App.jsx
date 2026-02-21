@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import ApiDashboard from './components/ApiDashboard'
 import Dashboard from './components/Dashboard'
 import ImportacionConversos from './components/ImportacionConversos'
 import Login from './components/Login'
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/conversos" element={<ImportacionConversos />} />
+            <Route path="/dashboard-api" element={<ApiDashboard />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

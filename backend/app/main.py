@@ -11,6 +11,7 @@ from .routes_jovenes import router as jovenes_router
 from .routes_adultos import router as adultos_router
 from .routes_misioneros import router as misioneros_router
 from .routes_asistencia import router as asistencia_router
+from .routes_lcr import router as lcr_router
 
 app = FastAPI(title="KPI PDF Extractor API")
 
@@ -37,6 +38,7 @@ app.include_router(jovenes_router, prefix="/api")
 app.include_router(adultos_router, prefix="/api")
 app.include_router(misioneros_router, prefix="/api")
 app.include_router(asistencia_router, prefix="/api")
+app.include_router(lcr_router, prefix="/api")
 
 
 @app.get("/")
