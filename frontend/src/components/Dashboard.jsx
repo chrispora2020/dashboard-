@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { useEffect, useState } from 'react'
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import API_BASE from '../config'
 import KPICard from './KPICard'
 
@@ -23,6 +23,18 @@ export default function Dashboard() {
   const [kpiAsistencia, setKpiAsistencia] = useState(null)
   const [asistenciaInput, setAsistenciaInput] = useState('')
   const [asistenciaSaving, setAsistenciaSaving] = useState(false)
+
+  const resumenGeneralData = [
+    ...kpis.map((kpi) => ({
+      nombre: kpi.title,
+      actual: kpi.actual ?? 0,
+      meta: kpi.meta ?? 0
+    })),
+    ...(kpiJovenes ? [{ nombre: 'Jóvenes con Recomendación', actual: kpiJovenes.real ?? 0, meta: 100 }] : []),
+    ...(kpiAdultos ? [{ nombre: 'Adultos con Recomendación', actual: kpiAdultos.real ?? 0, meta: 390 }] : []),
+    ...(kpiMisioneros ? [{ nombre: 'Misioneros en el Campo', actual: kpiMisioneros.real ?? 0, meta: 19 }] : []),
+    ...(kpiAsistencia ? [{ nombre: 'Asistencia Sacramental', actual: kpiAsistencia.real ?? 0, meta: 550 }] : [])
+  ].filter((indicador) => indicador.meta > 0)
 
   async function handleDetalleClick(kpi) {
     if (detalleOpen === kpi.id) {
@@ -535,11 +547,22 @@ export default function Dashboard() {
       )}
 
       <div style={styles.info}>
-        <p style={styles.infoText}>
-          ℹ️ {kpis.length > 0 && kpis[0].actual > 0 
-            ? 'Indicadores calculados automáticamente desde los datos importados.' 
-            : 'No hay datos aún. Ve a Conversos para importar tu primera lista.'}
-        </p>
+        <h3 style={styles.summaryChartTitle}>Resumen general de indicadores</h3>
+        {resumenGeneralData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={resumenGeneralData} margin={{ top: 10, right: 10, left: 10, bottom: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="nombre" angle={-20} textAnchor="end" interval={0} height={95} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="meta" name="Meta" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="actual" name="Actual" fill="#667eea" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <p style={styles.emptySummary}>Sin datos para mostrar.</p>
+        )}
       </div>
     </div>
   )
@@ -598,11 +621,15 @@ const styles = {
     borderRadius: '8px',
     padding: '15px 20px'
   },
-  infoText: {
+  summaryChartTitle: {
+    margin: '0 0 14px 0',
+    color: '#1e3a8a',
+    fontSize: '16px'
+  },
+  emptySummary: {
     margin: 0,
-    color: '#1e40af',
-    fontSize: '14px',
-    lineHeight: '1.6'
+    color: '#64748b',
+    fontSize: '14px'
   },
   loading: {
     display: 'flex',

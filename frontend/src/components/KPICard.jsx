@@ -7,11 +7,6 @@ export default function KPICard({ title, meta, actual, potencial, comentario, un
   const falta = esPorcentaje
     ? Math.max(0, 100 - percentage)
     : Math.max(0, meta - actual)
-  const graphGoal = esPorcentaje ? 100 : meta
-  const graphActual = esPorcentaje ? percentage : actual
-  const graphScale = Math.max(graphGoal, graphActual, 1)
-  const goalHeight = Math.max(10, Math.round((graphGoal / graphScale) * 64))
-  const actualHeight = Math.max(10, Math.round((graphActual / graphScale) * 64))
 
   const statusColors = {
     green: '#10b981',
@@ -75,22 +70,6 @@ export default function KPICard({ title, meta, actual, potencial, comentario, un
         <span style={{ fontSize: 10, color: '#9ca3af' }}>0</span>
         <span style={{ fontSize: 10, color: '#9ca3af' }}>{esPorcentaje ? '50%' : Math.round(meta / 2)}</span>
         <span style={{ fontSize: 10, color, fontWeight: 600 }}>{esPorcentaje ? '100%' : meta}</span>
-      </div>
-
-      <div style={styles.graphSection}>
-        <span style={styles.graphTitle}>Vista rápida</span>
-        <div style={styles.graphArea}>
-          <div style={styles.graphColumn}>
-            <div style={{ ...styles.graphBar, ...styles.graphMetaBar, height: goalHeight }} />
-            <span style={styles.graphLabel}>Meta</span>
-            <strong style={styles.graphValue}>{esPorcentaje ? '100%' : meta}</strong>
-          </div>
-          <div style={styles.graphColumn}>
-            <div style={{ ...styles.graphBar, background: statusColors[status], height: actualHeight }} />
-            <span style={styles.graphLabel}>{esPorcentaje ? 'Avance' : 'Actual'}</span>
-            <strong style={{ ...styles.graphValue, color: statusColors[status] }}>{esPorcentaje ? `${percentage}%` : actual}</strong>
-          </div>
-        </div>
       </div>
 
       <div style={{ ...styles.footer, background: statusBg[status], borderRadius: 6, padding: '6px 10px', marginTop: 8 }}>
@@ -215,54 +194,6 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     marginBottom: 8
-  },
-  graphSection: {
-    background: '#f8fafc',
-    border: '1px solid #e2e8f0',
-    borderRadius: 8,
-    padding: '8px 10px',
-    marginBottom: 8
-  },
-  graphTitle: {
-    display: 'block',
-    fontSize: 11,
-    color: '#64748b',
-    fontWeight: 600,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em'
-  },
-  graphArea: {
-    display: 'flex',
-    gap: 16,
-    alignItems: 'flex-end',
-    minHeight: 88
-  },
-  graphColumn: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 4,
-    width: 48
-  },
-  graphBar: {
-    width: '100%',
-    borderRadius: '6px 6px 3px 3px',
-    minHeight: 10,
-    transition: 'height 0.4s ease'
-  },
-  graphMetaBar: {
-    background: '#cbd5e1'
-  },
-  graphLabel: {
-    fontSize: 10,
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em'
-  },
-  graphValue: {
-    fontSize: 12,
-    color: '#1e293b'
   },
   footer: {
     display: 'flex',
