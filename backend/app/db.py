@@ -6,9 +6,9 @@ from sqlalchemy.pool import StaticPool
 
 def _default_database_url() -> str:
     """Build a safer default DB URL depending on environment."""
-    # En Render conviene guardar SQLite en el disco persistente (/var/data)
+    # Si existe disco persistente (Render: /var/data), priorizarlo siempre
     # para evitar pérdida de datos entre reinicios/deploys.
-    if os.getenv("RENDER") == "true":
+    if os.path.isdir("/var/data"):
         return "sqlite:////var/data/dashboard.db"
     return "sqlite:///./test.db"
 
