@@ -11,6 +11,7 @@ export default function Navbar({ user, onLogout }) {
         <div style={styles.menu}>
           <Link to="/" style={styles.link}>Dashboard</Link>
           <Link to="/conversos" style={styles.link}>Cargar Listas</Link>
+          <Link to="/dashboard-api" style={styles.link}>Dashboard API</Link>
           
           <div style={styles.user}>
             <span style={styles.userName}>{user?.name || user?.email}</span>
