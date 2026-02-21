@@ -14,20 +14,28 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @router.post('/')
-async def upload_files(files: list[UploadFile] = File(...), period_id: str | None = None, db: Session = Depends(db.get_db)):
-    # Limpiar tabla personas_conversos antes de importar
-    from .models import PersonaConverso, PdfFile
-    db.query(PersonaConverso).delete()
-    db.query(PdfFile).delete()
-    db.commit()
+async def upload_files(
+    files: list[UploadFile] = File(...),
+    period_id: str | None = None,
+    replace_existing: bool = False,
+    db: Session = Depends(db.get_db),
+):
+    # Modo seguro por defecto: no borrar data histórica en cada upload.
+    # Si se necesita reprocesar desde cero, usar replace_existing=true.
+    if replace_existing:
+        from .models import PersonaConverso, PdfFile
 
-    # Limpiar tabla IndicadorKPI si existe
-    try:
-        from .models import IndicadorKPI
-        db.query(IndicadorKPI).delete()
+        db.query(PersonaConverso).delete()
+        db.query(PdfFile).delete()
         db.commit()
-    except Exception:
-        pass
+
+        try:
+            from .models import IndicadorKPI
+
+            db.query(IndicadorKPI).delete()
+            db.commit()
+        except Exception:
+            pass
 
     saved = []
     for f in files:
