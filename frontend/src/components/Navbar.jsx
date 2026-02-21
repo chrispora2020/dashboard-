@@ -10,7 +10,6 @@ export default function Navbar({ user, onLogout }) {
         
         <div style={styles.menu}>
           <Link to="/" style={styles.link}>Dashboard</Link>
-          <Link to="/upload" style={styles.link}>Cargar PDFs</Link>
           <Link to="/conversos" style={styles.link}>Cargar Listas</Link>
           
           <div style={styles.user}>
