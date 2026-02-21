@@ -5,7 +5,8 @@ from jose import jwt
 
 JWT_SECRET = os.getenv("JWT_SECRET", "changeme")
 JWT_ALGO = "HS256"
-JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", str(60 * 24 * 7)))
+# Extend default session to reduce unexpected logouts in deployments.
+JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", str(60 * 24 * 30)))
 
 
 def hash_password(password: str) -> str:
