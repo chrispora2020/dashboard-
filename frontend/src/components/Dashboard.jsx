@@ -571,6 +571,7 @@ export default function Dashboard() {
               meta={100}
               actual={ministeringSummary.overallPercent}
               potencial={100}
+              unit={'%'}
               comentario={`Hombres: ${ministeringSummary.brothersPercent}% (${ministeringSummary.brothersRatio}) · Mujeres: ${ministeringSummary.sistersPercent}% (${ministeringSummary.sistersRatio})`}
               breakdown={[
                 {
