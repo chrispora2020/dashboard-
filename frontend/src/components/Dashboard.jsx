@@ -1,9 +1,9 @@
 import axios from 'axios'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import API_BASE from '../config'
 import KPICard from './KPICard'
-import MinisteringInterviewsCard from './MinisteringInterviewsCard'
+import { getMinisteringSummary, MINISTERING_STORAGE_KEY, parseMinisteringText } from '../utils/ministering'
 
 export default function Dashboard() {
 
@@ -24,7 +24,11 @@ export default function Dashboard() {
   const [kpiAsistencia, setKpiAsistencia] = useState(null)
   const [asistenciaInput, setAsistenciaInput] = useState('')
   const [asistenciaSaving, setAsistenciaSaving] = useState(false)
+  const [detalleMinisteringOpen, setDetalleMinisteringOpen] = useState(false)
+  const [ministeringRawText, setMinisteringRawText] = useState(() => localStorage.getItem(MINISTERING_STORAGE_KEY) || '')
   const indicadoresRef = useRef(null)
+  const ministeringParsed = useMemo(() => parseMinisteringText(ministeringRawText), [ministeringRawText])
+  const ministeringSummary = useMemo(() => getMinisteringSummary(ministeringParsed), [ministeringParsed])
 
   const resumenGeneralData = [
     ...kpis.map((kpi) => ({
@@ -62,6 +66,21 @@ export default function Dashboard() {
     fetchMisionerosKPI()
     fetchAsistenciaKPI()
   }, [periodoActual])
+
+  useEffect(() => {
+    function syncMinistering() {
+      setMinisteringRawText(localStorage.getItem(MINISTERING_STORAGE_KEY) || '')
+    }
+
+    syncMinistering()
+    window.addEventListener('storage', syncMinistering)
+    window.addEventListener('focus', syncMinistering)
+
+    return () => {
+      window.removeEventListener('storage', syncMinistering)
+      window.removeEventListener('focus', syncMinistering)
+    }
+  }, [])
 
   async function fetchJovenesKPI() {
     try {
@@ -222,7 +241,6 @@ export default function Dashboard() {
       </div>
 
       <div ref={indicadoresRef}>
-        <MinisteringInterviewsCard />
         {error && (
         <div style={styles.error}>
           <strong>⚠️ Error:</strong> {error}
@@ -524,6 +542,68 @@ export default function Dashboard() {
               </div>
             )}
             {(!kpiAsistencia || kpiAsistencia.real === 0) && (
+              <p style={{fontSize:12,color:'#999',marginTop:8}}>
+                Sin datos. Cargá el archivo en <a href="/conversos" style={{color:'#667eea'}}>Cargar Listas</a>.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <h2 style={styles.sectionTitle}>Entrevistas de ministración</h2>
+            <KPICard
+              meta={100}
+              actual={ministeringSummary.overallPercent}
+              potencial={100}
+              comentario={`Hermanos: ${ministeringSummary.brothersRatio} · Hermanas: ${ministeringSummary.sistersRatio}`}
+              color={
+                ministeringSummary.overallPercent >= 80 ? '#10b981'
+                : ministeringSummary.overallPercent >= 50 ? '#f59e0b'
+                : '#ef4444'
+              }
+              onDetalleClick={ministeringRawText ? () => setDetalleMinisteringOpen(v => !v) : undefined}
+            />
+            {detalleMinisteringOpen && ministeringRawText && (
+              <div style={{background:'#f9fafb',border:'1px solid #ddd',borderRadius:8,padding:16,marginTop:8}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',gap:16}}>
+                  {[
+                    { key: 'brothers', title: 'Hombres', color: '#0f6b82' },
+                    { key: 'sisters', title: 'Mujeres', color: '#7c3aed' }
+                  ].map((section) => {
+                    const data = ministeringParsed[section.key]
+                    return (
+                      <div key={section.key} style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:8,padding:10}}>
+                        <strong style={{color:section.color}}>{section.title} ({data.total ? `${data.total.interviewed}/${data.total.total}` : '--/--'})</strong>
+                        <table style={{width:'100%',marginTop:8,borderCollapse:'collapse',fontSize:13}}>
+                          <thead>
+                            <tr style={{background:'#f3f4f6'}}>
+                              <th style={{textAlign:'left',padding:'4px 6px'}}>Barrio</th>
+                              <th style={{textAlign:'right',padding:'4px 6px'}}>%</th>
+                              <th style={{textAlign:'right',padding:'4px 6px'}}>Entrev.</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(data.units || []).slice(1).map((u, i) => (
+                              <tr key={`${section.key}-${i}`} style={{borderBottom:'1px solid #eef2f7'}}>
+                                <td style={{padding:'4px 6px'}}>{u.unidad}</td>
+                                <td style={{padding:'4px 6px',textAlign:'right',fontWeight:600,color:section.color}}>{u.percent}%</td>
+                                <td style={{padding:'4px 6px',textAlign:'right'}}>{u.interviewed}/{u.total}</td>
+                              </tr>
+                            ))}
+                            {(data.units || []).length <= 1 && (
+                              <tr>
+                                <td colSpan={3} style={{padding:'6px',color:'#999'}}>Sin detalle por barrio.</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  })}
+                </div>
+                <button onClick={() => setDetalleMinisteringOpen(false)} style={{marginTop:10,padding:'4px 12px',borderRadius:6,border:'1px solid #ddd',background:'#fff',cursor:'pointer'}}>Cerrar</button>
+              </div>
+            )}
+            {!ministeringRawText && (
               <p style={{fontSize:12,color:'#999',marginTop:8}}>
                 Sin datos. Cargá el archivo en <a href="/conversos" style={{color:'#667eea'}}>Cargar Listas</a>.
               </p>

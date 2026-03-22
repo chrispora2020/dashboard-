@@ -2,6 +2,7 @@ import axios from 'axios'
 import { useState } from 'react'
 import API_BASE from '../config'
 import MapeoColumnas from './MapeoColumnas'
+import { getMinisteringSummary, MINISTERING_STORAGE_KEY, parseMinisteringText } from '../utils/ministering'
 
 function normalizarNombreArchivo(nombre) {
   return (nombre || '')
@@ -17,6 +18,7 @@ function detectarTipoLista(nombreArchivo) {
   if (n.includes('adult')) return 'adultos'
   if (n.includes('mision')) return 'misioneros'
   if (n.includes('asistencia') || n.includes('sacramental')) return 'asistencia'
+  if (n.includes('ministr')) return 'ministracion'
   return null
 }
 
@@ -55,6 +57,10 @@ export default function ImportacionConversos() {
   const [loteFiles, setLoteFiles] = useState([])
   const [loteUploading, setLoteUploading] = useState(false)
   const [loteResults, setLoteResults] = useState([])
+  const [ministeringFile, setMinisteringFile] = useState(null)
+  const [ministeringUploading, setMinisteringUploading] = useState(false)
+  const [ministeringText, setMinisteringText] = useState(() => localStorage.getItem(MINISTERING_STORAGE_KEY) || '')
+  const [ministeringError, setMinisteringError] = useState('')
 
   const handleUploadComplete = async (data) => {
     console.log('Upload completado:', data)
@@ -239,6 +245,10 @@ export default function ImportacionConversos() {
           setMisioneroError('')
         } else if (tipo === 'asistencia') {
           await handleAsistenciaUploadSimple(file, '2026')
+        } else if (tipo === 'ministracion') {
+          const text = await file.text()
+          localStorage.setItem(MINISTERING_STORAGE_KEY, text)
+          setMinisteringText(text)
         }
 
         results.push({ archivo: file.name, tipo, ok: true, mensaje: 'Importado correctamente' })
@@ -254,6 +264,29 @@ export default function ImportacionConversos() {
 
     setLoteResults(results)
     setLoteUploading(false)
+  }
+
+  const ministeringParsed = parseMinisteringText(ministeringText)
+  const ministeringSummary = getMinisteringSummary(ministeringParsed)
+
+  const handleMinisteringSave = async () => {
+    try {
+      setMinisteringUploading(true)
+      setMinisteringError('')
+
+      let content = ministeringText
+      if (ministeringFile) {
+        content = await ministeringFile.text()
+        setMinisteringText(content)
+      }
+
+      localStorage.setItem(MINISTERING_STORAGE_KEY, content || '')
+      setMinisteringFile(null)
+    } catch (err) {
+      setMinisteringError(err.message || 'No se pudo guardar el archivo')
+    } finally {
+      setMinisteringUploading(false)
+    }
   }
 
   // ── Asistencia Sacramental sub-component ──────────────────────────────────
@@ -557,6 +590,48 @@ export default function ImportacionConversos() {
 
           {/* ── Asistencia Sacramental ── */}
           <AsistenciaCard />
+
+          {/* ── Entrevistas de Ministración ── */}
+          <div style={cardStyles.card}>
+            <div style={cardStyles.cardHeader}>
+              <span style={{...cardStyles.badge, background:'#e0f2fe', color:'#0c4a6e'}}>Ministración</span>
+              <h3 style={cardStyles.cardTitle}>Entrevistas de ministración (Hombres / Mujeres)</h3>
+              <p style={cardStyles.cardDesc}>Subí un TXT o pegá el bloque completo para mostrar el tile y el detalle por barrio en el Dashboard.</p>
+            </div>
+            <div style={cardStyles.fileRow}>
+              <label style={cardStyles.fileLabel}>
+                <input
+                  type="file"
+                  accept=".txt"
+                  style={{display:'none'}}
+                  onChange={e => { setMinisteringFile(e.target.files[0] || null); setMinisteringError('') }}
+                  disabled={ministeringUploading}
+                />
+                <span style={cardStyles.fileBtn}>{ministeringFile ? '📄 ' + ministeringFile.name : '📂 Elegir TXT'}</span>
+              </label>
+              <button
+                onClick={handleMinisteringSave}
+                disabled={ministeringUploading || (!ministeringFile && !ministeringText.trim())}
+                style={{...cardStyles.importBtn, background: (!ministeringUploading && (ministeringFile || ministeringText.trim())) ? '#0369a1' : '#7dd3fc'}}
+              >
+                {ministeringUploading ? '⏳ Guardando...' : 'Guardar'}
+              </button>
+            </div>
+            <textarea
+              value={ministeringText}
+              onChange={(e) => setMinisteringText(e.target.value)}
+              placeholder="Pegá aquí el texto de Hermanos/Hermanas ministrantes"
+              style={{width:'100%',minHeight:120,marginTop:10,border:'1px solid #d1d5db',borderRadius:8,padding:10,fontFamily:'inherit'}}
+            />
+            <p style={{marginTop:8,fontSize:13,color:'#334155'}}>
+              Resumen actual: <strong>{ministeringSummary.overallPercent}%</strong> · Hombres {ministeringSummary.brothersRatio} · Mujeres {ministeringSummary.sistersRatio}
+            </p>
+            <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
+              <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#0369a1', color:'#fff', borderColor:'#0369a1'}}>Ver Dashboard</button>
+              <button onClick={() => { setMinisteringText(''); localStorage.removeItem(MINISTERING_STORAGE_KEY) }} style={cardStyles.resetBtn}>Limpiar</button>
+            </div>
+            {ministeringError && <p style={cardStyles.errorText}>⚠ {ministeringError}</p>}
+          </div>
 
           {/* ── Jóvenes ── */}
           <div style={cardStyles.card}>
