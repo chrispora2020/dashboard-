@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import API_BASE from '../config'
 import KPICard from './KPICard'
+import MinisteringInterviewsCard from './MinisteringInterviewsCard'
 
 export default function Dashboard() {
 
@@ -221,6 +222,7 @@ export default function Dashboard() {
       </div>
 
       <div ref={indicadoresRef}>
+        <MinisteringInterviewsCard />
         {error && (
         <div style={styles.error}>
           <strong>⚠️ Error:</strong> {error}
