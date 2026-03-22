@@ -105,7 +105,7 @@ class CalculadorIndicadores:
         """
         Calcula indicador: Conversos con Recomendación
         
-        ELEGIBLES = mayores de 12 años
+        ELEGIBLES = conversos de 12+ años
         REAL = ELEGIBLES con recomendación activa
         % = REAL / ELEGIBLES * 100
         """
@@ -120,15 +120,19 @@ class CalculadorIndicadores:
 
         todas_personas = query.all()
 
-        # Clasificar por elegibilidad (mayores de 12 años)
+        # Clasificar por elegibilidad (12+ años)
         elegibles = {}
         con_recomendacion = {}
         sin_recomendacion = {}
         no_elegibles = []
         sin_clasificar = []
         for persona in todas_personas:
-            edad = persona.edad_al_confirmar if persona.edad_al_confirmar is not None else 18
-            if edad > 12:
+            es_elegible = es_elegible_recomendacion(persona.edad_al_confirmar)
+            if es_elegible is None:
+                sin_clasificar.append(persona)
+                continue
+
+            if es_elegible:
                 elegibles[persona.id] = persona
                 if persona.tiene_recomendacion is True:
                     con_recomendacion[persona.id] = persona
