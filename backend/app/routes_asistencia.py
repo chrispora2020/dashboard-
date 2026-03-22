@@ -17,18 +17,34 @@ def _parse_asistencia_txt(content: bytes) -> tuple[int, dict]:
     Retorna (total, {barrio: valor})."""
     text = content.decode('utf-8-sig', errors='replace')
     desglose = {}
+    encabezados_ignorados = (
+        'asistencia sacramental',
+        'asistencia',
+        'total',
+        'congregación',
+        'congregacion',
+    )
     for line in text.split('\n'):
         line = line.strip()
         if not line:
             continue
-        # Buscar líneas que terminan en un número: "Libia 78"
-        m = re.match(r'^(.+?)\s+(\d+)\s*$', line)
+        # Ignorar encabezados conocidos completos.
+        if line.lower() in encabezados_ignorados:
+            continue
+
+        # Permitir formato "Unidad|78" o "Unidad 78"
+        m = re.match(r'^(.+?)\s*(?:\||\s)\s*(\d+)\s*$', line)
         if not m:
             continue
         barrio = m.group(1).strip()
         valor = int(m.group(2))
-        # Saltar si el "barrio" parece un encabezado
-        if any(kw in barrio.lower() for kw in ['asistencia', 'total', 'sacramental', 'barrio', 'congregaci']):
+        barrio_lower = barrio.lower()
+        # Saltar cabeceras derivadas como "Asistencia sacramental" o "Total general"
+        if (
+            barrio_lower in encabezados_ignorados
+            or barrio_lower.startswith('total ')
+            or barrio_lower.startswith('asistencia ')
+        ):
             continue
         desglose[barrio] = valor
     total = sum(desglose.values())
