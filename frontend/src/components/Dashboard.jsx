@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import API_BASE from '../config'
 import KPICard from './KPICard'
-import { getMinisteringSummary, MINISTERING_STORAGE_KEY, parseMinisteringText } from '../utils/ministering'
+import { getMinisteringSummary, MINISTERING_API_PATH, MINISTERING_STORAGE_KEY, parseMinisteringText } from '../utils/ministering'
 
 export default function Dashboard() {
 
@@ -78,8 +78,15 @@ export default function Dashboard() {
   }, [periodoActual])
 
   useEffect(() => {
-    function syncMinistering() {
-      setMinisteringRawText(localStorage.getItem(MINISTERING_STORAGE_KEY) || '')
+    async function syncMinistering() {
+      try {
+        const { data } = await axios.get(`${API_BASE}${MINISTERING_API_PATH}`)
+        const persistedText = data?.text || ''
+        setMinisteringRawText(persistedText)
+        localStorage.setItem(MINISTERING_STORAGE_KEY, persistedText)
+      } catch (err) {
+        setMinisteringRawText(localStorage.getItem(MINISTERING_STORAGE_KEY) || '')
+      }
     }
 
     syncMinistering()

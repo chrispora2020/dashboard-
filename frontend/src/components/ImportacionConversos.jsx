@@ -1,8 +1,8 @@
 import axios from 'axios'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import API_BASE from '../config'
 import MapeoColumnas from './MapeoColumnas'
-import { getMinisteringSummary, MINISTERING_STORAGE_KEY, parseMinisteringText } from '../utils/ministering'
+import { getMinisteringSummary, MINISTERING_API_PATH, MINISTERING_STORAGE_KEY, parseMinisteringText } from '../utils/ministering'
 
 function normalizarNombreArchivo(nombre) {
   return (nombre || '')
@@ -61,6 +61,21 @@ export default function ImportacionConversos() {
   const [ministeringUploading, setMinisteringUploading] = useState(false)
   const [ministeringText, setMinisteringText] = useState(() => localStorage.getItem(MINISTERING_STORAGE_KEY) || '')
   const [ministeringError, setMinisteringError] = useState('')
+
+  useEffect(() => {
+    async function fetchMinisteringPersisted() {
+      try {
+        const { data } = await axios.get(`${API_BASE}${MINISTERING_API_PATH}`)
+        const persistedText = data?.text || ''
+        setMinisteringText(persistedText)
+        localStorage.setItem(MINISTERING_STORAGE_KEY, persistedText)
+      } catch (err) {
+        console.warn('No se pudo cargar ministración persistida, se usa localStorage.', err)
+      }
+    }
+
+    fetchMinisteringPersisted()
+  }, [])
 
   const handleUploadComplete = async (data) => {
     console.log('Upload completado:', data)
@@ -249,6 +264,7 @@ export default function ImportacionConversos() {
           const text = await file.text()
           localStorage.setItem(MINISTERING_STORAGE_KEY, text)
           setMinisteringText(text)
+          await axios.post(`${API_BASE}${MINISTERING_API_PATH}`, { text })
         }
 
         results.push({ archivo: file.name, tipo, ok: true, mensaje: 'Importado correctamente' })
@@ -280,7 +296,9 @@ export default function ImportacionConversos() {
         setMinisteringText(content)
       }
 
-      localStorage.setItem(MINISTERING_STORAGE_KEY, content || '')
+      const textToSave = content || ''
+      localStorage.setItem(MINISTERING_STORAGE_KEY, textToSave)
+      await axios.post(`${API_BASE}${MINISTERING_API_PATH}`, { text: textToSave })
       setMinisteringFile(null)
     } catch (err) {
       setMinisteringError(err.message || 'No se pudo guardar el archivo')
