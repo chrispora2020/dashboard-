@@ -21,6 +21,13 @@ function extractRatioFromLine(line) {
   return { interviewed, total }
 }
 
+function extractLabelFromRatioLine(line = '') {
+  const ratioMatch = line.match(/(\d+)\s*\/\s*(\d+)/)
+  if (!ratioMatch) return ''
+  const label = line.slice(0, ratioMatch.index).trim()
+  return cleanUnitLabel(label)
+}
+
 function detectSection(normalizedLine) {
   if (normalizedLine.includes('hermanos ministrantes')) return 'brothers'
   if (normalizedLine.includes('hermanas ministrantes')) return 'sisters'
@@ -30,8 +37,10 @@ function detectSection(normalizedLine) {
 function cleanUnitLabel(label = '') {
   return label
     .replace(/total de.*$/i, '')
-    .replace(/compan[ñn]er[ií]smos entrevistados?/i, '')
+    .replace(/compa(?:ñ|n)erismos?(?:\s+entrevistados?)?/iu, '')
     .replace(/entrevistados?/i, '')
+    .replace(/:\s*$/g, '')
+    .replace(/\s{2,}/g, ' ')
     .trim()
 }
 
@@ -74,7 +83,8 @@ export function parseMinisteringText(rawText = '') {
       continue
     }
 
-    const rawLabel = cleanUnitLabel(previousLabel)
+    const labelFromCurrentLine = extractLabelFromRatioLine(line)
+    const rawLabel = labelFromCurrentLine || cleanUnitLabel(previousLabel)
     const unitName = rawLabel || `${currentSection === 'brothers' ? 'Hermanos' : 'Hermanas'} ${result[currentSection].units.length + 1}`
     const detail = {
       unidad: unitName,
