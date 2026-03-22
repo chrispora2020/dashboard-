@@ -29,6 +29,16 @@ export default function Dashboard() {
   const indicadoresRef = useRef(null)
   const ministeringParsed = useMemo(() => parseMinisteringText(ministeringRawText), [ministeringRawText])
   const ministeringSummary = useMemo(() => getMinisteringSummary(ministeringParsed), [ministeringParsed])
+  const barriosOrdenados = useMemo(() => Object.keys(kpiAsistencia?.desglose || {}), [kpiAsistencia])
+
+  const getMinisteringUnitName = (unitName, index) => {
+    if (!unitName) return barriosOrdenados[index] || ''
+    const isFallbackLabel = /^(Hermanos|Hermanas)\s+\d+$/i.test(unitName.trim())
+    if (isFallbackLabel && barriosOrdenados[index]) {
+      return barriosOrdenados[index]
+    }
+    return unitName
+  }
 
   const resumenGeneralData = [
     ...kpis.map((kpi) => ({
@@ -600,7 +610,7 @@ export default function Dashboard() {
                           <tbody>
                             {(data.units || []).slice(1).map((u, i) => (
                               <tr key={`${section.key}-${i}`} style={{borderBottom:'1px solid #eef2f7'}}>
-                                <td style={{padding:'4px 6px'}}>{u.unidad}</td>
+                                <td style={{padding:'4px 6px'}}>{getMinisteringUnitName(u.unidad, i)}</td>
                                 <td style={{padding:'4px 6px',textAlign:'right',fontWeight:600,color:section.color}}>{u.percent}%</td>
                                 <td style={{padding:'4px 6px',textAlign:'right'}}>{u.interviewed}/{u.total}</td>
                               </tr>
