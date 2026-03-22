@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import API_BASE from '../config'
 import KPICard from './KPICard'
@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [kpiAsistencia, setKpiAsistencia] = useState(null)
   const [asistenciaInput, setAsistenciaInput] = useState('')
   const [asistenciaSaving, setAsistenciaSaving] = useState(false)
+  const indicadoresRef = useRef(null)
 
   const resumenGeneralData = [
     ...kpis.map((kpi) => ({
@@ -177,6 +178,13 @@ export default function Dashboard() {
     }
   }
 
+  async function descargarImagenIndicadores() {
+    const prevTitle = document.title
+    document.title = `indicadores-${periodoActual.replaceAll(' ', '-').toLowerCase()}`
+    window.print()
+    document.title = prevTitle
+  }
+
   if (loading) {
     return (
       <div style={styles.container}>
@@ -203,20 +211,27 @@ export default function Dashboard() {
             <option value="Q3 2026">2026 - Q3</option>
             <option value="Q4 2026">2026 - Q4</option>
           </select>
+          <button
+            onClick={descargarImagenIndicadores}
+            style={styles.downloadBtn}
+          >
+            Imprimir / guardar captura de indicadores
+          </button>
         </div>
       </div>
 
-      {error && (
+      <div ref={indicadoresRef}>
+        {error && (
         <div style={styles.error}>
           <strong>⚠️ Error:</strong> {error}
           <p style={{ marginTop: '10px', fontSize: '14px' }}>
             Mostrando datos en cero. Asegúrate de que el backend esté ejecutándose y que hayas importado datos de conversos.
           </p>
         </div>
-      )}
+        )}
 
-      <h2 style={styles.sectionTitle}>Nuevos Conversos</h2>
-      <div style={styles.grid}>
+        <h2 style={styles.sectionTitle}>Nuevos Conversos</h2>
+        <div style={styles.grid}>
         {kpis.length === 0 ? (
           <div style={styles.emptyState}>
             <p>No hay indicadores disponibles.</p>
@@ -270,7 +285,7 @@ export default function Dashboard() {
           ))
         )}
 
-      </div>
+        </div>
 
       {/* ── Indicadores: Jóvenes · Adultos · Misioneros · Asistencia ── */}
       <div style={{marginTop: 32}}>
@@ -546,7 +561,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div style={styles.info}>
+        <div style={styles.info}>
         <h3 style={styles.summaryChartTitle}>Resumen general de indicadores</h3>
         {resumenGeneralData.length > 0 ? (
           <ResponsiveContainer width="100%" height={320}>
@@ -563,6 +578,7 @@ export default function Dashboard() {
         ) : (
           <p style={styles.emptySummary}>Sin datos para mostrar.</p>
         )}
+        </div>
       </div>
     </div>
   )
@@ -588,13 +604,23 @@ const styles = {
   },
   filters: {
     display: 'flex',
-    gap: '10px'
+    gap: '10px',
+    flexWrap: 'wrap'
   },
   select: {
     padding: '8px 15px',
     borderRadius: '6px',
     border: '1px solid #ddd',
     fontSize: '14px',
+    cursor: 'pointer'
+  },
+  downloadBtn: {
+    padding: '8px 14px',
+    borderRadius: '6px',
+    border: '1px solid #6366f1',
+    background: '#6366f1',
+    color: 'white',
+    fontWeight: 600,
     cursor: 'pointer'
   },
   grid: {
