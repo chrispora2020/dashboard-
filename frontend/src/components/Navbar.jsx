@@ -1,22 +1,22 @@
 import { Link } from 'react-router-dom'
 
 export default function Navbar({ user, onLogout }) {
-  console.log('Navbar rendering with user:', user)
-  
+  const userLabel = user?.name || user?.email || 'Usuario local'
+
   return (
     <nav style={styles.nav}>
       <div style={styles.container}>
         <h1 style={styles.brand}>Indicadores Claves Estaca Maroñas</h1>
-        
+
         <div style={styles.menu}>
           <Link to="/" style={styles.link}>Dashboard</Link>
           <Link to="/conversos" style={styles.link}>Cargar Listas</Link>
           <Link to="/dashboard-api" style={styles.link}>Dashboard API</Link>
-          
+
           <div style={styles.user}>
-            <span style={styles.userName}>{user?.name || user?.email}</span>
+            <span style={styles.userName}>{userLabel}</span>
             <button onClick={onLogout} style={styles.logoutBtn}>
-              Salir
+              Restablecer
             </button>
           </div>
         </div>
