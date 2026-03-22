@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-export default function Navbar({ user, onLogout }) {
+export default function Navbar({ user, onLogout, listasAccessGranted }) {
   const userLabel = user?.name || user?.email || 'Usuario local'
 
   return (
@@ -10,7 +10,11 @@ export default function Navbar({ user, onLogout }) {
 
         <div style={styles.menu}>
           <Link to="/" style={styles.link}>Dashboard</Link>
-          <Link to="/conversos" style={styles.link}>Cargar Listas</Link>
+          {!listasAccessGranted ? (
+            <Link to="/acceso-listas" style={styles.link}>Acceso Cargar Listas</Link>
+          ) : (
+            <Link to="/conversos" style={styles.link}>Cargar Listas</Link>
+          )}
           <Link to="/dashboard-api" style={styles.link}>Dashboard API</Link>
 
           <div style={styles.user}>
