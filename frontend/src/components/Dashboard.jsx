@@ -554,7 +554,23 @@ export default function Dashboard() {
               meta={100}
               actual={ministeringSummary.overallPercent}
               potencial={100}
-              comentario={`Hermanos: ${ministeringSummary.brothersRatio} · Hermanas: ${ministeringSummary.sistersRatio}`}
+              comentario={`Hombres: ${ministeringSummary.brothersPercent}% (${ministeringSummary.brothersRatio}) · Mujeres: ${ministeringSummary.sistersPercent}% (${ministeringSummary.sistersRatio})`}
+              breakdown={[
+                {
+                  key: 'brothers',
+                  label: 'Hombres',
+                  actual: ministeringParsed.brothers?.total?.interviewed ?? 0,
+                  potential: ministeringParsed.brothers?.total?.total ?? 0,
+                  color: '#0f6b82'
+                },
+                {
+                  key: 'sisters',
+                  label: 'Mujeres',
+                  actual: ministeringParsed.sisters?.total?.interviewed ?? 0,
+                  potential: ministeringParsed.sisters?.total?.total ?? 0,
+                  color: '#7c3aed'
+                }
+              ]}
               color={
                 ministeringSummary.overallPercent >= 80 ? '#10b981'
                 : ministeringSummary.overallPercent >= 50 ? '#f59e0b'
