@@ -1,4 +1,5 @@
 export const MINISTERING_STORAGE_KEY = 'ministering_interviews_raw_text'
+export const MINISTERING_API_PATH = '/api/ministering'
 
 function normalizeLine(line = '') {
   return line

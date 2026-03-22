@@ -215,6 +215,15 @@ class AsistenciaSacramental(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class AppSetting(Base):
+    """Almacena configuraciones simples de la app (clave/valor)."""
+    __tablename__ = 'app_settings'
+
+    key = Column(String, primary_key=True)
+    value = Column(Text, nullable=False, default='')
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class MapeoColumna(Base):
     """Mapeo de columnas del archivo fuente a campos del modelo"""
     __tablename__ = 'mapeos_columnas'
