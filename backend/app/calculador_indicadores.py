@@ -127,7 +127,14 @@ class CalculadorIndicadores:
         no_elegibles = []
         sin_clasificar = []
         for persona in todas_personas:
-            es_elegible = es_elegible_recomendacion(persona.edad_al_confirmar)
+            edad_valor = persona.edad_al_confirmar
+            if edad_valor is not None and not isinstance(edad_valor, int):
+                try:
+                    edad_valor = int(str(edad_valor).strip())
+                except (ValueError, TypeError):
+                    edad_valor = None
+
+            es_elegible = es_elegible_recomendacion(edad_valor)
             if es_elegible is None:
                 sin_clasificar.append(persona)
                 continue
