@@ -1,9 +1,10 @@
-export default function KPICard({ title, meta, actual, potencial, comentario, unit = '', color = '#667eea', onDetalleClick }) {
+export default function KPICard({ title, meta, actual, potencial, comentario, unit = '', color = '#667eea', onDetalleClick, breakdown = [] }) {
   const esPorcentaje = unit === '%' && potencial != null
   const esBautismos = !esPorcentaje
   const denominator = esPorcentaje ? potencial : meta
   const percentage = denominator > 0 ? Math.round((actual / denominator) * 100) : 0
   const status = percentage >= 90 ? 'green' : percentage >= 70 ? 'orange' : 'red'
+  const hasBreakdown = Array.isArray(breakdown) && breakdown.length > 0
   const falta = esPorcentaje
     ? Math.max(0, 100 - percentage)
     : Math.max(0, meta - actual)
@@ -63,14 +64,45 @@ export default function KPICard({ title, meta, actual, potencial, comentario, un
         )}
       </div>
 
-      <div style={styles.progressContainer}>
-        <div style={{ ...styles.progressBar, width: `${Math.min(percentage, 100)}%`, background: statusColors[status] }} />
-      </div>
-      <div style={styles.progressLabels}>
-        <span style={{ fontSize: 10, color: '#9ca3af' }}>0</span>
-        <span style={{ fontSize: 10, color: '#9ca3af' }}>{esPorcentaje ? '50%' : Math.round(meta / 2)}</span>
-        <span style={{ fontSize: 10, color, fontWeight: 600 }}>{esPorcentaje ? '100%' : meta}</span>
-      </div>
+      {hasBreakdown ? (
+        <div style={styles.breakdownWrap}>
+          {breakdown.map((item) => {
+            const pct = item.potential > 0 ? Math.round((item.actual / item.potential) * 100) : 0
+            const safePct = Math.max(0, Math.min(100, pct))
+            const rowColor = item.color || color
+
+            return (
+              <div key={item.key || item.label} style={styles.breakdownRow}>
+                <div style={styles.breakdownHeader}>
+                  <span style={styles.breakdownLabel}>{item.label}</span>
+                  <span style={styles.breakdownNumbers}>
+                    {pct}% · Real {item.actual} / Potencial {item.potential}
+                  </span>
+                </div>
+                <div style={styles.progressContainer}>
+                  <div style={{ ...styles.progressBar, width: `${safePct}%`, background: rowColor }} />
+                </div>
+                <div style={styles.progressLabels}>
+                  <span style={{ fontSize: 10, color: '#9ca3af' }}>0</span>
+                  <span style={{ fontSize: 10, color: '#9ca3af' }}>50%</span>
+                  <span style={{ fontSize: 10, color: rowColor, fontWeight: 600 }}>100%</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <>
+          <div style={styles.progressContainer}>
+            <div style={{ ...styles.progressBar, width: `${Math.min(percentage, 100)}%`, background: statusColors[status] }} />
+          </div>
+          <div style={styles.progressLabels}>
+            <span style={{ fontSize: 10, color: '#9ca3af' }}>0</span>
+            <span style={{ fontSize: 10, color: '#9ca3af' }}>{esPorcentaje ? '50%' : Math.round(meta / 2)}</span>
+            <span style={{ fontSize: 10, color, fontWeight: 600 }}>{esPorcentaje ? '100%' : meta}</span>
+          </div>
+        </>
+      )}
 
       <div style={{ ...styles.footer, background: statusBg[status], borderRadius: 6, padding: '6px 10px', marginTop: 8 }}>
         <span style={{ ...styles.badge, background: statusColors[status] }}>
@@ -177,6 +209,36 @@ const styles = {
     color: '#9ca3af',
     textTransform: 'uppercase',
     letterSpacing: '0.05em'
+  },
+
+  breakdownWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    marginBottom: 8
+  },
+  breakdownRow: {
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: 8,
+    padding: '6px 8px'
+  },
+  breakdownHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: 8,
+    marginBottom: 4
+  },
+  breakdownLabel: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: '#334155'
+  },
+  breakdownNumbers: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: 600
   },
   progressContainer: {
     height: '10px',
