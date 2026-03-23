@@ -1,4 +1,4 @@
-import os
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from . import init_db
@@ -28,6 +28,22 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     init_db.init()
+
+    diagnostics = None
+    try:
+        from .db import db_runtime_diagnostics
+
+        diagnostics = db_runtime_diagnostics()
+    except Exception:
+        diagnostics = None
+
+    if diagnostics:
+        logging.info("[DB] Using %s", diagnostics["database_url_masked"])
+        if diagnostics.get("is_ephemeral_sqlite"):
+            logging.warning(
+                "[DB] SQLite en ruta no persistente (%s). Los datos pueden perderse al reiniciar/desplegar.",
+                diagnostics.get("sqlite_path"),
+            )
 
 
 app.include_router(auth_router, prefix="/api/auth")
