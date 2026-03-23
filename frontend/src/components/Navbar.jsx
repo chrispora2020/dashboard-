@@ -16,6 +16,7 @@ export default function Navbar({ user, onLogout, listasAccessGranted }) {
             <Link to="/conversos" style={styles.link}>Cargar Listas</Link>
           )}
           <Link to="/dashboard-api" style={styles.link}>Dashboard API</Link>
+          <Link to="/mensajes-estaca" style={styles.link}>Mensajes de Estaca</Link>
 
           <div style={styles.user}>
             <span style={styles.userName}>{userLabel}</span>
