@@ -102,6 +102,18 @@ curl -X POST http://localhost:8000/api/files -F "files=@sample.pdf" -F "period_i
 
 ## Problemas conocidos y soluciones
 
+### La base "se borra" después de reinicios/despliegues
+Síntoma típico cuando la app corre con SQLite en ruta no persistente (por ejemplo `./test.db` dentro del contenedor).  
+
+Qué validar:
+1. Revisar logs de backend: ahora la app falla en ambientes productivos si detecta SQLite efímero.
+2. Configurar `DATABASE_URL` a PostgreSQL en producción.
+3. Si se usa SQLite, apuntar a disco persistente (`/var/data/dashboard.db` o `/data/dashboard.db`).
+
+Variables de control:
+- `ALLOW_EPHEMERAL_SQLITE=true`: bypass temporal (no recomendado en producción).
+- `STRICT_EPHEMERAL_SQLITE=false`: desactiva el bloqueo estricto.
+
 ### Certificados corporativos (SELF_SIGNED_CERT_IN_CHAIN)
 Si tu red usa un proxy con certificados auto-firmados:
 1. Exporta el certificado CA y guárdalo como `frontend/ca.crt`

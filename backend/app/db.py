@@ -8,6 +8,10 @@ def _is_truthy(value: str | None) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _is_falsey(value: str | None) -> bool:
+    return str(value).strip().lower() in {"0", "false", "no", "off"}
+
+
 def _default_database_url() -> str:
     """Build a safer default DB URL depending on environment."""
     # Priorizar rutas persistentes conocidas antes de usar un archivo local del contenedor.
@@ -30,6 +34,17 @@ def _normalize_database_url(raw_url: str) -> str:
     if raw_url.startswith("postgres://"):
         return raw_url.replace("postgres://", "postgresql+psycopg2://", 1)
     return raw_url
+
+
+def _is_production_like_env() -> bool:
+    env_name = (
+        os.getenv("APP_ENV")
+        or os.getenv("ENV")
+        or os.getenv("ENVIRONMENT")
+        or os.getenv("PYTHON_ENV")
+        or ""
+    ).strip().lower()
+    return env_name in {"prod", "production", "staging"} or _is_truthy(os.getenv("RENDER"))
 
 
 def _mask_database_url(url: str) -> str:
@@ -73,6 +88,20 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
+def _validate_db_configuration() -> None:
+    diagnostics = db_runtime_diagnostics()
+    allow_ephemeral = _is_truthy(os.getenv("ALLOW_EPHEMERAL_SQLITE"))
+    strict_ephemeral = not _is_falsey(os.getenv("STRICT_EPHEMERAL_SQLITE"))
+
+    if diagnostics["is_ephemeral_sqlite"] and _is_production_like_env() and strict_ephemeral and not allow_ephemeral:
+        raise RuntimeError(
+            "Configuración de base de datos insegura: se detectó SQLite en ruta no persistente "
+            f"({diagnostics['sqlite_path']}). Configure DATABASE_URL (PostgreSQL recomendado) o "
+            "una ruta persistente (/var/data o /data). Para bypass temporal: "
+            "ALLOW_EPHEMERAL_SQLITE=true o STRICT_EPHEMERAL_SQLITE=false."
+        )
+
+
 def db_runtime_diagnostics() -> dict[str, str | bool]:
     is_sqlite = DATABASE_URL.startswith("sqlite")
     sqlite_path = DATABASE_URL.replace("sqlite:///", "", 1) if is_sqlite else ""
@@ -87,6 +116,9 @@ def db_runtime_diagnostics() -> dict[str, str | bool]:
         "is_ephemeral_sqlite": is_ephemeral_sqlite,
         "is_render": _is_truthy(os.getenv("RENDER")),
     }
+
+
+_validate_db_configuration()
 
 
 def get_db():
