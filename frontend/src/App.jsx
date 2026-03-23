@@ -83,7 +83,10 @@ export default function App() {
             )}
           />
           <Route path="/dashboard-api" element={<ApiDashboard />} />
-          <Route path="/mensajes-estaca" element={<StakeMessagesPlan />} />
+          <Route
+            path="/mensajes-estaca"
+            element={listasAccessGranted ? <StakeMessagesPlan /> : <Navigate to="/acceso-listas" replace />}
+          />
           <Route path="/plan-discursos" element={<SpeakersPlanView />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
