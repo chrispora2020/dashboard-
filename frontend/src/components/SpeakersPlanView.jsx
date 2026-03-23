@@ -88,16 +88,8 @@ export default function SpeakersPlanView() {
                         <div key={`${month.id}-${index}`} style={styles.unitRow}>
                           <div style={styles.unitHeader}>
                             <span style={styles.unitName}>{unit.unit}</span>
-                            <span style={styles.speaker}>{unit.speaker}</span>
+                            <span style={styles.speaker}>Discursante: {unit.speaker}</span>
                           </div>
-                          <p style={styles.assignedTalkTitle}>
-                            Discurso asignado: {unit.talkTitle || month.topicTitle || 'Pendiente'}
-                          </p>
-                          {unit.talkUrl || month.topicUrl ? (
-                            <a href={unit.talkUrl || month.topicUrl} target="_blank" rel="noreferrer" style={styles.link}>
-                              Abrir link del discurso
-                            </a>
-                          ) : null}
                         </div>
                       ))}
                     </div>
@@ -220,11 +212,6 @@ const styles = {
   },
   speaker: {
     color: '#0f172a'
-  },
-  assignedTalkTitle: {
-    margin: 0,
-    color: '#1e3a8a',
-    fontSize: '14px'
   },
   message: {
     color: '#334155'
