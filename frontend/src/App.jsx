@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard'
 import ImportacionConversos from './components/ImportacionConversos'
 import Navbar from './components/Navbar'
 import StakeMessagesPlan from './components/StakeMessagesPlan'
+import SpeakersPlanView from './components/SpeakersPlanView'
 import Upload from './components/Upload'
 
 const LOCAL_USER_KEY = 'user'
@@ -83,6 +84,7 @@ export default function App() {
           />
           <Route path="/dashboard-api" element={<ApiDashboard />} />
           <Route path="/mensajes-estaca" element={<StakeMessagesPlan />} />
+          <Route path="/plan-discursos" element={<SpeakersPlanView />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
