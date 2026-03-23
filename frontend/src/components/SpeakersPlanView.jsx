@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import API_BASE from '../config'
 
 const API_PATH = '/api/stake-messages-plan'
+const PLAN_STORAGE_KEY = 'stake_messages_plan_cache'
 
 const FALLBACK_PLAN = {
   quarterLabel: 'Plan trimestral de discursos',
@@ -35,11 +36,29 @@ export default function SpeakersPlanView() {
       try {
         const { data } = await axios.get(`${API_BASE}${API_PATH}`)
 
-        if (data?.plan) {
+        if (data?.plan?.months?.length) {
           setPlan(data.plan)
+          localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(data.plan))
+        } else {
+          const cachedPlan = localStorage.getItem(PLAN_STORAGE_KEY)
+          if (cachedPlan) {
+            setPlan(JSON.parse(cachedPlan))
+          }
         }
       } catch (requestError) {
-        setError('No fue posible cargar el plan en este momento. Intenta nuevamente en unos minutos.')
+        let loadedFromCache = false
+        try {
+          const cachedPlan = localStorage.getItem(PLAN_STORAGE_KEY)
+          if (cachedPlan) {
+            setPlan(JSON.parse(cachedPlan))
+            loadedFromCache = true
+          }
+        } catch (cacheError) {
+          console.warn('No fue posible leer el plan cacheado', cacheError)
+        }
+        if (!loadedFromCache) {
+          setError('No fue posible cargar el plan en este momento. Intenta nuevamente en unos minutos.')
+        }
       } finally {
         setLoading(false)
       }
@@ -85,11 +104,10 @@ export default function SpeakersPlanView() {
 
                     <div style={styles.unitsBlock}>
                       {month.units?.map((unit, index) => (
-                        <div key={`${month.id}-${index}`} style={styles.unitRow}>
-                          <div style={styles.unitHeader}>
-                            <span style={styles.unitName}>{unit.unit}</span>
-                            <span style={styles.speaker}>Discursante: {unit.speaker}</span>
-                          </div>
+                        <div key={`${month.id}-${index}`} style={styles.unitCard}>
+                          <span style={styles.unitName}>{unit.unit}</span>
+                          <span style={styles.speakerLabel}>Discursante</span>
+                          <span style={styles.speaker}>{unit.speaker || 'Pendiente'}</span>
                         </div>
                       ))}
                     </div>
@@ -191,27 +209,33 @@ const styles = {
   unitsBlock: {
     marginTop: '14px',
     borderTop: '1px solid #e5e7eb',
-    paddingTop: '10px'
+    paddingTop: '12px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: '10px'
   },
-  unitRow: {
+  unitCard: {
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '10px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
-    marginBottom: '10px',
-    paddingBottom: '10px',
-    borderBottom: '1px dashed #e2e8f0'
-  },
-  unitHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '8px'
+    gap: '4px',
+    padding: '10px'
   },
   unitName: {
-    color: '#334155',
-    fontWeight: 600
+    color: '#0f172a',
+    fontWeight: 700
+  },
+  speakerLabel: {
+    color: '#64748b',
+    fontSize: '12px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em'
   },
   speaker: {
-    color: '#0f172a'
+    color: '#1e293b',
+    fontSize: '14px'
   },
   message: {
     color: '#334155'

@@ -1,14 +1,47 @@
 import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 
 export default function Navbar({ user, onLogout, listasAccessGranted }) {
   const userLabel = user?.name || user?.email || 'Usuario local'
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  useEffect(() => {
+    function onResize() {
+      const mobile = window.innerWidth <= 900
+      setIsMobile(mobile)
+      if (!mobile) {
+        setMenuOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   return (
     <nav style={styles.nav}>
       <div style={styles.container}>
         <h1 style={styles.brand}>Indicadores Claves Estaca Maroñas</h1>
 
-        <div style={styles.menu}>
+        {isMobile ? (
+          <button
+            type="button"
+            style={styles.menuToggle}
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-label="Abrir menú"
+          >
+            {menuOpen ? '✕' : '☰'}
+          </button>
+        ) : null}
+
+        <div
+          style={{
+            ...styles.menu,
+            ...(isMobile ? styles.menuMobile : {}),
+            ...(isMobile && menuOpen ? styles.menuMobileOpen : {})
+          }}
+        >
           <Link to="/" style={styles.link}>Dashboard</Link>
           {!listasAccessGranted ? (
             <Link to="/acceso-listas" style={styles.link}>Acceso Cargar Listas</Link>
@@ -22,7 +55,7 @@ export default function Navbar({ user, onLogout, listasAccessGranted }) {
             <Link to="/mensajes-estaca" style={styles.link}>Editar plan</Link>
           )}
 
-          <div style={styles.user}>
+          <div style={{ ...styles.user, ...(isMobile ? styles.userMobile : {}) }}>
             <span style={styles.userName}>{userLabel}</span>
             <button onClick={onLogout} style={styles.logoutBtn}>
               Restablecer
@@ -47,17 +80,48 @@ const styles = {
     padding: '0 20px',
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    gap: '16px',
+    position: 'relative'
   },
   brand: {
     margin: 0,
     fontSize: '24px',
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    lineHeight: 1.2
+  },
+  menuToggle: {
+    background: 'rgba(255,255,255,0.18)',
+    border: '1px solid rgba(255,255,255,0.35)',
+    borderRadius: '10px',
+    color: '#fff',
+    fontSize: '22px',
+    padding: '2px 10px',
+    cursor: 'pointer'
   },
   menu: {
     display: 'flex',
     alignItems: 'center',
     gap: '25px'
+  },
+  menuMobile: {
+    position: 'absolute',
+    top: '56px',
+    right: '20px',
+    left: '20px',
+    display: 'none',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: '10px',
+    background: 'rgba(30, 41, 59, 0.95)',
+    border: '1px solid rgba(255,255,255,0.2)',
+    borderRadius: '12px',
+    padding: '12px',
+    zIndex: 10,
+    backdropFilter: 'blur(4px)'
+  },
+  menuMobileOpen: {
+    display: 'flex'
   },
   link: {
     color: 'white',
@@ -73,6 +137,14 @@ const styles = {
     marginLeft: '20px',
     paddingLeft: '20px',
     borderLeft: '1px solid rgba(255,255,255,0.3)'
+  },
+  userMobile: {
+    marginLeft: 0,
+    paddingLeft: 0,
+    borderLeft: 'none',
+    borderTop: '1px solid rgba(255,255,255,0.2)',
+    paddingTop: '10px',
+    justifyContent: 'space-between'
   },
   userName: {
     fontSize: '14px',
