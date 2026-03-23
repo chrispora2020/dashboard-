@@ -15,5 +15,6 @@ RUN pip install --upgrade pip \
 	   -r /app/requirements.txt
 COPY backend /app
 ENV PYTHONUNBUFFERED=1
-EXPOSE $PORT
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
+ENV PORT=10000
+EXPOSE 10000
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
