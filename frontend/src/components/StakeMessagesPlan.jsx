@@ -96,14 +96,10 @@ function buildReminderText(plan, month, daysBefore) {
     ''
   ]
 
+  lines.push('Este tema aplica para todo el grupo del mes.')
+
   for (const unit of month.units) {
-    const discourseTitle = unit.talkTitle?.trim() || month.topicTitle || 'Tema pendiente'
-    const discourseUrl = unit.talkUrl?.trim() || month.topicUrl || ''
     lines.push(`${unit.unit} - ${unit.speaker}`)
-    lines.push(`Discurso asignado: ${discourseTitle}`)
-    if (discourseUrl) {
-      lines.push(`Link: ${discourseUrl}`)
-    }
   }
 
   if (plan.closingMessage?.trim()) {
@@ -150,7 +146,7 @@ export default function StakeMessagesPlan() {
     }))
   }
 
-  function updateUnit(monthId, unitIndex, key, value) {
+  function updateUnitField(monthId, unitIndex, patch) {
     setPlan((prev) => ({
       ...prev,
       months: prev.months.map((month) => {
@@ -158,7 +154,7 @@ export default function StakeMessagesPlan() {
 
         return {
           ...month,
-          units: month.units.map((unit, idx) => (idx === unitIndex ? { ...unit, [key]: value } : unit))
+          units: month.units.map((unit, idx) => (idx === unitIndex ? { ...unit, ...patch } : unit))
         }
       })
     }))
@@ -239,6 +235,8 @@ export default function StakeMessagesPlan() {
               </div>
             </div>
 
+            <p style={styles.note}>El tema y link de este mes son generales para todo el grupo.</p>
+
             <label style={styles.label}>Link del tema</label>
             <input
               style={styles.input}
@@ -258,9 +256,7 @@ export default function StakeMessagesPlan() {
               <thead>
                 <tr>
                   <th style={styles.th}>Unidad</th>
-                  <th style={styles.th}>Persona asignada</th>
-                  <th style={styles.th}>Título del discurso asignado</th>
-                  <th style={styles.th}>Link del discurso</th>
+                  <th style={styles.th}>Discursante asignado</th>
                 </tr>
               </thead>
               <tbody>
@@ -270,30 +266,14 @@ export default function StakeMessagesPlan() {
                       <input
                         style={styles.input}
                         value={unit.unit}
-                        onChange={(event) => updateUnit(month.id, index, 'unit', event.target.value)}
+                        onChange={(event) => updateUnitField(month.id, index, { unit: event.target.value })}
                       />
                     </td>
                     <td style={styles.td}>
                       <input
                         style={styles.input}
                         value={unit.speaker}
-                        onChange={(event) => updateUnit(month.id, index, 'speaker', event.target.value)}
-                      />
-                    </td>
-                    <td style={styles.td}>
-                      <input
-                        style={styles.input}
-                        value={unit.talkTitle || ''}
-                        onChange={(event) => updateUnit(month.id, index, 'talkTitle', event.target.value)}
-                        placeholder="Tema o idea del discurso"
-                      />
-                    </td>
-                    <td style={styles.td}>
-                      <input
-                        style={styles.input}
-                        value={unit.talkUrl || ''}
-                        onChange={(event) => updateUnit(month.id, index, 'talkUrl', event.target.value)}
-                        placeholder="https://..."
+                        onChange={(event) => updateUnitField(month.id, index, { speaker: event.target.value })}
                       />
                     </td>
                   </tr>
