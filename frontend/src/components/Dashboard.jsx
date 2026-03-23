@@ -215,13 +215,6 @@ export default function Dashboard() {
     }
   }
 
-  async function descargarImagenIndicadores() {
-    const prevTitle = document.title
-    document.title = `indicadores-${periodoActual.replaceAll(' ', '-').toLowerCase()}`
-    window.print()
-    document.title = prevTitle
-  }
-
   if (loading) {
     return (
       <div style={styles.container}>
@@ -248,12 +241,6 @@ export default function Dashboard() {
             <option value="Q3 2026">2026 - Q3</option>
             <option value="Q4 2026">2026 - Q4</option>
           </select>
-          <button
-            onClick={descargarImagenIndicadores}
-            style={styles.downloadBtn}
-          >
-            Imprimir / guardar captura de indicadores
-          </button>
         </div>
       </div>
 
@@ -728,15 +715,6 @@ const styles = {
     borderRadius: '6px',
     border: '1px solid #ddd',
     fontSize: '14px',
-    cursor: 'pointer'
-  },
-  downloadBtn: {
-    padding: '8px 14px',
-    borderRadius: '6px',
-    border: '1px solid #6366f1',
-    background: '#6366f1',
-    color: 'white',
-    fontWeight: 600,
     cursor: 'pointer'
   },
   grid: {
