@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import API_BASE from '../config'
 
 const API_PATH = '/api/stake-messages-plan'
+const PLAN_STORAGE_KEY = 'stake_messages_plan_cache'
 
 const DEFAULT_PLAN = {
   quarterLabel: 'Plan trimestral Abril - Junio 2026',
@@ -123,8 +124,26 @@ export default function StakeMessagesPlan() {
         if (data?.plan?.months?.length) {
           setPlan(data.plan)
           setSelectedMonthId(data.plan.months[0].id)
+          localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(data.plan))
+        } else {
+          const cachedPlan = localStorage.getItem(PLAN_STORAGE_KEY)
+          if (cachedPlan) {
+            const parsedPlan = JSON.parse(cachedPlan)
+            setPlan(parsedPlan)
+            setSelectedMonthId(parsedPlan.months?.[0]?.id || 'abril')
+          }
         }
       } catch (error) {
+        try {
+          const cachedPlan = localStorage.getItem(PLAN_STORAGE_KEY)
+          if (cachedPlan) {
+            const parsedPlan = JSON.parse(cachedPlan)
+            setPlan(parsedPlan)
+            setSelectedMonthId(parsedPlan.months?.[0]?.id || 'abril')
+          }
+        } catch (cacheError) {
+          console.warn('No se pudo leer el plan cacheado.', cacheError)
+        }
         console.warn('No se pudo cargar plan persistido. Se usa el plan por defecto.', error)
       } finally {
         setLoading(false)
@@ -166,6 +185,7 @@ export default function StakeMessagesPlan() {
 
     try {
       await axios.post(`${API_BASE}${API_PATH}`, { plan })
+      localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(plan))
       setStatus('✅ Plan guardado correctamente.')
     } catch (error) {
       setStatus(`❌ No se pudo guardar: ${error.response?.data?.detail || error.message}`)
