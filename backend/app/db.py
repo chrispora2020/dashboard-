@@ -22,7 +22,12 @@ def _default_database_url() -> str:
 
     for candidate in persistent_candidates:
         parent = os.path.dirname(candidate)
-        if os.path.isdir(parent):
+        try:
+            os.makedirs(parent, exist_ok=True)
+        except OSError:
+            continue
+
+        if os.path.isdir(parent) and os.access(parent, os.W_OK):
             return f"sqlite:///{candidate}"
 
     # Último recurso: archivo local (puede perderse al reiniciar el contenedor).
