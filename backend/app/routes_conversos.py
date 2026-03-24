@@ -511,10 +511,6 @@ async def confirmar_importacion(
                     edad_val = int(str(edad_cruda).strip())
                 except Exception:
                     edad_val = None
-            # Si no hay edad, asumir 18 para que cuente en KPIs de recomendación
-            if edad_val is None:
-                edad_val = 18
-
 
             # Normalizar todos los strings: reemplazar saltos de línea por espacio
             # (pdfplumber a veces une celdas multilínea con \n)
@@ -873,9 +869,6 @@ async def import_conversos_directo(
                         edad_val = int(str(edad_cruda).strip())
                     except Exception:
                         edad_val = None
-                if edad_val is None:
-                    edad_val = 18
-
                 # Fecha confirmación fallback
                 if not datos.get('fecha_confirmacion'):
                     try:
