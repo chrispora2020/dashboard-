@@ -32,6 +32,34 @@ def _normalize_plan_payload(plan: dict):
     }
 
 
+
+def _fix_mojibake(text: str) -> str:
+    if not text:
+        return ''
+
+    suspicious_markers = ('Ã', 'â', 'Ð', 'Ñ', 'Â')
+    if not any(marker in text for marker in suspicious_markers):
+        return text
+
+    try:
+        repaired = text.encode('latin-1').decode('utf-8')
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
+
+    return repaired
+
+
+def _clean_preview_text(value: str) -> str:
+    if not value:
+        return ''
+
+    cleaned = value.strip()
+    cleaned = _fix_mojibake(cleaned)
+    cleaned = cleaned.replace('\\r\\n', '\n').replace('\\n', '\n').replace('\\t', ' ')
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
+
+
 @router.get('/stake-messages-plan')
 def get_stake_messages_plan(session: Session = Depends(db.get_db)):
     setting = session.query(AppSetting).filter(AppSetting.key == STAKE_MESSAGES_PLAN_KEY).first()
@@ -75,6 +103,7 @@ def get_stake_messages_link_preview(url: str = Query(..., min_length=8, max_leng
             headers={'User-Agent': 'Mozilla/5.0 (compatible; dashboard-preview-bot/1.0)'}
         )
         response.raise_for_status()
+        response.encoding = response.encoding or response.apparent_encoding or 'utf-8'
         html = response.text[:500_000]
     except requests.RequestException as exc:
         return {'ok': False, 'detail': f'No se pudo obtener el enlace: {exc}'}
@@ -98,8 +127,8 @@ def get_stake_messages_link_preview(url: str = Query(..., min_length=8, max_leng
 
     return {
         'ok': True,
-        'title': title,
-        'image': image,
-        'description': description,
+        'title': _clean_preview_text(title),
+        'image': image.strip(),
+        'description': _clean_preview_text(description),
         'url': response.url,
     }
