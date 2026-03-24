@@ -7,11 +7,12 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from . import db
-from .models import AppSetting
+from .models import AppSetting, StakeMessagesPlan
 
 router = APIRouter()
 
 STAKE_MESSAGES_PLAN_KEY = 'stake_messages_quarter_plan'
+STAKE_MESSAGES_PLAN_SCOPE = 'default'
 
 
 class StakeMessagesPlanPayload(BaseModel):
@@ -62,14 +63,26 @@ def _clean_preview_text(value: str) -> str:
 
 @router.get('/stake-messages-plan')
 def get_stake_messages_plan(session: Session = Depends(db.get_db)):
-    setting = session.query(AppSetting).filter(AppSetting.key == STAKE_MESSAGES_PLAN_KEY).first()
+    row = session.query(StakeMessagesPlan).filter(StakeMessagesPlan.scope_key == STAKE_MESSAGES_PLAN_SCOPE).first()
+    if row and isinstance(row.plan_data, dict):
+        return {'plan': _normalize_plan_payload(row.plan_data)}
 
+    # Compatibilidad: migrar desde app_settings si existe el dato histórico.
+    setting = session.query(AppSetting).filter(AppSetting.key == STAKE_MESSAGES_PLAN_KEY).first()
     if not setting or not setting.value:
         return {'plan': {}}
 
     try:
         plan = json.loads(setting.value)
-        return {'plan': _normalize_plan_payload(plan)}
+        normalized_plan = _normalize_plan_payload(plan)
+        migrated = StakeMessagesPlan(
+            scope_key=STAKE_MESSAGES_PLAN_SCOPE,
+            active_quarter_id=normalized_plan.get('activeQuarterId', ''),
+            plan_data=normalized_plan,
+        )
+        session.add(migrated)
+        session.commit()
+        return {'plan': normalized_plan}
     except json.JSONDecodeError:
         return {'plan': {}}
 
@@ -77,12 +90,24 @@ def get_stake_messages_plan(session: Session = Depends(db.get_db)):
 @router.post('/stake-messages-plan')
 def save_stake_messages_plan(payload: StakeMessagesPlanPayload, session: Session = Depends(db.get_db)):
     normalized_plan = _normalize_plan_payload(payload.plan)
+    row = session.query(StakeMessagesPlan).filter(StakeMessagesPlan.scope_key == STAKE_MESSAGES_PLAN_SCOPE).first()
+
+    if not row:
+        row = StakeMessagesPlan(
+            scope_key=STAKE_MESSAGES_PLAN_SCOPE,
+            active_quarter_id=normalized_plan.get('activeQuarterId', ''),
+            plan_data=normalized_plan,
+        )
+        session.add(row)
+    else:
+        row.active_quarter_id = normalized_plan.get('activeQuarterId', '')
+        row.plan_data = normalized_plan
+
+    # Mantener app_settings actualizado mientras coexisten despliegues viejos.
     serialized_plan = json.dumps(normalized_plan, ensure_ascii=False)
     setting = session.query(AppSetting).filter(AppSetting.key == STAKE_MESSAGES_PLAN_KEY).first()
-
     if not setting:
-        setting = AppSetting(key=STAKE_MESSAGES_PLAN_KEY, value=serialized_plan)
-        session.add(setting)
+        session.add(AppSetting(key=STAKE_MESSAGES_PLAN_KEY, value=serialized_plan))
     else:
         setting.value = serialized_plan
 

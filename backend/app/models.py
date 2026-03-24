@@ -224,6 +224,18 @@ class AppSetting(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class StakeMessagesPlan(Base):
+    """Plan trimestral de mensajes de estaca persistido en tabla dedicada."""
+    __tablename__ = 'stake_messages_plans'
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    scope_key = Column(String, nullable=False, unique=True, default='default')
+    active_quarter_id = Column(String, nullable=False, default='')
+    plan_data = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class MapeoColumna(Base):
     """Mapeo de columnas del archivo fuente a campos del modelo"""
     __tablename__ = 'mapeos_columnas'
