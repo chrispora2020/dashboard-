@@ -16,8 +16,8 @@ def _default_database_url() -> str:
     """Build a safer default DB URL depending on environment."""
     # Priorizar rutas persistentes conocidas antes de usar un archivo local del contenedor.
     persistent_candidates = (
-        "/var/data/dashboard.db",  # Render Disk
         "/data/dashboard.db",      # Docker volume habitual en este repo
+        "/var/data/dashboard.db",  # Render Disk
     )
 
     for candidate in persistent_candidates:
