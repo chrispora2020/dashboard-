@@ -1,14 +1,14 @@
 import axios from 'axios'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import API_BASE from '../config'
+import { normalizePlanPayload, PLAN_STORAGE_KEY } from '../utils/stakeMessagesPlan'
 
 const API_PATH = '/api/stake-messages-plan'
-const PLAN_STORAGE_KEY = 'stake_messages_plan_cache'
 
-const FALLBACK_PLAN = {
+const FALLBACK_PLAN = normalizePlanPayload({
   quarterLabel: 'Plan trimestral de discursos',
   months: []
-}
+})
 
 const MOTIVATIONAL_QUOTE = {
   text: 'Si estáis preparados, no temeréis.',
@@ -27,22 +27,35 @@ function toSpanishDate(isoDate) {
 }
 
 export default function SpeakersPlanView() {
-  const [plan, setPlan] = useState(FALLBACK_PLAN)
+  const [planData, setPlanData] = useState(FALLBACK_PLAN)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const quarterOptions = useMemo(
+    () => Object.entries(planData.quarters).map(([id, value]) => ({ id, label: value.quarterLabel || id })),
+    [planData.quarters]
+  )
+
+  const activeQuarter = useMemo(() => {
+    if (planData.quarters[planData.activeQuarterId]) {
+      return planData.quarters[planData.activeQuarterId]
+    }
+    return quarterOptions[0]?.id ? planData.quarters[quarterOptions[0].id] : { quarterLabel: '', months: [] }
+  }, [planData, quarterOptions])
 
   useEffect(() => {
     async function loadPlan() {
       try {
         const { data } = await axios.get(`${API_BASE}${API_PATH}`)
 
-        if (data?.plan?.months?.length) {
-          setPlan(data.plan)
-          localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(data.plan))
+        if (data?.plan && Object.keys(data.plan).length) {
+          const normalized = normalizePlanPayload(data.plan)
+          setPlanData(normalized)
+          localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(normalized))
         } else {
           const cachedPlan = localStorage.getItem(PLAN_STORAGE_KEY)
           if (cachedPlan) {
-            setPlan(JSON.parse(cachedPlan))
+            setPlanData(normalizePlanPayload(JSON.parse(cachedPlan)))
           }
         }
       } catch (requestError) {
@@ -50,7 +63,7 @@ export default function SpeakersPlanView() {
         try {
           const cachedPlan = localStorage.getItem(PLAN_STORAGE_KEY)
           if (cachedPlan) {
-            setPlan(JSON.parse(cachedPlan))
+            setPlanData(normalizePlanPayload(JSON.parse(cachedPlan)))
             loadedFromCache = true
           }
         } catch (cacheError) {
@@ -87,11 +100,22 @@ export default function SpeakersPlanView() {
 
         {!loading && !error && (
           <section>
-            <h3 style={styles.planLabel}>{plan.quarterLabel}</h3>
+            <div style={styles.headerRow}>
+              <h3 style={styles.planLabel}>{activeQuarter.quarterLabel}</h3>
+              <select
+                style={styles.quarterSelect}
+                value={planData.activeQuarterId}
+                onChange={(event) => setPlanData((prev) => ({ ...prev, activeQuarterId: event.target.value }))}
+              >
+                {quarterOptions.map((quarter) => (
+                  <option key={quarter.id} value={quarter.id}>{quarter.label}</option>
+                ))}
+              </select>
+            </div>
 
-            {plan.months?.length ? (
+            {activeQuarter.months?.length ? (
               <div style={styles.grid}>
-                {plan.months.map((month) => (
+                {activeQuarter.months.map((month) => (
                   <article key={month.id} style={styles.card}>
                     <p style={styles.month}>{month.monthLabel}</p>
                     <p style={styles.date}>{toSpanishDate(month.sundayDate)}</p>
@@ -101,6 +125,16 @@ export default function SpeakersPlanView() {
                         Abrir tema general
                       </a>
                     ) : null}
+
+                    {(month.topicPreviewTitle || month.topicPreviewImage) && (
+                      <div style={styles.previewCard}>
+                        {month.topicPreviewImage ? <img src={month.topicPreviewImage} alt="Miniatura del tema" style={styles.previewImage} /> : null}
+                        <div>
+                          <p style={styles.previewTitle}>{month.topicPreviewTitle || 'Título detectado automáticamente'}</p>
+                          {month.topicPreviewDescription ? <p style={styles.previewDescription}>{month.topicPreviewDescription}</p> : null}
+                        </div>
+                      </div>
+                    )}
 
                     <div style={styles.unitsBlock}>
                       {month.units?.map((unit, index) => (
@@ -168,6 +202,19 @@ const styles = {
     marginBottom: 0,
     color: '#4338ca'
   },
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: '10px'
+  },
+  quarterSelect: {
+    minWidth: '250px',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '8px 10px'
+  },
   planLabel: {
     marginTop: 0,
     marginBottom: '14px',
@@ -205,6 +252,33 @@ const styles = {
     color: '#2563eb',
     textDecoration: 'none',
     fontWeight: 600
+  },
+  previewCard: {
+    marginTop: '10px',
+    padding: '10px',
+    borderRadius: '10px',
+    border: '1px solid #dbeafe',
+    background: '#eff6ff',
+    display: 'flex',
+    gap: '10px',
+    alignItems: 'center'
+  },
+  previewImage: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '8px',
+    objectFit: 'cover',
+    border: '1px solid #bfdbfe'
+  },
+  previewTitle: {
+    margin: 0,
+    color: '#1e3a8a',
+    fontWeight: 600
+  },
+  previewDescription: {
+    margin: '4px 0 0 0',
+    color: '#1e40af',
+    fontSize: '13px'
   },
   unitsBlock: {
     marginTop: '14px',

@@ -1,68 +1,10 @@
 import axios from 'axios'
 import { useEffect, useMemo, useState } from 'react'
 import API_BASE from '../config'
+import { DEFAULT_PLAN, normalizePlanPayload, PLAN_STORAGE_KEY } from '../utils/stakeMessagesPlan'
 
 const API_PATH = '/api/stake-messages-plan'
-const PLAN_STORAGE_KEY = 'stake_messages_plan_cache'
-
-const DEFAULT_PLAN = {
-  quarterLabel: 'Plan trimestral Abril - Junio 2026',
-  introMessage: 'Muy buenas noches queridos líderes de la Estaca Maroñas, este domingo tendremos mensaje de estaca 😉',
-  closingMessage: 'Les recordamos que todos lo puedan preparar por las dudas.',
-  months: [
-    {
-      id: 'abril',
-      monthLabel: 'Abril',
-      sundayDate: '2026-04-19',
-      topicUrl: 'https://www.churchofjesuschrist.org/study/general-conference/2025/10/13browning?lang=spa',
-      topicTitle: 'Tema de conferencia',
-      notes: '',
-      units: [
-        { unit: 'Los Ceibos', speaker: 'Prs María Elena' },
-        { unit: 'Libia', speaker: 'Richard Alvez' },
-        { unit: 'Belloni', speaker: 'Prs Silva' },
-        { unit: 'B. Italia', speaker: 'Ruth Santos' },
-        { unit: 'Toledo', speaker: 'Antonio González' },
-        { unit: 'B.14', speaker: 'Joaquín Acosta' },
-        { unit: 'Pando', speaker: 'Conferencia (sin mensaje de estaca)' }
-      ]
-    },
-    {
-      id: 'mayo',
-      monthLabel: 'Mayo',
-      sundayDate: '2026-05-17',
-      topicUrl: 'https://www.churchofjesuschrist.org/study/general-conference/2025/10/13browning?lang=spa',
-      topicTitle: 'Tema de conferencia',
-      notes: '',
-      units: [
-        { unit: 'Los Ceibos', speaker: 'Prs María Elena' },
-        { unit: 'Libia', speaker: 'Richard Alvez' },
-        { unit: 'Belloni', speaker: 'Prs Silva' },
-        { unit: 'B. Italia', speaker: 'Ruth Santos' },
-        { unit: 'Toledo', speaker: 'Antonio González' },
-        { unit: 'B.14', speaker: 'Joaquín Acosta' },
-        { unit: 'Pando', speaker: 'Pablo Morales' }
-      ]
-    },
-    {
-      id: 'junio',
-      monthLabel: 'Junio',
-      sundayDate: '2026-06-21',
-      topicUrl: 'https://www.churchofjesuschrist.org/study/general-conference/2025/10/13browning?lang=spa',
-      topicTitle: 'Tema de conferencia',
-      notes: '',
-      units: [
-        { unit: 'Los Ceibos', speaker: 'Prs María Elena' },
-        { unit: 'Libia', speaker: 'Richard Alvez' },
-        { unit: 'Belloni', speaker: 'Prs Silva' },
-        { unit: 'B. Italia', speaker: 'Ruth Santos' },
-        { unit: 'Toledo', speaker: 'Antonio González' },
-        { unit: 'B.14', speaker: 'Joaquín Acosta' },
-        { unit: 'Pando', speaker: 'Pablo Morales' }
-      ]
-    }
-  ]
-}
+const PREVIEW_API_PATH = '/api/stake-messages-link-preview'
 
 function toSpanishDate(isoDate) {
   if (!isoDate) return 'Sin fecha'
@@ -110,36 +52,57 @@ function buildReminderText(plan, month, daysBefore) {
   return lines.join('\n')
 }
 
+function buildQuarterId(monthStartLabel) {
+  return `${monthStartLabel.toLowerCase().replaceAll(' ', '-')}-${Date.now()}`
+}
+
 export default function StakeMessagesPlan() {
-  const [plan, setPlan] = useState(DEFAULT_PLAN)
+  const [planData, setPlanData] = useState(DEFAULT_PLAN)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
   const [selectedMonthId, setSelectedMonthId] = useState('abril')
+  const [previewLoadingId, setPreviewLoadingId] = useState('')
+
+  const quarterOptions = useMemo(
+    () => Object.entries(planData.quarters).map(([id, value]) => ({ id, label: value.quarterLabel || id })),
+    [planData.quarters]
+  )
+
+  const activeQuarter = useMemo(() => {
+    if (planData.quarters[planData.activeQuarterId]) {
+      return planData.quarters[planData.activeQuarterId]
+    }
+
+    const fallbackQuarterId = quarterOptions[0]?.id
+    return fallbackQuarterId ? planData.quarters[fallbackQuarterId] : null
+  }, [planData, quarterOptions])
 
   useEffect(() => {
     async function loadPlan() {
       try {
         const { data } = await axios.get(`${API_BASE}${API_PATH}`)
-        if (data?.plan?.months?.length) {
-          setPlan(data.plan)
-          setSelectedMonthId(data.plan.months[0].id)
-          localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(data.plan))
+        if (data?.plan && Object.keys(data.plan).length) {
+          const normalized = normalizePlanPayload(data.plan)
+          setPlanData(normalized)
+          const firstMonthId = normalized.quarters[normalized.activeQuarterId]?.months?.[0]?.id || 'abril'
+          setSelectedMonthId(firstMonthId)
+          localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(normalized))
         } else {
           const cachedPlan = localStorage.getItem(PLAN_STORAGE_KEY)
           if (cachedPlan) {
-            const parsedPlan = JSON.parse(cachedPlan)
-            setPlan(parsedPlan)
-            setSelectedMonthId(parsedPlan.months?.[0]?.id || 'abril')
+            const normalized = normalizePlanPayload(JSON.parse(cachedPlan))
+            setPlanData(normalized)
+            setSelectedMonthId(normalized.quarters[normalized.activeQuarterId]?.months?.[0]?.id || 'abril')
           }
         }
       } catch (error) {
         try {
           const cachedPlan = localStorage.getItem(PLAN_STORAGE_KEY)
           if (cachedPlan) {
-            const parsedPlan = JSON.parse(cachedPlan)
-            setPlan(parsedPlan)
-            setSelectedMonthId(parsedPlan.months?.[0]?.id || 'abril')
+            const normalized = normalizePlanPayload(JSON.parse(cachedPlan))
+            setPlanData(normalized)
+            setSelectedMonthId(normalized.quarters[normalized.activeQuarterId]?.months?.[0]?.id || 'abril')
           }
         } catch (cacheError) {
           console.warn('No se pudo leer el plan cacheado.', cacheError)
@@ -154,29 +117,100 @@ export default function StakeMessagesPlan() {
   }, [])
 
   const selectedMonth = useMemo(
-    () => plan.months.find((month) => month.id === selectedMonthId) || plan.months[0],
-    [plan.months, selectedMonthId]
+    () => activeQuarter?.months?.find((month) => month.id === selectedMonthId) || activeQuarter?.months?.[0],
+    [activeQuarter, selectedMonthId]
   )
 
-  function updateMonth(monthId, patch) {
-    setPlan((prev) => ({
+  function updateActiveQuarter(patch) {
+    setPlanData((prev) => ({
       ...prev,
-      months: prev.months.map((month) => (month.id === monthId ? { ...month, ...patch } : month))
+      quarters: {
+        ...prev.quarters,
+        [prev.activeQuarterId]: {
+          ...prev.quarters[prev.activeQuarterId],
+          ...patch
+        }
+      }
+    }))
+  }
+
+  function updateMonth(monthId, patch) {
+    setPlanData((prev) => ({
+      ...prev,
+      quarters: {
+        ...prev.quarters,
+        [prev.activeQuarterId]: {
+          ...prev.quarters[prev.activeQuarterId],
+          months: prev.quarters[prev.activeQuarterId].months.map((month) => (month.id === monthId ? { ...month, ...patch } : month))
+        }
+      }
     }))
   }
 
   function updateUnitField(monthId, unitIndex, patch) {
-    setPlan((prev) => ({
+    setPlanData((prev) => ({
       ...prev,
-      months: prev.months.map((month) => {
-        if (month.id !== monthId) return month
+      quarters: {
+        ...prev.quarters,
+        [prev.activeQuarterId]: {
+          ...prev.quarters[prev.activeQuarterId],
+          months: prev.quarters[prev.activeQuarterId].months.map((month) => {
+            if (month.id !== monthId) return month
 
-        return {
-          ...month,
-          units: month.units.map((unit, idx) => (idx === unitIndex ? { ...unit, ...patch } : unit))
+            return {
+              ...month,
+              units: month.units.map((unit, idx) => (idx === unitIndex ? { ...unit, ...patch } : unit))
+            }
+          })
         }
-      })
+      }
     }))
+  }
+
+  function createNewQuarterFromCurrent() {
+    if (!activeQuarter) return
+    const quarterId = buildQuarterId(activeQuarter.months?.[0]?.monthLabel || 'trimestre')
+
+    setPlanData((prev) => ({
+      activeQuarterId: quarterId,
+      quarters: {
+        ...prev.quarters,
+        [quarterId]: JSON.parse(JSON.stringify(activeQuarter))
+      }
+    }))
+    setStatus('✅ Nuevo trimestre creado a partir del trimestre actual. Ya puedes editarlo y guardarlo.')
+  }
+
+  async function fetchLinkPreview(monthId) {
+    const month = activeQuarter?.months?.find((item) => item.id === monthId)
+    if (!month?.topicUrl) return
+
+    setPreviewLoadingId(monthId)
+    setStatus('')
+
+    try {
+      const { data } = await axios.get(`${API_BASE}${PREVIEW_API_PATH}`, { params: { url: month.topicUrl } })
+      if (!data?.ok) {
+        setStatus(`⚠️ No se pudo obtener preview para ${month.monthLabel}.`) 
+        return
+      }
+
+      updateMonth(monthId, {
+        topicPreviewTitle: data.title || '',
+        topicPreviewImage: data.image || '',
+        topicPreviewDescription: data.description || ''
+      })
+
+      if (!month.topicTitle || month.topicTitle === 'Tema de conferencia') {
+        updateMonth(monthId, { topicTitle: data.title || month.topicTitle })
+      }
+
+      setStatus(`✅ Preview actualizado para ${month.monthLabel}.`)
+    } catch (error) {
+      setStatus(`⚠️ No se pudo cargar preview: ${error.response?.data?.detail || error.message}`)
+    } finally {
+      setPreviewLoadingId('')
+    }
   }
 
   async function savePlan() {
@@ -184,8 +218,8 @@ export default function StakeMessagesPlan() {
     setStatus('')
 
     try {
-      await axios.post(`${API_BASE}${API_PATH}`, { plan })
-      localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(plan))
+      await axios.post(`${API_BASE}${API_PATH}`, { plan: planData })
+      localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(planData))
       setStatus('✅ Plan guardado correctamente.')
     } catch (error) {
       setStatus(`❌ No se pudo guardar: ${error.response?.data?.detail || error.message}`)
@@ -195,12 +229,12 @@ export default function StakeMessagesPlan() {
   }
 
   async function copyReminder(daysBefore) {
-    const text = buildReminderText(plan, selectedMonth, daysBefore)
+    const text = buildReminderText(activeQuarter, selectedMonth, daysBefore)
     await navigator.clipboard.writeText(text)
     setStatus(`✅ Mensaje copiado para enviar ${daysBefore} días antes.`)
   }
 
-  if (loading) {
+  if (loading || !activeQuarter) {
     return <div style={styles.page}>Cargando plan trimestral...</div>
   }
 
@@ -210,28 +244,51 @@ export default function StakeMessagesPlan() {
         <h2 style={styles.title}>Mensajes de Estaca Maroñas</h2>
         <p style={styles.subtitle}>Plan editable y persistente para el trimestre.</p>
 
+        <div style={styles.row}>
+          <div style={styles.col}>
+            <label style={styles.label}>Trimestre activo</label>
+            <select
+              style={styles.input}
+              value={planData.activeQuarterId}
+              onChange={(event) => {
+                const quarterId = event.target.value
+                setPlanData((prev) => ({ ...prev, activeQuarterId: quarterId }))
+                setSelectedMonthId(planData.quarters[quarterId]?.months?.[0]?.id || 'abril')
+              }}
+            >
+              {quarterOptions.map((quarter) => (
+                <option key={quarter.id} value={quarter.id}>{quarter.label}</option>
+              ))}
+            </select>
+          </div>
+          <div style={styles.col}>
+            <label style={styles.label}>Acciones de trimestre</label>
+            <button type="button" style={styles.secondaryBtn} onClick={createNewQuarterFromCurrent}>Duplicar trimestre para nuevo periodo</button>
+          </div>
+        </div>
+
         <label style={styles.label}>Título del plan</label>
         <input
           style={styles.input}
-          value={plan.quarterLabel}
-          onChange={(event) => setPlan((prev) => ({ ...prev, quarterLabel: event.target.value }))}
+          value={activeQuarter.quarterLabel}
+          onChange={(event) => updateActiveQuarter({ quarterLabel: event.target.value })}
         />
 
         <label style={styles.label}>Introducción del mensaje</label>
         <textarea
           style={styles.textarea}
-          value={plan.introMessage}
-          onChange={(event) => setPlan((prev) => ({ ...prev, introMessage: event.target.value }))}
+          value={activeQuarter.introMessage}
+          onChange={(event) => updateActiveQuarter({ introMessage: event.target.value })}
         />
 
         <label style={styles.label}>Cierre del mensaje</label>
         <textarea
           style={styles.textarea}
-          value={plan.closingMessage}
-          onChange={(event) => setPlan((prev) => ({ ...prev, closingMessage: event.target.value }))}
+          value={activeQuarter.closingMessage}
+          onChange={(event) => updateActiveQuarter({ closingMessage: event.target.value })}
         />
 
-        {plan.months.map((month) => (
+        {activeQuarter.months.map((month) => (
           <section key={month.id} style={styles.monthSection}>
             <h3 style={styles.monthTitle}>{month.monthLabel} · {toSpanishDate(month.sundayDate)}</h3>
 
@@ -258,11 +315,26 @@ export default function StakeMessagesPlan() {
             <p style={styles.note}>El tema y link de este mes son generales para todo el grupo.</p>
 
             <label style={styles.label}>Link del tema</label>
-            <input
-              style={styles.input}
-              value={month.topicUrl}
-              onChange={(event) => updateMonth(month.id, { topicUrl: event.target.value })}
-            />
+            <div style={styles.row}>
+              <input
+                style={{ ...styles.input, marginBottom: 0, flex: 1 }}
+                value={month.topicUrl}
+                onChange={(event) => updateMonth(month.id, { topicUrl: event.target.value })}
+              />
+              <button type="button" style={styles.secondaryBtn} onClick={() => fetchLinkPreview(month.id)} disabled={previewLoadingId === month.id}>
+                {previewLoadingId === month.id ? 'Cargando preview...' : 'Cargar preview'}
+              </button>
+            </div>
+
+            {(month.topicPreviewTitle || month.topicPreviewImage) && (
+              <div style={styles.previewCard}>
+                {month.topicPreviewImage && <img src={month.topicPreviewImage} alt="Preview del enlace" style={styles.previewImage} />}
+                <div>
+                  <strong>{month.topicPreviewTitle || 'Título no encontrado'}</strong>
+                  {month.topicPreviewDescription ? <p style={styles.previewDescription}>{month.topicPreviewDescription}</p> : null}
+                </div>
+              </div>
+            )}
 
             <label style={styles.label}>Notas</label>
             <textarea
@@ -314,16 +386,16 @@ export default function StakeMessagesPlan() {
           <label style={styles.label}>Mes para recordatorio</label>
           <select
             style={styles.input}
-            value={selectedMonth.id}
+            value={selectedMonth?.id}
             onChange={(event) => setSelectedMonthId(event.target.value)}
           >
-            {plan.months.map((month) => (
+            {activeQuarter.months.map((month) => (
               <option key={month.id} value={month.id}>{month.monthLabel}</option>
             ))}
           </select>
 
-          <p style={styles.note}>Enviar 5 días antes: <strong>{toSpanishDate(shiftDays(selectedMonth.sundayDate, 5))}</strong></p>
-          <p style={styles.note}>Enviar 2 días antes: <strong>{toSpanishDate(shiftDays(selectedMonth.sundayDate, 2))}</strong></p>
+          <p style={styles.note}>Enviar 5 días antes: <strong>{toSpanishDate(shiftDays(selectedMonth?.sundayDate, 5))}</strong></p>
+          <p style={styles.note}>Enviar 2 días antes: <strong>{toSpanishDate(shiftDays(selectedMonth?.sundayDate, 2))}</strong></p>
 
           <div style={styles.row}>
             <button type="button" style={styles.reminderBtn} onClick={() => copyReminder(5)}>Copiar mensaje (5 días antes)</button>
@@ -369,7 +441,8 @@ const styles = {
   row: {
     display: 'flex',
     gap: '12px',
-    flexWrap: 'wrap'
+    flexWrap: 'wrap',
+    alignItems: 'center'
   },
   col: {
     flex: '1 1 300px'
@@ -423,6 +496,14 @@ const styles = {
     cursor: 'pointer',
     fontWeight: 'bold'
   },
+  secondaryBtn: {
+    background: '#e2e8f0',
+    color: '#0f172a',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '10px 12px',
+    cursor: 'pointer'
+  },
   reminderBox: {
     marginTop: '20px',
     padding: '16px',
@@ -442,6 +523,29 @@ const styles = {
     marginTop: '6px',
     marginBottom: '8px',
     color: '#334155'
+  },
+  previewCard: {
+    marginTop: '8px',
+    marginBottom: '10px',
+    padding: '10px',
+    borderRadius: '10px',
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    display: 'flex',
+    gap: '10px',
+    alignItems: 'center'
+  },
+  previewImage: {
+    width: '72px',
+    height: '72px',
+    objectFit: 'cover',
+    borderRadius: '8px',
+    border: '1px solid #cbd5e1'
+  },
+  previewDescription: {
+    margin: '6px 0 0 0',
+    color: '#475569',
+    fontSize: '14px'
   },
   status: {
     marginTop: '14px',
