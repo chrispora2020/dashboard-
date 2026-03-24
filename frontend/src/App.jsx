@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import ApiDashboard from './components/ApiDashboard'
 import Dashboard from './components/Dashboard'
 import ImportacionConversos from './components/ImportacionConversos'
@@ -56,7 +56,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
         <Navbar
           user={user}
@@ -91,7 +91,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 
