@@ -31,8 +31,9 @@ function writeCachedJSON(key, value) {
 
 export default function Dashboard() {
 
-  const [kpis, setKpis] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [kpis, setKpis] = useState(() => readCachedJSON(KPI_RESUMEN_STORAGE_KEY, []))
+  const [loading, setLoading] = useState(() => readCachedJSON(KPI_RESUMEN_STORAGE_KEY, []).length === 0)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
   const [periodoActual, setPeriodoActual] = useState('2026')
   const [trendData, setTrendData] = useState([])
@@ -186,12 +187,19 @@ export default function Dashboard() {
   }
 
   async function fetchKPIs() {
-    setLoading(true)
+    const hasVisibleData = kpis.length > 0
+    if (hasVisibleData) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
     setError(null)
 
     try {
       // Fetch resumen de KPIs
-      const { data } = await axios.get(`${API_BASE}/api/kpis/resumen?periodo=${periodoActual}`)
+      const { data } = await axios.get(`${API_BASE}/api/kpis/resumen?periodo=${periodoActual}`, {
+        timeout: 45000
+      })
       
       console.log('KPIs data received:', data)
       
@@ -234,6 +242,7 @@ export default function Dashboard() {
       }
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -284,6 +293,11 @@ export default function Dashboard() {
       </div>
 
       <div ref={indicadoresRef}>
+        {refreshing && (
+          <div style={styles.refreshingBanner}>
+            <span style={styles.spinnerInline}>⏳</span> Actualizando indicadores...
+          </div>
+        )}
         {error && (
         <div style={styles.error}>
           <strong>⚠️ Error:</strong> {error}
@@ -801,6 +815,23 @@ const styles = {
     fontSize: '48px',
     marginBottom: '20px',
     animation: 'spin 2s linear infinite',
+  },
+  spinnerInline: {
+    display: 'inline-block',
+    animation: 'spin 1.3s linear infinite',
+  },
+  refreshingBanner: {
+    background: '#eff6ff',
+    color: '#1d4ed8',
+    border: '1px solid #bfdbfe',
+    borderRadius: '10px',
+    padding: '10px 14px',
+    marginBottom: '12px',
+    fontSize: '14px',
+    fontWeight: 600,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px'
   },
   error: {
     background: '#fee2e2',
