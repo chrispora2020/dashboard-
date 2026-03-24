@@ -5,6 +5,30 @@ import API_BASE from '../config'
 import KPICard from './KPICard'
 import { getMinisteringSummary, MINISTERING_API_PATH, MINISTERING_STORAGE_KEY, parseMinisteringText } from '../utils/ministering'
 
+const KPI_RESUMEN_STORAGE_KEY = 'dashboard_kpis_resumen_cache'
+const KPI_JOVENES_STORAGE_KEY = 'dashboard_kpi_jovenes_cache'
+const KPI_ADULTOS_STORAGE_KEY = 'dashboard_kpi_adultos_cache'
+const KPI_MISIONEROS_STORAGE_KEY = 'dashboard_kpi_misioneros_cache'
+const KPI_ASISTENCIA_STORAGE_KEY = 'dashboard_kpi_asistencia_cache'
+
+function readCachedJSON(key, fallbackValue) {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return fallbackValue
+    return JSON.parse(raw)
+  } catch {
+    return fallbackValue
+  }
+}
+
+function writeCachedJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // noop
+  }
+}
+
 export default function Dashboard() {
 
   const [kpis, setKpis] = useState([])
@@ -103,8 +127,10 @@ export default function Dashboard() {
     try {
       const { data } = await axios.get(`${API_BASE}/api/jovenes/kpi`)
       setKpiJovenes(data)
+      writeCachedJSON(KPI_JOVENES_STORAGE_KEY, data)
     } catch (e) {
-      setKpiJovenes(null)
+      const cached = readCachedJSON(KPI_JOVENES_STORAGE_KEY, null)
+      setKpiJovenes(cached)
     }
   }
 
@@ -112,8 +138,10 @@ export default function Dashboard() {
     try {
       const { data } = await axios.get(`${API_BASE}/api/adultos/kpi`)
       setKpiAdultos(data)
+      writeCachedJSON(KPI_ADULTOS_STORAGE_KEY, data)
     } catch (e) {
-      setKpiAdultos(null)
+      const cached = readCachedJSON(KPI_ADULTOS_STORAGE_KEY, null)
+      setKpiAdultos(cached)
     }
   }
 
@@ -122,9 +150,11 @@ export default function Dashboard() {
       const { data } = await axios.get(`${API_BASE}/api/misioneros/kpi`)
       console.log('[MISIONEROS KPI]', JSON.stringify(data, null, 2))
       setKpiMisioneros(data)
+      writeCachedJSON(KPI_MISIONEROS_STORAGE_KEY, data)
     } catch (e) {
       console.error('[MISIONEROS KPI] Error:', e)
-      setKpiMisioneros(null)
+      const cached = readCachedJSON(KPI_MISIONEROS_STORAGE_KEY, null)
+      setKpiMisioneros(cached)
     }
   }
 
@@ -133,8 +163,11 @@ export default function Dashboard() {
       const { data } = await axios.get(`${API_BASE}/api/asistencia/kpi?periodo=${periodoActual}`)
       setKpiAsistencia(data)
       setAsistenciaInput(data.real > 0 ? String(data.real) : '')
+      writeCachedJSON(KPI_ASISTENCIA_STORAGE_KEY, data)
     } catch (e) {
-      setKpiAsistencia(null)
+      const cached = readCachedJSON(KPI_ASISTENCIA_STORAGE_KEY, null)
+      setKpiAsistencia(cached)
+      setAsistenciaInput(cached?.real > 0 ? String(cached.real) : '')
     }
   }
 
@@ -176,6 +209,7 @@ export default function Dashboard() {
       }))
 
       setKpis(mappedKPIs)
+      writeCachedJSON(KPI_RESUMEN_STORAGE_KEY, mappedKPIs)
 
       // Fetch tendencia para el primer indicador
       if (data.indicadores.length > 0) {
@@ -186,13 +220,18 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Error fetching KPIs:', err)
       setError(err.response?.data?.detail || 'Error al cargar KPIs')
-      
-      // Fallback a datos de ejemplo si hay error
-      setKpis([
-        { id: 1, title: 'Bautismos de Conversos', meta: 168, actual: 0, porcentaje: 0, unit: '', color: '#ef4444' },
-        { id: 2, title: 'Conversos con Recomendación', meta: 100, actual: 0, porcentaje: 0, unit: '%', color: '#ef4444' },
-        { id: 3, title: 'Conversos Ordenados', meta: 100, actual: 0, porcentaje: 0, unit: '%', color: '#ef4444' }
-      ])
+
+      const cached = readCachedJSON(KPI_RESUMEN_STORAGE_KEY, null)
+      if (Array.isArray(cached) && cached.length > 0) {
+        setKpis(cached)
+      } else {
+        // Fallback a datos de ejemplo si no hay caché
+        setKpis([
+          { id: 1, title: 'Bautismos de Conversos', meta: 168, actual: 0, porcentaje: 0, unit: '', color: '#ef4444' },
+          { id: 2, title: 'Conversos con Recomendación', meta: 100, actual: 0, porcentaje: 0, unit: '%', color: '#ef4444' },
+          { id: 3, title: 'Conversos Ordenados', meta: 100, actual: 0, porcentaje: 0, unit: '%', color: '#ef4444' }
+        ])
+      }
     } finally {
       setLoading(false)
     }
