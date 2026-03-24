@@ -105,7 +105,7 @@ class CalculadorIndicadores:
         """
         Calcula indicador: Conversos con Recomendación
         
-        ELEGIBLES = conversos de 12+ años
+        ELEGIBLES = conversos mayores de 8 años
         REAL = ELEGIBLES con recomendación activa
         % = REAL / ELEGIBLES * 100
         """
@@ -120,7 +120,7 @@ class CalculadorIndicadores:
 
         todas_personas = query.all()
 
-        # Clasificar por elegibilidad (12+ años)
+        # Clasificar por elegibilidad (mayor de 8 años)
         elegibles = {}
         con_recomendacion = {}
         sin_recomendacion = {}

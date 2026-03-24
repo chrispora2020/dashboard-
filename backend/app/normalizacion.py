@@ -164,14 +164,14 @@ def calcular_edad(fecha_nacimiento: Optional[date], fecha_referencia: Optional[d
 
 def es_elegible_recomendacion(edad: Optional[int]) -> Optional[bool]:
     """
-    Determina si es elegible para recomendación (>= 12 años)
+    Determina si es elegible para recomendación (mayor de 8 años)
     
     Returns:
         True si es elegible, False si no, None si no se puede determinar
     """
     if edad is None:
         return None
-    return edad >= 12
+    return edad > 8
 
 
 def es_elegible_ordenacion(sexo: Optional[str]) -> Optional[bool]:
