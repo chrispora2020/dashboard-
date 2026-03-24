@@ -119,17 +119,18 @@ export default function SpeakersPlanView() {
                   <article key={month.id} style={styles.card}>
                     <p style={styles.month}>{month.monthLabel}</p>
                     <p style={styles.date}>{toSpanishDate(month.sundayDate)}</p>
-                    <p style={styles.topicTitle}>Tema (idea del discurso): {month.topicTitle || 'Tema pendiente'}</p>
+                    <p style={styles.topicTitle}>Tema del discurso: {month.topicTitle || 'Tema pendiente'}</p>
                     {month.topicUrl ? (
                       <a href={month.topicUrl} target="_blank" rel="noreferrer" style={styles.link}>
-                        Abrir tema general
+                        Abrir discurso
                       </a>
                     ) : null}
 
-                    {(month.topicPreviewTitle || month.topicPreviewImage) && (
+                    {(month.topicPreviewTitle || month.topicPreviewImage || month.topicPreviewDescription) && (
                       <div style={styles.previewCard}>
                         {month.topicPreviewImage ? <img src={month.topicPreviewImage} alt="Miniatura del tema" style={styles.previewImage} /> : null}
-                        <div>
+                        <div style={styles.previewContent}>
+                          <p style={styles.previewLabel}>Vista previa del discurso</p>
                           <p style={styles.previewTitle}>{month.topicPreviewTitle || 'Título detectado automáticamente'}</p>
                           {month.topicPreviewDescription ? <p style={styles.previewDescription}>{month.topicPreviewDescription}</p> : null}
                         </div>
@@ -261,7 +262,8 @@ const styles = {
     background: '#eff6ff',
     display: 'flex',
     gap: '10px',
-    alignItems: 'center'
+    alignItems: 'flex-start',
+    flexWrap: 'wrap'
   },
   previewImage: {
     width: '64px',
@@ -269,6 +271,17 @@ const styles = {
     borderRadius: '8px',
     objectFit: 'cover',
     border: '1px solid #bfdbfe'
+  },
+  previewContent: {
+    minWidth: '180px',
+    flex: '1 1 180px'
+  },
+  previewLabel: {
+    margin: '0 0 4px 0',
+    color: '#3730a3',
+    fontSize: '12px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em'
   },
   previewTitle: {
     margin: 0,
