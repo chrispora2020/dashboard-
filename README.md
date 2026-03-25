@@ -108,7 +108,12 @@ Síntoma típico cuando la app corre con SQLite en ruta no persistente (por ejem
 Qué validar:
 1. Revisar logs de backend: ahora la app falla en ambientes productivos si detecta SQLite efímero.
 2. Configurar `DATABASE_URL` a PostgreSQL en producción.
-3. Si se usa SQLite, apuntar a disco persistente (`/var/data/dashboard.db` o `/data/dashboard.db`).
+3. Si se usa SQLite, apuntar a disco persistente (`/var/data/dashboard.db`, `/data/dashboard.db` o `./data/dashboard.db`).
+
+Configuración recomendada para evitar pérdida de datos:
+- Producción: `DATABASE_URL=postgresql+psycopg2://...` (base administrada).
+- Desarrollo local sin Postgres: crear carpeta `./data` y usar `SQLITE_PATH=./data/dashboard.db`.
+- Nunca usar `sqlite:///./test.db` para entornos que reinician contenedores.
 
 Variables de control:
 - `ALLOW_EPHEMERAL_SQLITE=true`: bypass temporal (no recomendado en producción).
