@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: dashboard-backend
+    env: docker
+    rootDir: backend
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dashboard-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: dashboard-redis
+          property: connectionString
+      - key: JWT_SECRET
+        value: change-me-in-render
+      - key: RENDER
+        value: "true"
+      - key: APP_ENV
+        value: production
+
+  - type: worker
+    name: dashboard-worker
+    env: docker
+    rootDir: backend
+    dockerCommand: celery -A app.celery_app.celery worker --loglevel=info
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dashboard-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: dashboard-redis
+          property: connectionString
+      - key: JWT_SECRET
+        value: change-me-in-render
+      - key: RENDER
+        value: "true"
+      - key: APP_ENV
+        value: production
+
+  - type: redis
+    name: dashboard-redis
+    ipAllowList: []
+    plan: starter
+
+databases:
+  - name: dashboard-postgres
+    plan: starter

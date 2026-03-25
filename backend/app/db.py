@@ -113,6 +113,14 @@ def _validate_db_configuration() -> None:
     allow_ephemeral = _is_truthy(os.getenv("ALLOW_EPHEMERAL_SQLITE"))
     strict_ephemeral = not _is_falsey(os.getenv("STRICT_EPHEMERAL_SQLITE"))
 
+    if diagnostics["is_sqlite"] and diagnostics["is_render"] and strict_ephemeral and not allow_ephemeral:
+        raise RuntimeError(
+            "Configuración insegura para Render: se detectó SQLite. "
+            "Use una base administrada PostgreSQL en DATABASE_URL para evitar pérdida de datos "
+            "entre reinicios/despliegues. Bypass temporal: ALLOW_EPHEMERAL_SQLITE=true "
+            "o STRICT_EPHEMERAL_SQLITE=false."
+        )
+
     if diagnostics["is_ephemeral_sqlite"] and _is_production_like_env() and strict_ephemeral and not allow_ephemeral:
         raise RuntimeError(
             "Configuración de base de datos insegura: se detectó SQLite en ruta no persistente "

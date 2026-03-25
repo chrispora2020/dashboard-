@@ -102,6 +102,24 @@ curl -X POST http://localhost:8000/api/files -F "files=@sample.pdf" -F "period_i
 
 ## Problemas conocidos y soluciones
 
+### Deploy en Render sin perder datos
+
+Si despliegas en Render, **no uses SQLite** para producción. El contenedor puede reiniciarse y perder archivos locales.
+
+Este repo ahora incluye `render.yaml` con servicios listos para usar:
+- `dashboard-postgres` (PostgreSQL administrado)
+- `dashboard-redis` (cola/cache)
+- `dashboard-backend` (FastAPI)
+- `dashboard-worker` (Celery)
+
+Pasos:
+1. En Render, crea un nuevo Blueprint apuntando a este repo.
+2. Render leerá `render.yaml` y conectará `DATABASE_URL` automáticamente al PostgreSQL administrado.
+3. Verifica en logs de backend que la URL activa sea `postgresql+psycopg2://...` y no `sqlite:///...`.
+
+Nota: el backend bloquea SQLite cuando detecta entorno Render (excepto bypass explícito con `ALLOW_EPHEMERAL_SQLITE=true`).
+
+
 ### La base "se borra" después de reinicios/despliegues
 Síntoma típico cuando la app corre con SQLite en ruta no persistente (por ejemplo `./test.db` dentro del contenedor).  
 
