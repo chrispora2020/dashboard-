@@ -16,11 +16,16 @@ def _default_database_url() -> str:
     """Build a safer default DB URL depending on environment."""
     # Priorizar rutas persistentes conocidas antes de usar un archivo local del contenedor.
     persistent_candidates = (
+        os.getenv("SQLITE_PATH", "").strip(),
         "/data/dashboard.db",      # Docker volume habitual en este repo
         "/var/data/dashboard.db",  # Render Disk
+        "./data/dashboard.db",     # desarrollo local fuera de Docker
     )
 
     for candidate in persistent_candidates:
+        if not candidate:
+            continue
+
         parent = os.path.dirname(candidate)
         try:
             os.makedirs(parent, exist_ok=True)
@@ -78,16 +83,26 @@ if DATABASE_URL.startswith("sqlite"):
     if sqlite_path and sqlite_path != ":memory:":
         os.makedirs(os.path.dirname(os.path.abspath(sqlite_path)), exist_ok=True)
 
-    engine = create_engine(
-        DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        # StaticPool se recomienda para in-memory; para archivo también funciona
-        # y mantiene un comportamiento consistente en este proyecto.
-        poolclass=StaticPool,
-        echo=False,
-    )
+    sqlite_connect_args = {"check_same_thread": False}
+    if sqlite_path == ":memory:":
+        # Para in-memory sí conviene una sola conexión compartida.
+        engine = create_engine(
+            DATABASE_URL,
+            connect_args=sqlite_connect_args,
+            poolclass=StaticPool,
+            echo=False,
+        )
+    else:
+        # Para archivo en disco, usar pool normal evita comportamientos inesperados
+        # con una única conexión global y mantiene mejor estabilidad en producción.
+        engine = create_engine(
+            DATABASE_URL,
+            connect_args=sqlite_connect_args,
+            echo=False,
+            pool_pre_ping=True,
+        )
 else:
-    engine = create_engine(DATABASE_URL, echo=False)
+    engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -102,7 +117,7 @@ def _validate_db_configuration() -> None:
         raise RuntimeError(
             "Configuración de base de datos insegura: se detectó SQLite en ruta no persistente "
             f"({diagnostics['sqlite_path']}). Configure DATABASE_URL (PostgreSQL recomendado) o "
-            "una ruta persistente (/var/data o /data). Para bypass temporal: "
+            "una ruta persistente (/var/data, /data o ./data). Para bypass temporal: "
             "ALLOW_EPHEMERAL_SQLITE=true o STRICT_EPHEMERAL_SQLITE=false."
         )
 
@@ -110,7 +125,12 @@ def _validate_db_configuration() -> None:
 def db_runtime_diagnostics() -> dict[str, str | bool]:
     is_sqlite = DATABASE_URL.startswith("sqlite")
     sqlite_path = DATABASE_URL.replace("sqlite:///", "", 1) if is_sqlite else ""
-    is_persistent_sqlite = sqlite_path.startswith("/var/data/") or sqlite_path.startswith("/data/")
+    is_persistent_sqlite = (
+        sqlite_path.startswith("/var/data/")
+        or sqlite_path.startswith("/data/")
+        or sqlite_path.startswith("./data/")
+        or sqlite_path.startswith("data/")
+    )
     is_ephemeral_sqlite = is_sqlite and not is_persistent_sqlite
 
     return {
