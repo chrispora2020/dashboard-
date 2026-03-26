@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 from datetime import date
 
 from .models import PersonaConverso, PeriodoKPI, IndicadorKPI
-from .normalizacion import es_elegible_recomendacion, es_elegible_ordenacion
+from .normalizacion import es_elegible_ordenacion
 
 
 # === DEFINICIÓN DE INDICADORES ===
@@ -105,8 +105,8 @@ class CalculadorIndicadores:
         """
         Calcula indicador: Conversos con Recomendación
         
-        ELEGIBLES = conversos mayores de 8 años
-        REAL = ELEGIBLES con recomendación activa
+        ELEGIBLES = conversos mayores de 11 años
+        REAL = ELEGIBLES con recomendación en estado ACTIVA
         % = REAL / ELEGIBLES * 100
         """
         query = self.db.query(PersonaConverso).filter(
@@ -120,7 +120,7 @@ class CalculadorIndicadores:
 
         todas_personas = query.all()
 
-        # Clasificar por elegibilidad (mayor de 8 años)
+        # Clasificar por elegibilidad (mayor de 11 años)
         elegibles = {}
         con_recomendacion = {}
         sin_recomendacion = {}
@@ -134,14 +134,24 @@ class CalculadorIndicadores:
                 except (ValueError, TypeError):
                     edad_valor = None
 
-            es_elegible = es_elegible_recomendacion(edad_valor)
+            # Regla de negocio para conversos:
+            # - potencial: edades > 11
+            # - edades <= 11 no son elegibles
+            if edad_valor is None:
+                es_elegible = None
+            else:
+                es_elegible = edad_valor > 11
             if es_elegible is None:
                 sin_clasificar.append(persona)
                 continue
 
             if es_elegible:
                 elegibles[persona.id] = persona
-                if persona.tiene_recomendacion is True:
+                estado_raw = (persona.estado_recomendacion_raw or "").strip().lower()
+                tiene_estado = estado_raw not in ("", "nan", "none")
+                # REAL solo cuando el estado existe y es activo.
+                # Si no hay estado explícito, se considera sin recomendación.
+                if persona.tiene_recomendacion is True and tiene_estado:
                     con_recomendacion[persona.id] = persona
                 else:
                     sin_recomendacion[persona.id] = persona
