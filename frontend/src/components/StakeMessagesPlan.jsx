@@ -56,7 +56,7 @@ function buildQuarterId(monthStartLabel) {
   return `${monthStartLabel.toLowerCase().replaceAll(' ', '-')}-${Date.now()}`
 }
 
-export default function StakeMessagesPlan() {
+export default function StakeMessagesPlan({ canEdit = true }) {
   const [planData, setPlanData] = useState(DEFAULT_PLAN)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -225,6 +225,10 @@ export default function StakeMessagesPlan() {
   }
 
   async function savePlan() {
+    if (!canEdit) {
+      return
+    }
+
     setSaving(true)
     setStatus('')
 
@@ -273,7 +277,9 @@ export default function StakeMessagesPlan() {
     <div style={styles.page}>
       <div style={styles.card}>
         <h2 style={styles.title}>Mensajes de Estaca Maroñas</h2>
-        <p style={styles.subtitle}>Plan editable y persistente para el trimestre.</p>
+        <p style={styles.subtitle}>
+          {canEdit ? 'Plan editable y persistente para el trimestre.' : 'Vista de solo lectura del plan trimestral.'}
+        </p>
 
         <div style={styles.row}>
           <div style={styles.col}>
@@ -281,7 +287,9 @@ export default function StakeMessagesPlan() {
             <select
               style={styles.input}
               value={planData.activeQuarterId}
+              disabled={!canEdit}
               onChange={(event) => {
+                if (!canEdit) return
                 const quarterId = event.target.value
                 setPlanData((prev) => ({ ...prev, activeQuarterId: quarterId }))
                 setSelectedMonthId(planData.quarters[quarterId]?.months?.[0]?.id || 'abril')
@@ -294,7 +302,7 @@ export default function StakeMessagesPlan() {
           </div>
           <div style={styles.col}>
             <label style={styles.label}>Acciones de trimestre</label>
-            <button type="button" style={styles.secondaryBtn} onClick={createNewQuarterFromCurrent}>Duplicar trimestre para nuevo periodo</button>
+            <button type="button" style={styles.secondaryBtn} onClick={createNewQuarterFromCurrent} disabled={!canEdit}>Duplicar trimestre para nuevo periodo</button>
           </div>
         </div>
 
@@ -302,6 +310,7 @@ export default function StakeMessagesPlan() {
         <input
           style={styles.input}
           value={activeQuarter.quarterLabel}
+          disabled={!canEdit}
           onChange={(event) => updateActiveQuarter({ quarterLabel: event.target.value })}
         />
 
@@ -309,6 +318,7 @@ export default function StakeMessagesPlan() {
         <textarea
           style={styles.textarea}
           value={activeQuarter.introMessage}
+          disabled={!canEdit}
           onChange={(event) => updateActiveQuarter({ introMessage: event.target.value })}
         />
 
@@ -316,6 +326,7 @@ export default function StakeMessagesPlan() {
         <textarea
           style={styles.textarea}
           value={activeQuarter.closingMessage}
+          disabled={!canEdit}
           onChange={(event) => updateActiveQuarter({ closingMessage: event.target.value })}
         />
 
@@ -330,6 +341,7 @@ export default function StakeMessagesPlan() {
                   type="date"
                   style={styles.input}
                   value={month.sundayDate}
+                  disabled={!canEdit}
                   onChange={(event) => updateMonth(month.id, { sundayDate: event.target.value })}
                 />
               </div>
@@ -338,6 +350,7 @@ export default function StakeMessagesPlan() {
                 <input
                   style={styles.input}
                   value={month.topicTitle}
+                  disabled={!canEdit}
                   onChange={(event) => updateMonth(month.id, { topicTitle: event.target.value })}
                 />
               </div>
@@ -350,18 +363,19 @@ export default function StakeMessagesPlan() {
               <input
                 style={{ ...styles.input, ...styles.linkInput, marginBottom: 0, flex: 1 }}
                 value={month.topicUrl}
+                disabled={!canEdit}
                 onChange={(event) => updateMonth(month.id, { topicUrl: event.target.value })}
                 placeholder="Pega aquí el link del tema"
               />
               <div style={{ ...styles.linkActions, ...(isMobile ? styles.linkActionsMobile : null) }}>
-                <button type="button" style={styles.iconBtn} onClick={() => clearMonthLink(month.id)} title="Limpiar link">
+                <button type="button" style={styles.iconBtn} onClick={() => clearMonthLink(month.id)} title="Limpiar link" disabled={!canEdit}>
                   🧹 Limpiar
                 </button>
-                <button type="button" style={styles.iconBtn} onClick={() => pasteMonthLink(month.id)} title="Pegar link">
+                <button type="button" style={styles.iconBtn} onClick={() => pasteMonthLink(month.id)} title="Pegar link" disabled={!canEdit}>
                   📋 Pegar
                 </button>
               </div>
-              <button type="button" style={styles.secondaryBtn} onClick={() => fetchLinkPreview(month.id)} disabled={previewLoadingId === month.id}>
+              <button type="button" style={styles.secondaryBtn} onClick={() => fetchLinkPreview(month.id)} disabled={previewLoadingId === month.id || !canEdit}>
                 {previewLoadingId === month.id ? 'Cargando preview...' : 'Cargar preview'}
               </button>
             </div>
@@ -380,6 +394,7 @@ export default function StakeMessagesPlan() {
             <textarea
               style={styles.textarea}
               value={month.notes || ''}
+              disabled={!canEdit}
               onChange={(event) => updateMonth(month.id, { notes: event.target.value })}
               placeholder="Ej: Si hay conferencia de unidad, no hay mensaje de estaca."
             />
@@ -398,6 +413,7 @@ export default function StakeMessagesPlan() {
                       <input
                         style={styles.input}
                         value={unit.unit}
+                        disabled={!canEdit}
                         onChange={(event) => updateUnitField(month.id, index, { unit: event.target.value })}
                       />
                     </td>
@@ -405,6 +421,7 @@ export default function StakeMessagesPlan() {
                       <input
                         style={styles.input}
                         value={unit.speaker}
+                        disabled={!canEdit}
                         onChange={(event) => updateUnitField(month.id, index, { speaker: event.target.value })}
                       />
                     </td>
@@ -415,9 +432,11 @@ export default function StakeMessagesPlan() {
           </section>
         ))}
 
-        <button type="button" onClick={savePlan} style={styles.saveBtn} disabled={saving}>
-          {saving ? 'Guardando...' : 'Guardar plan trimestral'}
-        </button>
+        {canEdit ? (
+          <button type="button" onClick={savePlan} style={styles.saveBtn} disabled={saving}>
+            {saving ? 'Guardando...' : 'Guardar plan trimestral'}
+          </button>
+        ) : null}
 
         <div style={styles.reminderBox}>
           <h3 style={styles.monthTitle}>Recordatorios para grupo</h3>

@@ -9,8 +9,10 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
 
   const headerByPath = {
     '/': 'Indicadores Estaca Maroñas',
+    '/mensajes/ver': 'Plan de mensajes',
+    '/mensajes/editar': 'Editar plan de mensajes',
     '/conversos': 'Cargar listas',
-    '/mensajes-estaca': 'Editar plan',
+    '/mensajes-estaca': 'Plan de mensajes',
     '/sumo-consejo': 'Asignaciones',
     '/asignaciones/ver': 'Asignaciones',
     '/asignaciones/editar': 'Editar asignaciones',
@@ -63,22 +65,37 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
             ...(isMobile && menuOpen ? styles.menuMobileOpen : {})
           }}
         >
-          <Link to="/" style={styles.link}>Dashboard</Link>
-          {canManageLists ? (
-            <Link to="/conversos" style={styles.link}>Cargar Listas</Link>
-          ) : null}
-          <Link to="/plan-discursos" style={styles.link}>Plan de discursos</Link>
-          {isPresidencia ? (
-            <>
+          <details style={styles.group} open={!isMobile}>
+            <summary style={styles.groupTitle}>Indicadores</summary>
+            <div style={styles.submenu}>
+              <Link to="/" style={styles.link}>Dashboard</Link>
+              {canManageLists ? (
+                <Link to="/conversos" style={styles.link}>Cargar lista indicadores</Link>
+              ) : null}
+            </div>
+          </details>
+
+          <details style={styles.group} open={!isMobile}>
+            <summary style={styles.groupTitle}>Mensajes</summary>
+            <div style={styles.submenu}>
+              <Link to="/mensajes/ver" style={styles.link}>Ver plan mensajes</Link>
+              {canManageLists ? (
+                <Link to="/mensajes/editar" style={styles.link}>Editar plan mensajes</Link>
+              ) : null}
+            </div>
+          </details>
+
+          <details style={styles.group} open={!isMobile}>
+            <summary style={styles.groupTitle}>Asignaciones</summary>
+            <div style={styles.submenu}>
               <Link to="/asignaciones/ver" style={styles.link}>Ver asignaciones</Link>
-              <Link to="/asignaciones/editar" style={styles.link}>Editar asignaciones</Link>
-            </>
-          ) : (
-            <Link to="/asignaciones/ver" style={styles.link}>Asignaciones</Link>
-          )}
-          {canManageLists ? (
-            <Link to="/mensajes-estaca" style={styles.link}>Editar plan</Link>
-          ) : null}
+              {isPresidencia ? (
+                <Link to="/asignaciones/editar" style={styles.link}>Editar asignaciones</Link>
+              ) : null}
+            </div>
+          </details>
+
+          <Link to="/plan-discursos" style={styles.link}>Plan de discursos</Link>
 
           <div style={{ ...styles.user, ...(isMobile ? styles.userMobile : {}) }}>
             <span style={styles.userName}>{userLabel}</span>
@@ -127,7 +144,7 @@ const styles = {
   menu: {
     display: 'flex',
     alignItems: 'center',
-    gap: '25px'
+    gap: '14px'
   },
   menuMobile: {
     position: 'absolute',
@@ -151,9 +168,26 @@ const styles = {
   link: {
     color: 'white',
     textDecoration: 'none',
-    fontSize: '16px',
+    fontSize: '15px',
     fontWeight: '500',
     transition: 'opacity 0.3s'
+  },
+  group: {
+    border: '1px solid rgba(255,255,255,0.25)',
+    borderRadius: '10px',
+    padding: '6px 10px',
+    minWidth: '190px'
+  },
+  groupTitle: {
+    cursor: 'pointer',
+    fontWeight: 700,
+    fontSize: '14px'
+  },
+  submenu: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    marginTop: '8px'
   },
   user: {
     display: 'flex',
