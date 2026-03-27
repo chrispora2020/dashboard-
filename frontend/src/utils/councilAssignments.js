@@ -48,6 +48,9 @@ export function normalizeCouncilAssignmentsPayload(plan) {
       isHighCouncil: Boolean(leader.isHighCouncil),
       isTraveler: Boolean(leader.isTraveler),
       unitId: String(leader.unitId || ''),
+      unitIds: Array.isArray(leader.unitIds)
+        ? leader.unitIds.map((unitId) => String(unitId || '')).filter(Boolean)
+        : (leader.unitId ? [String(leader.unitId)] : []),
       committeeIds: Array.isArray(leader.committeeIds) ? leader.committeeIds : []
     }))
 
