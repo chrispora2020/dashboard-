@@ -105,14 +105,15 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
               if (group.links.length === 1) {
                 const onlyLink = group.links[0]
                 return (
-                  <li key={group.id} style={styles.navItem}>
-                    <Link
-                      to={onlyLink.to}
-                      style={{
-                        ...styles.navLink,
-                        ...(onlyLink.to === location.pathname ? styles.navLinkActive : {})
-                      }}
-                    >
+                <li key={group.id} style={styles.navItem}>
+                  <Link
+                    to={onlyLink.to}
+                    style={{
+                      ...styles.navLink,
+                      ...(isMobile ? styles.navLinkMobile : {}),
+                      ...(onlyLink.to === location.pathname ? styles.navLinkActive : {})
+                    }}
+                  >
                       {onlyLink.label}
                     </Link>
                   </li>
@@ -121,11 +122,15 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
 
               const isOpen = openDropdown === group.id
               return (
-                <li key={group.id} style={styles.dropdownWrapper}>
+                <li
+                  key={group.id}
+                  style={{ ...styles.dropdownWrapper, ...(isMobile ? styles.dropdownWrapperMobile : {}) }}
+                >
                   <button
                     type="button"
                     style={{
                       ...styles.dropdownToggle,
+                      ...(isMobile ? styles.dropdownToggleMobile : {}),
                       ...(groupActive ? styles.navLinkActive : {})
                     }}
                     onClick={() => setOpenDropdown((prev) => (prev === group.id ? '' : group.id))}
@@ -170,12 +175,13 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
 
 const styles = {
   navbar: {
-    background: '#f8f9fa',
-    borderBottom: '1px solid #d7dde2',
+    background: 'linear-gradient(135deg, #00587c 0%, #0b7ea8 100%)',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.25)',
     padding: '10px 0',
     position: 'sticky',
     top: 0,
-    zIndex: 20
+    zIndex: 20,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
   },
   containerFluid: {
     width: '100%',
@@ -189,17 +195,17 @@ const styles = {
   },
   brand: {
     fontSize: '1.05rem',
-    color: '#212529',
+    color: '#ffffff',
     textDecoration: 'none',
     fontWeight: 700,
     marginRight: '8px'
   },
   toggler: {
     marginLeft: 'auto',
-    border: '1px solid #adb5bd',
+    border: '1px solid rgba(255, 255, 255, 0.35)',
     borderRadius: '6px',
-    background: '#fff',
-    color: '#212529',
+    background: 'rgba(255, 255, 255, 0.18)',
+    color: '#ffffff',
     padding: '4px 10px',
     fontSize: '20px',
     lineHeight: 1,
@@ -242,27 +248,40 @@ const styles = {
   },
   navLink: {
     textDecoration: 'none',
-    color: '#495057',
+    color: '#ffffff',
     padding: '8px 12px',
     borderRadius: '6px',
     display: 'inline-block',
     fontWeight: 500
   },
+  navLinkMobile: {
+    display: 'block',
+    width: '100%'
+  },
   navLinkActive: {
-    color: '#0d6efd',
-    background: '#e7f1ff'
+    color: '#e8f6ff',
+    background: 'rgba(255,255,255,0.18)'
   },
   dropdownWrapper: {
     position: 'relative'
   },
+  dropdownWrapperMobile: {
+    width: '100%'
+  },
   dropdownToggle: {
     border: 'none',
     background: 'transparent',
-    color: '#495057',
+    color: '#ffffff',
     padding: '8px 12px',
     borderRadius: '6px',
     fontWeight: 500,
     cursor: 'pointer'
+  },
+  dropdownToggleMobile: {
+    width: '100%',
+    textAlign: 'left',
+    display: 'flex',
+    justifyContent: 'space-between'
   },
   dropdownMenu: {
     position: 'absolute',
@@ -272,8 +291,8 @@ const styles = {
     listStyle: 'none',
     padding: '8px',
     minWidth: '230px',
-    background: '#fff',
-    border: '1px solid #ced4da',
+    background: 'rgba(8, 56, 79, 0.95)',
+    border: '1px solid rgba(255,255,255,0.25)',
     borderRadius: '8px',
     boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
     zIndex: 30
@@ -282,18 +301,19 @@ const styles = {
     position: 'static',
     width: '100%',
     marginTop: 0,
-    boxShadow: 'none'
+    boxShadow: 'none',
+    paddingLeft: '6px'
   },
   dropdownItem: {
     textDecoration: 'none',
-    color: '#212529',
+    color: '#ffffff',
     padding: '8px 10px',
     borderRadius: '6px',
     display: 'block'
   },
   dropdownItemActive: {
-    color: '#0d6efd',
-    background: '#e7f1ff'
+    color: '#e8f6ff',
+    background: 'rgba(255,255,255,0.18)'
   },
   userSection: {
     marginLeft: 'auto',
@@ -305,17 +325,17 @@ const styles = {
     marginLeft: 0,
     width: '100%',
     justifyContent: 'space-between',
-    borderTop: '1px solid #e9ecef',
+    borderTop: '1px solid rgba(255, 255, 255, 0.3)',
     paddingTop: '10px'
   },
   userName: {
-    color: '#6c757d',
+    color: '#e8f6ff',
     fontSize: '0.9rem'
   },
   logoutBtn: {
-    border: '1px solid #dc3545',
-    background: '#fff',
-    color: '#dc3545',
+    border: '1px solid rgba(255,255,255,0.3)',
+    background: 'rgba(255,255,255,0.2)',
+    color: '#ffffff',
     borderRadius: '6px',
     padding: '7px 11px',
     cursor: 'pointer',
