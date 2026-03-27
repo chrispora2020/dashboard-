@@ -30,7 +30,6 @@ function LeaderCard({ leader, unitNames, committeesMap }) {
       <p style={styles.metaText}>
         Comité: {leader.committeeIds.map((id) => committeesMap[id]).filter(Boolean).join(', ') || 'Sin comité'}
       </p>
-      {!leader.isHighCouncil ? <p style={styles.tagOther}>Solo para comité</p> : null}
     </article>
   )
 }
@@ -362,7 +361,7 @@ export default function CouncilAssignments({ canEdit }) {
       ) : (
         <div style={styles.sectionCard}>
           <h3 style={styles.sectionTitle}>Vista de asignaciones</h3>
-          <p style={styles.hint}>Solo la Presidencia puede editar estas asignaciones.</p>
+          <p style={styles.hint}>Estas asignaciones pueden ser consultadas tanto por Consejo como por Presidencia.</p>
 
           <div style={styles.committeeBox}>
             <h4 style={styles.unitTitle}>Asignaciones de barrios (Sumo Consejo)</h4>
@@ -464,7 +463,6 @@ const styles = {
   travelerIcon: { fontSize: '15px' },
   leaderSubtitle: { margin: '3px 0 0', color: '#334155', fontSize: '13px' },
   metaText: { margin: '4px 0 0', color: '#475569', fontSize: '12px' },
-  tagOther: { margin: '6px 0 0', color: '#92400e', fontSize: '12px', fontWeight: 600 },
   committeeBox: { marginTop: '18px', borderTop: '1px solid #e2e8f0', paddingTop: '14px' },
   committeeRow: { borderBottom: '1px solid #f1f5f9', padding: '8px 0', display: 'grid', gap: '8px' },
   committeeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px', flexWrap: 'wrap' },
