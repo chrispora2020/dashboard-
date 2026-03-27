@@ -11,6 +11,7 @@ export default function Navbar({ user, onLogout, canManageLists }) {
     '/': 'Indicadores Estaca Maroñas',
     '/conversos': 'Cargar listas',
     '/mensajes-estaca': 'Editar plan',
+    '/sumo-consejo': 'Miembros y asignaciones',
     '/plan-discursos': 'Plan de discursos',
     '/upload': 'Cargar listas',
     '/dashboard-api': 'Dashboard API'
@@ -65,6 +66,7 @@ export default function Navbar({ user, onLogout, canManageLists }) {
             <Link to="/conversos" style={styles.link}>Cargar Listas</Link>
           ) : null}
           <Link to="/plan-discursos" style={styles.link}>Plan de discursos</Link>
+          <Link to="/sumo-consejo" style={styles.link}>Sumo consejo</Link>
           {canManageLists ? (
             <Link to="/mensajes-estaca" style={styles.link}>Editar plan</Link>
           ) : null}

@@ -236,6 +236,17 @@ class StakeMessagesPlan(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class CouncilAssignmentsPlan(Base):
+    """Asignaciones de unidades/comités para sumo consejo y otros líderes."""
+    __tablename__ = 'council_assignments_plans'
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    scope_key = Column(String, nullable=False, unique=True, default='default')
+    plan_data = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class MapeoColumna(Base):
     """Mapeo de columnas del archivo fuente a campos del modelo"""
     __tablename__ = 'mapeos_columnas'

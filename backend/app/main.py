@@ -14,6 +14,7 @@ from .routes_asistencia import router as asistencia_router
 from .routes_lcr import router as lcr_router
 from .routes_ministering import router as ministering_router
 from .routes_stake_messages import router as stake_messages_router
+from .routes_council_assignments import router as council_assignments_router
 
 app = FastAPI(title="KPI PDF Extractor API")
 
@@ -59,6 +60,7 @@ app.include_router(asistencia_router, prefix="/api")
 app.include_router(lcr_router, prefix="/api")
 app.include_router(ministering_router, prefix="/api")
 app.include_router(stake_messages_router, prefix="/api")
+app.include_router(council_assignments_router, prefix="/api")
 
 
 @app.get("/")
