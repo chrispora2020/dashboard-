@@ -1,10 +1,22 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
 export default function Navbar({ user, onLogout, canManageLists }) {
   const userLabel = user?.name || user?.email || 'Usuario local'
+  const location = useLocation()
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const headerByPath = {
+    '/': 'Indicadores Estaca Maroñas',
+    '/conversos': 'Cargar listas',
+    '/mensajes-estaca': 'Editar plan',
+    '/plan-discursos': 'Plan de discursos',
+    '/upload': 'Cargar listas',
+    '/dashboard-api': 'Dashboard API'
+  }
+
+  const pageTitle = headerByPath[location.pathname] || 'Indicadores Estaca Maroñas'
 
   useEffect(() => {
     function onResize() {
@@ -22,7 +34,7 @@ export default function Navbar({ user, onLogout, canManageLists }) {
   return (
     <nav style={styles.nav}>
       <div style={styles.container}>
-        <h1 style={styles.brand}>Indicadores Claves Estaca Maroñas</h1>
+        <h1 style={styles.brand}>{pageTitle}</h1>
 
         {isMobile ? (
           <button
