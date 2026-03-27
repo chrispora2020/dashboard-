@@ -31,6 +31,12 @@ export default function Navbar({ user, onLogout, canManageLists }) {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
+  useEffect(() => {
+    if (isMobile) {
+      setMenuOpen(false)
+    }
+  }, [location.pathname, isMobile])
+
   return (
     <nav style={styles.nav}>
       <div style={styles.container}>
