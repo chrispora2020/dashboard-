@@ -4,11 +4,9 @@ import { useEffect, useState } from 'react'
 export default function Navbar({ user, onLogout, canManageLists, isPresidencia }) {
   const userLabel = user?.name || user?.email || 'Usuario local'
   const location = useLocation()
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 991)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [openGroup, setOpenGroup] = useState('indicadores')
-  const [hoveredGroup, setHoveredGroup] = useState('')
-  const [hoveredLink, setHoveredLink] = useState('')
+  const [openDropdown, setOpenDropdown] = useState('')
 
   const headerByPath = {
     '/': 'Indicadores Estaca Maroñas',
@@ -26,26 +24,7 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
 
   const pageTitle = headerByPath[location.pathname] || 'Indicadores Estaca Maroñas'
 
-  useEffect(() => {
-    function onResize() {
-      const mobile = window.innerWidth <= 900
-      setIsMobile(mobile)
-      if (!mobile) {
-        setMenuOpen(false)
-      }
-    }
-
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-
-  useEffect(() => {
-    if (isMobile) {
-      setMenuOpen(false)
-    }
-  }, [location.pathname, isMobile])
-
-  const groups = [
+  const menuGroups = [
     {
       id: 'indicadores',
       title: 'Indicadores',
@@ -73,102 +52,111 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
   ]
 
   useEffect(() => {
-    const activeGroup = groups.find((group) => group.links.some((link) => link.to === location.pathname))
-    if (activeGroup) {
-      setOpenGroup(activeGroup.id)
+    function onResize() {
+      const mobile = window.innerWidth <= 991
+      setIsMobile(mobile)
+      if (!mobile) {
+        setMenuOpen(false)
+      }
     }
-  }, [location.pathname, canManageLists, isPresidencia])
+
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  useEffect(() => {
+    setMenuOpen(false)
+    setOpenDropdown('')
+  }, [location.pathname])
+
+  function isRouteActive(group) {
+    return group.links.some((link) => link.to === location.pathname)
+  }
 
   return (
-    <nav style={styles.nav}>
-      <div style={styles.container}>
-        <h1 style={styles.brand}>{pageTitle}</h1>
+    <nav style={styles.navbar}>
+      <div style={styles.containerFluid}>
+        <Link to="/" style={styles.brand}>
+          {pageTitle}
+        </Link>
 
-        {isMobile ? (
-          <button
-            type="button"
-            style={styles.menuToggle}
-            onClick={() => setMenuOpen((prev) => !prev)}
-            aria-label="Abrir menú"
-          >
-            {menuOpen ? '✕' : '☰'}
-          </button>
-        ) : null}
+        <button
+          type="button"
+          style={{ ...styles.toggler, ...(!isMobile ? styles.togglerDesktop : {}) }}
+          onClick={() => setMenuOpen((prev) => !prev)}
+          aria-controls="navbarSupportedContent"
+          aria-expanded={menuOpen}
+          aria-label="Toggle navigation"
+        >
+          ☰
+        </button>
 
         <div
+          id="navbarSupportedContent"
           style={{
-            ...styles.menu,
-            ...(isMobile ? styles.menuMobile : {}),
-            ...(isMobile && menuOpen ? styles.menuMobileOpen : {})
+            ...styles.collapse,
+            ...(menuOpen || !isMobile ? styles.collapseOpen : {}),
+            ...(isMobile ? styles.collapseMobile : {})
           }}
         >
-          {groups.map((group) => {
-            const isOpen = openGroup === group.id
-            const hasSingleLink = group.links.length === 1
-            const singleLink = hasSingleLink ? group.links[0] : null
-            const isGroupHovered = hoveredGroup === group.id
-            const isSingleLinkActive = singleLink?.to === location.pathname
-            return (
-              <div
-                key={group.id}
-                style={{
-                  ...styles.group,
-                  ...(!isMobile && (isOpen || isGroupHovered) ? styles.groupActiveDesktop : {})
-                }}
-                onMouseEnter={() => !isMobile && setHoveredGroup(group.id)}
-                onMouseLeave={() => !isMobile && setHoveredGroup('')}
-              >
-                {hasSingleLink && singleLink ? (
-                  <Link
-                    to={singleLink.to}
-                    style={{
-                      ...styles.groupSingleLink,
-                      ...(!isMobile && isGroupHovered ? styles.groupSingleLinkHoverDesktop : {}),
-                      ...(isSingleLinkActive ? styles.groupSingleLinkActive : {})
-                    }}
-                  >
-                    {singleLink.label}
-                  </Link>
-                ) : (
-                  <>
-                    <button
-                      type="button"
+          <ul style={{ ...styles.navbarNav, ...(isMobile ? styles.navbarNavMobile : {}) }}>
+            {menuGroups.map((group) => {
+              const groupActive = isRouteActive(group)
+              if (group.links.length === 1) {
+                const onlyLink = group.links[0]
+                return (
+                  <li key={group.id} style={styles.navItem}>
+                    <Link
+                      to={onlyLink.to}
                       style={{
-                        ...styles.groupTitleButton,
-                        ...(!isMobile && (isOpen || isGroupHovered) ? styles.groupTitleButtonDesktopActive : {})
+                        ...styles.navLink,
+                        ...(onlyLink.to === location.pathname ? styles.navLinkActive : {})
                       }}
-                      onClick={() => setOpenGroup((prev) => (prev === group.id ? '' : group.id))}
                     >
-                      <span>{group.title}</span>
-                      <span style={{ ...styles.chevron, ...(isOpen ? styles.chevronOpen : {}) }}>▾</span>
-                    </button>
-                    {isOpen ? (
-                      <div style={styles.submenu}>
-                        {group.links.map((link) => (
+                      {onlyLink.label}
+                    </Link>
+                  </li>
+                )
+              }
+
+              const isOpen = openDropdown === group.id
+              return (
+                <li key={group.id} style={styles.dropdownWrapper}>
+                  <button
+                    type="button"
+                    style={{
+                      ...styles.dropdownToggle,
+                      ...(groupActive ? styles.navLinkActive : {})
+                    }}
+                    onClick={() => setOpenDropdown((prev) => (prev === group.id ? '' : group.id))}
+                    aria-expanded={isOpen}
+                  >
+                    {group.title} ▾
+                  </button>
+
+                  {isOpen ? (
+                    <ul style={{ ...styles.dropdownMenu, ...(isMobile ? styles.dropdownMenuMobile : {}) }}>
+                      {group.links.map((link) => (
+                        <li key={link.to}>
                           <Link
-                            key={link.to}
                             to={link.to}
                             style={{
-                              ...styles.link,
-                              ...(link.to === location.pathname ? styles.linkActive : {}),
-                              ...(!isMobile && hoveredLink === link.to ? styles.linkHoverDesktop : {})
+                              ...styles.dropdownItem,
+                              ...(link.to === location.pathname ? styles.dropdownItemActive : {})
                             }}
-                            onMouseEnter={() => !isMobile && setHoveredLink(link.to)}
-                            onMouseLeave={() => !isMobile && setHoveredLink('')}
                           >
                             {link.label}
                           </Link>
-                        ))}
-                      </div>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            )
-          })}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ul>
 
-
-          <div style={{ ...styles.user, ...(isMobile ? styles.userMobile : {}) }}>
+          <div style={{ ...styles.userSection, ...(isMobile ? styles.userSectionMobile : {}) }}>
             <span style={styles.userName}>{userLabel}</span>
             <button onClick={onLogout} style={styles.logoutBtn}>
               Cerrar sesión
@@ -181,165 +169,156 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
 }
 
 const styles = {
-  nav: {
-    background: 'linear-gradient(135deg, #00587c 0%, #0b7ea8 100%)',
-    color: 'white',
-    padding: '15px 0',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+  navbar: {
+    background: '#f8f9fa',
+    borderBottom: '1px solid #d7dde2',
+    padding: '10px 0',
+    position: 'sticky',
+    top: 0,
+    zIndex: 20
   },
-  container: {
+  containerFluid: {
+    width: '100%',
     maxWidth: '1200px',
     margin: '0 auto',
-    padding: '0 20px',
+    padding: '0 18px',
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: '16px',
-    position: 'relative'
+    flexWrap: 'wrap',
+    gap: '10px'
   },
   brand: {
-    margin: 0,
-    fontSize: '24px',
-    fontWeight: 'bold',
-    lineHeight: 1.2
+    fontSize: '1.05rem',
+    color: '#212529',
+    textDecoration: 'none',
+    fontWeight: 700,
+    marginRight: '8px'
   },
-  menuToggle: {
-    background: 'rgba(255,255,255,0.18)',
-    border: '1px solid rgba(255,255,255,0.35)',
-    borderRadius: '10px',
-    color: '#fff',
-    fontSize: '22px',
-    padding: '2px 10px',
+  toggler: {
+    marginLeft: 'auto',
+    border: '1px solid #adb5bd',
+    borderRadius: '6px',
+    background: '#fff',
+    color: '#212529',
+    padding: '4px 10px',
+    fontSize: '20px',
+    lineHeight: 1,
     cursor: 'pointer'
   },
-  menu: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px'
+  togglerDesktop: {
+    display: 'none'
   },
-  menuMobile: {
-    position: 'absolute',
-    top: '56px',
-    right: '20px',
-    left: '20px',
-    display: 'none',
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: '10px',
-    background: 'rgba(30, 41, 59, 0.95)',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '12px',
-    padding: '12px',
-    zIndex: 10,
-    backdropFilter: 'blur(4px)'
-  },
-  menuMobileOpen: {
-    display: 'flex'
-  },
-  link: {
-    color: 'white',
-    textDecoration: 'none',
-    fontSize: '15px',
-    fontWeight: '500',
-    transition: 'all 0.2s ease',
-    padding: '4px 8px',
-    borderRadius: '6px'
-  },
-  linkActive: {
-    background: 'rgba(255,255,255,0.18)',
-    fontWeight: 700
-  },
-  linkHoverDesktop: {
-    transform: 'translateX(2px)',
-    background: 'rgba(255,255,255,0.12)'
-  },
-  group: {
-    border: '1px solid rgba(255,255,255,0.25)',
-    borderRadius: '10px',
-    padding: '6px 10px',
-    minWidth: '190px',
-    background: 'rgba(255,255,255,0.05)',
-    transition: 'all 0.22s ease'
-  },
-  groupActiveDesktop: {
-    background: 'rgba(255,255,255,0.12)',
-    boxShadow: '0 10px 22px rgba(2, 34, 49, 0.28)',
-    border: '1px solid rgba(255,255,255,0.38)',
-    transform: 'translateY(-1px)'
-  },
-  groupTitleButton: {
+  collapse: {
     width: '100%',
-    border: 'none',
-    background: 'transparent',
-    color: '#fff',
-    display: 'flex',
+    display: 'none',
     alignItems: 'center',
     justifyContent: 'space-between',
-    cursor: 'pointer',
-    fontWeight: 700,
-    fontSize: '14px',
-    padding: 0,
-    transition: 'color 0.2s ease'
+    gap: '14px',
+    position: 'relative'
   },
-  groupTitleButtonDesktopActive: {
-    color: '#e8f6ff'
+  collapseOpen: {
+    display: 'flex'
   },
-  groupSingleLink: {
-    color: 'white',
-    textDecoration: 'none',
-    display: 'block',
-    fontWeight: 700,
-    fontSize: '14px',
-    borderRadius: '6px',
-    padding: '2px 4px',
-    transition: 'all 0.2s ease'
-  },
-  groupSingleLinkHoverDesktop: {
-    background: 'rgba(255,255,255,0.14)'
-  },
-  groupSingleLinkActive: {
-    color: '#e8f6ff'
-  },
-  chevron: {
-    display: 'inline-block',
-    transition: 'transform 0.2s ease'
-  },
-  chevronOpen: {
-    transform: 'rotate(180deg)'
-  },
-  submenu: {
-    display: 'flex',
+  collapseMobile: {
     flexDirection: 'column',
-    gap: '6px',
-    marginTop: '8px'
+    alignItems: 'stretch'
   },
-  user: {
+  navbarNav: {
+    listStyle: 'none',
     display: 'flex',
     alignItems: 'center',
-    gap: '15px',
-    marginLeft: '20px',
-    paddingLeft: '20px',
-    borderLeft: '1px solid rgba(255,255,255,0.3)'
+    gap: '8px',
+    margin: 0,
+    padding: 0,
+    flexWrap: 'wrap'
   },
-  userMobile: {
+  navbarNavMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    width: '100%'
+  },
+  navItem: {
+    position: 'relative'
+  },
+  navLink: {
+    textDecoration: 'none',
+    color: '#495057',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    display: 'inline-block',
+    fontWeight: 500
+  },
+  navLinkActive: {
+    color: '#0d6efd',
+    background: '#e7f1ff'
+  },
+  dropdownWrapper: {
+    position: 'relative'
+  },
+  dropdownToggle: {
+    border: 'none',
+    background: 'transparent',
+    color: '#495057',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    fontWeight: 500,
+    cursor: 'pointer'
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    marginTop: '4px',
+    listStyle: 'none',
+    padding: '8px',
+    minWidth: '230px',
+    background: '#fff',
+    border: '1px solid #ced4da',
+    borderRadius: '8px',
+    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
+    zIndex: 30
+  },
+  dropdownMenuMobile: {
+    position: 'static',
+    width: '100%',
+    marginTop: 0,
+    boxShadow: 'none'
+  },
+  dropdownItem: {
+    textDecoration: 'none',
+    color: '#212529',
+    padding: '8px 10px',
+    borderRadius: '6px',
+    display: 'block'
+  },
+  dropdownItemActive: {
+    color: '#0d6efd',
+    background: '#e7f1ff'
+  },
+  userSection: {
+    marginLeft: 'auto',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
+  },
+  userSectionMobile: {
     marginLeft: 0,
-    paddingLeft: 0,
-    borderLeft: 'none',
-    borderTop: '1px solid rgba(255,255,255,0.2)',
-    paddingTop: '10px',
-    justifyContent: 'space-between'
+    width: '100%',
+    justifyContent: 'space-between',
+    borderTop: '1px solid #e9ecef',
+    paddingTop: '10px'
   },
   userName: {
-    fontSize: '14px',
-    opacity: 0.9
+    color: '#6c757d',
+    fontSize: '0.9rem'
   },
   logoutBtn: {
-    padding: '6px 15px',
-    background: 'rgba(255,255,255,0.2)',
-    border: '1px solid rgba(255,255,255,0.3)',
-    color: 'white',
-    borderRadius: '4px',
+    border: '1px solid #dc3545',
+    background: '#fff',
+    color: '#dc3545',
+    borderRadius: '6px',
+    padding: '7px 11px',
     cursor: 'pointer',
-    fontSize: '14px'
+    fontWeight: 600
   }
 }
