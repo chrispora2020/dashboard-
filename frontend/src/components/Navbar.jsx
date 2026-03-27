@@ -65,7 +65,7 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
             ...(isMobile && menuOpen ? styles.menuMobileOpen : {})
           }}
         >
-          <details style={styles.group} open={!isMobile}>
+          <details style={styles.group}>
             <summary style={styles.groupTitle}>Indicadores</summary>
             <div style={styles.submenu}>
               <Link to="/" style={styles.link}>Dashboard</Link>
@@ -75,17 +75,18 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
             </div>
           </details>
 
-          <details style={styles.group} open={!isMobile}>
+          <details style={styles.group}>
             <summary style={styles.groupTitle}>Mensajes</summary>
             <div style={styles.submenu}>
-              <Link to="/mensajes/ver" style={styles.link}>Ver plan mensajes</Link>
+              <Link to="/mensajes/ver" style={styles.link}>Ver plan de mensajes</Link>
+              <Link to="/plan-discursos" style={styles.link}>Ver plan de discursos</Link>
               {canManageLists ? (
-                <Link to="/mensajes/editar" style={styles.link}>Editar plan mensajes</Link>
+                <Link to="/mensajes/editar" style={styles.link}>Editar plan de mensajes</Link>
               ) : null}
             </div>
           </details>
 
-          <details style={styles.group} open={!isMobile}>
+          <details style={styles.group}>
             <summary style={styles.groupTitle}>Asignaciones</summary>
             <div style={styles.submenu}>
               <Link to="/asignaciones/ver" style={styles.link}>Ver asignaciones</Link>
@@ -95,7 +96,6 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
             </div>
           </details>
 
-          <Link to="/plan-discursos" style={styles.link}>Plan de discursos</Link>
 
           <div style={{ ...styles.user, ...(isMobile ? styles.userMobile : {}) }}>
             <span style={styles.userName}>{userLabel}</span>
