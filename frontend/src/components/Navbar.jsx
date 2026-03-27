@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
-export default function Navbar({ user, onLogout, listasAccessGranted }) {
+export default function Navbar({ user, onLogout, canManageLists }) {
   const userLabel = user?.name || user?.email || 'Usuario local'
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -43,22 +43,18 @@ export default function Navbar({ user, onLogout, listasAccessGranted }) {
           }}
         >
           <Link to="/" style={styles.link}>Dashboard</Link>
-          {!listasAccessGranted ? (
-            <Link to="/acceso-listas" style={styles.link}>Acceso Cargar Listas</Link>
-          ) : (
+          {canManageLists ? (
             <Link to="/conversos" style={styles.link}>Cargar Listas</Link>
-          )}
+          ) : null}
           <Link to="/plan-discursos" style={styles.link}>Plan de discursos</Link>
-          {!listasAccessGranted ? (
-            <Link to="/acceso-listas" style={styles.link}>Acceso Editar plan</Link>
-          ) : (
+          {canManageLists ? (
             <Link to="/mensajes-estaca" style={styles.link}>Editar plan</Link>
-          )}
+          ) : null}
 
           <div style={{ ...styles.user, ...(isMobile ? styles.userMobile : {}) }}>
             <span style={styles.userName}>{userLabel}</span>
             <button onClick={onLogout} style={styles.logoutBtn}>
-              Restablecer
+              Cerrar sesión
             </button>
           </div>
         </div>
@@ -69,7 +65,7 @@ export default function Navbar({ user, onLogout, listasAccessGranted }) {
 
 const styles = {
   nav: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #00587c 0%, #0b7ea8 100%)',
     color: 'white',
     padding: '15px 0',
     boxShadow: '0 2px 8px rgba(0,0,0,0.1)'

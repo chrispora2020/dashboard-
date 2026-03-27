@@ -1,88 +1,60 @@
-import axios from 'axios'
 import { useState } from 'react'
-import API_BASE from '../config'
 
 export default function Login({ onLogin }) {
-  const [isRegister, setIsRegister] = useState(false)
-  const [email, setEmail] = useState('')
+  const [role, setRole] = useState('consejo')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(e) {
+  const credentialsByRole = {
+    consejo: {
+      password: import.meta.env.VITE_ROLE_PASSWORD_CONSEJO || 'consejo2026',
+      name: 'Consejo',
+      email: 'consejo@dashboard.local'
+    },
+    presidencia: {
+      password: import.meta.env.VITE_ROLE_PASSWORD_PRESIDENCIA || 'Presidencia2026Maroñas#',
+      name: 'Presidencia',
+      email: 'presidencia@dashboard.local'
+    }
+  }
+
+  function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    setLoading(true)
 
-    try {
-      const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login'
-      const payload = isRegister 
-        ? { email, password, name }
-        : { email, password }
-      
-      console.log('Sending request to:', `${API_BASE}${endpoint}`, payload)
-      const { data } = await axios.post(`${API_BASE}${endpoint}`, payload)
-      console.log('Response from backend:', data)
-      
-      if (data.access_token) {
-        localStorage.setItem('token', data.access_token)
-        localStorage.setItem('user', JSON.stringify(data.user))
-        console.log('Calling onLogin with user:', data.user)
-        onLogin(data.user)
-      } else if (isRegister) {
-        setIsRegister(false)
-        setError('Usuario registrado. Ahora inicia sesión.')
-      }
-    } catch (err) {
-      console.error('Login error:', err)
-      let errorMessage = 'Error de conexión'
-      
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail
-        // Si detail es un array (errores de validación de Pydantic)
-        if (Array.isArray(detail)) {
-          errorMessage = detail.map(e => e.msg).join(', ')
-        } else if (typeof detail === 'string') {
-          errorMessage = detail
-        } else {
-          errorMessage = JSON.stringify(detail)
-        }
-      }
-      
-      setError(errorMessage)
-    } finally {
-      setLoading(false)
+    const roleConfig = credentialsByRole[role]
+
+    if (!roleConfig) {
+      setError('Rol no válido.')
+      return
     }
+
+    if (password.trim() !== roleConfig.password) {
+      setError('Contraseña incorrecta para el rol seleccionado.')
+      return
+    }
+
+    onLogin({
+      role,
+      name: roleConfig.name,
+      email: roleConfig.email
+    })
   }
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2 style={styles.title}>
-          {isRegister ? 'Crear Cuenta' : 'Iniciar Sesión'}
-        </h2>
+        <h2 style={styles.title}>Iniciar sesión</h2>
+        <p style={styles.subtitle}>Seleccione rol y contraseña</p>
         
         <form onSubmit={handleSubmit} style={styles.form}>
-          {isRegister && (
-            <input
-              type="text"
-              placeholder="Nombre completo"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              style={styles.input}
-            />
-          )}
-          
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={styles.input}
-          />
+          <label style={styles.label}>
+            Rol
+            <select value={role} onChange={(event) => setRole(event.target.value)} style={styles.input}>
+              <option value="consejo">Consejo</option>
+              <option value="presidencia">Presidencia</option>
+            </select>
+          </label>
           
           <input
             type="password"
@@ -95,26 +67,10 @@ export default function Login({ onLogin }) {
           
           {error && <div style={styles.error}>{error}</div>}
           
-          <button 
-            type="submit" 
-            disabled={loading}
-            style={styles.button}
-          >
-            {loading ? 'Procesando...' : (isRegister ? 'Registrar' : 'Ingresar')}
+          <button type="submit" style={styles.button}>
+            Ingresar
           </button>
         </form>
-        
-        <p style={styles.toggle}>
-          {isRegister ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}
-          {' '}
-          <a 
-            href="#" 
-            onClick={(e) => { e.preventDefault(); setIsRegister(!isRegister); setError('') }}
-            style={styles.link}
-          >
-            {isRegister ? 'Inicia sesión' : 'Regístrate'}
-          </a>
-        </p>
       </div>
     </div>
   )
@@ -126,7 +82,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #00587c 0%, #0b7ea8 100%)',
     fontFamily: 'Arial, sans-serif'
   },
   card: {
@@ -139,14 +95,27 @@ const styles = {
   },
   title: {
     marginTop: 0,
-    marginBottom: '30px',
+    marginBottom: '6px',
     textAlign: 'center',
     color: '#333'
+  },
+  subtitle: {
+    textAlign: 'center',
+    color: '#4b5563',
+    marginTop: 0,
+    marginBottom: '22px'
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
     gap: '15px'
+  },
+  label: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    color: '#374151',
+    fontSize: '14px'
   },
   input: {
     padding: '12px 15px',
@@ -161,7 +130,7 @@ const styles = {
     fontSize: '16px',
     fontWeight: 'bold',
     color: 'white',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #00587c 0%, #0b7ea8 100%)',
     border: 'none',
     borderRadius: '6px',
     cursor: 'pointer',
@@ -173,16 +142,5 @@ const styles = {
     color: '#c33',
     borderRadius: '6px',
     fontSize: '14px'
-  },
-  toggle: {
-    marginTop: '20px',
-    textAlign: 'center',
-    fontSize: '14px',
-    color: '#666'
-  },
-  link: {
-    color: '#667eea',
-    textDecoration: 'none',
-    fontWeight: 'bold'
   }
 }
