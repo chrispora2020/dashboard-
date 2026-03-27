@@ -195,7 +195,7 @@ export default function CouncilAssignments({ canEdit }) {
       <div style={styles.headerCard}>
         <h2 style={styles.title}>Asignación de Sumo Consejo y comités</h2>
         <p style={styles.subtitle}>Pantalla de edición de asignaciones para Presidencia.</p>
-
+        <p style={styles.legend}>Referencia: 🧭 indica que el miembro está marcado como viajante.</p>
       </div>
 
       {canEdit ? (
@@ -428,6 +428,7 @@ const styles = {
   },
   title: { margin: 0, color: '#0f172a' },
   subtitle: { marginTop: '6px', marginBottom: 0, color: '#475569' },
+  legend: { marginTop: '8px', marginBottom: 0, color: '#334155', fontSize: '13px' },
   sectionCard: {
     background: '#fff',
     borderRadius: '12px',
