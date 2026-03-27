@@ -9,6 +9,15 @@ import {
 
 const API_PATH = '/api/council-assignments'
 
+function slugifyLeaderId(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 function LeaderCard({ leader, unitNames, committeesMap }) {
   return (
     <article style={styles.leaderCard}>
@@ -31,7 +40,9 @@ export default function CouncilAssignments({ canEdit }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
-  const [activeTab, setActiveTab] = useState(canEdit ? 'ver' : 'ver')
+  const [newLeaderName, setNewLeaderName] = useState('')
+  const [newLeaderTitle, setNewLeaderTitle] = useState('')
+  const [newLeaderType, setNewLeaderType] = useState('high-council')
 
   const unitsMap = useMemo(() => Object.fromEntries(plan.units.map((unit) => [unit.id, unit.name])), [plan.units])
   const committeesMap = useMemo(() => Object.fromEntries(plan.committees.map((committee) => [committee.id, committee.name])), [plan.committees])
@@ -124,6 +135,43 @@ export default function CouncilAssignments({ canEdit }) {
     }))
   }
 
+
+  function updateLeaderField(leaderId, field, value) {
+    setPlan((prev) => ({
+      ...prev,
+      leaders: prev.leaders.map((leader) => (leader.id === leaderId ? { ...leader, [field]: value } : leader))
+    }))
+  }
+
+  function addLeader() {
+    const cleanName = newLeaderName.trim()
+    if (!cleanName) {
+      setStatus('⚠️ Escribe el nombre del miembro para agregarlo.')
+      return
+    }
+
+    const baseId = slugifyLeaderId(cleanName) || `lider-${Date.now()}`
+    const idExists = plan.leaders.some((leader) => leader.id === baseId)
+    const nextId = idExists ? `${baseId}-${Date.now()}` : baseId
+
+    const leaderToAdd = {
+      id: nextId,
+      name: cleanName,
+      assignmentTitle: newLeaderTitle.trim(),
+      isHighCouncil: newLeaderType === 'high-council',
+      isTraveler: false,
+      unitId: '',
+      unitIds: [],
+      committeeIds: []
+    }
+
+    setPlan((prev) => ({ ...prev, leaders: [...prev.leaders, leaderToAdd] }))
+    setNewLeaderName('')
+    setNewLeaderTitle('')
+    setNewLeaderType('high-council')
+    setStatus(`✅ Se agregó a ${cleanName}.`)
+  }
+
   async function savePlan() {
     setSaving(true)
     setStatus('')
@@ -147,65 +195,80 @@ export default function CouncilAssignments({ canEdit }) {
     <div style={styles.page}>
       <div style={styles.headerCard}>
         <h2 style={styles.title}>Asignación de Sumo Consejo y comités</h2>
-        <p style={styles.subtitle}>Separamos la vista de asignaciones de la pantalla de edición.</p>
+        <p style={styles.subtitle}>Pantalla de edición de asignaciones para Presidencia.</p>
 
-        <div style={styles.tabsRow}>
-          <button type="button" style={{ ...styles.tabBtn, ...(activeTab === 'ver' ? styles.tabBtnActive : {}) }} onClick={() => setActiveTab('ver')}>Ver asignaciones</button>
-          {canEdit ? (
-            <button type="button" style={{ ...styles.tabBtn, ...(activeTab === 'editar' ? styles.tabBtnActive : {}) }} onClick={() => setActiveTab('editar')}>Editar</button>
-          ) : null}
-        </div>
       </div>
 
-      {activeTab === 'ver' ? (
-        <div style={styles.sectionCard}>
-          <h3 style={styles.sectionTitle}>Distribución de miembros de Sumo Consejo</h3>
-          <div style={styles.unitsGrid}>
-            {highCouncilByUnit.map((unit) => (
-              <section key={unit.id} style={styles.unitColumn}>
-                <h4 style={styles.unitTitle}>{unit.name}</h4>
-                {unit.leaders.length ? unit.leaders.map((leader) => (
-                  <LeaderCard
-                    key={leader.id}
-                    leader={leader}
-                    unitNames={leader.unitIds.map((unitId) => unitsMap[unitId]).filter(Boolean)}
-                    committeesMap={committeesMap}
-                  />
-                )) : <p style={styles.emptyHint}>Sin miembros asignados.</p>}
-              </section>
-            ))}
-          </div>
-
-          <h3 style={{ ...styles.sectionTitle, marginTop: '20px' }}>Distribución de comités</h3>
-          <div style={styles.unitsGrid}>
-            {committeesWithLeaders.map((committee) => (
-              <section key={committee.id} style={styles.unitColumn}>
-                <h4 style={styles.unitTitle}>{committee.name}</h4>
-                {committee.leaders.length ? committee.leaders.map((leader) => (
-                  <LeaderCard
-                    key={`${committee.id}-${leader.id}`}
-                    leader={leader}
-                    unitNames={leader.unitIds.map((unitId) => unitsMap[unitId]).filter(Boolean)}
-                    committeesMap={committeesMap}
-                  />
-                )) : <p style={styles.emptyHint}>Sin miembros en este comité.</p>}
-              </section>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === 'editar' && canEdit ? (
+      {canEdit ? (
         <div style={styles.sectionCard}>
           <h3 style={styles.sectionTitle}>Editor para Presidencia</h3>
           <p style={styles.hint}>Ahora puedes asignar varios barrios al mismo miembro del Sumo Consejo y marcar si es viajante.</p>
+
+          <div style={styles.addLeaderBox}>
+            <h4 style={styles.unitTitle}>Agregar miembro</h4>
+            <div style={styles.addLeaderGrid}>
+              <label style={styles.inputLabel}>
+                Nombre
+                <input
+                  type="text"
+                  value={newLeaderName}
+                  onChange={(event) => setNewLeaderName(event.target.value)}
+                  placeholder="Nombre completo"
+                  style={styles.textInput}
+                />
+              </label>
+
+              <label style={styles.inputLabel}>
+                Llamamiento / asignación
+                <input
+                  type="text"
+                  value={newLeaderTitle}
+                  onChange={(event) => setNewLeaderTitle(event.target.value)}
+                  placeholder="Ej: Presidente de ..."
+                  style={styles.textInput}
+                />
+              </label>
+
+              <label style={styles.inputLabel}>
+                Tipo de miembro
+                <select
+                  value={newLeaderType}
+                  onChange={(event) => setNewLeaderType(event.target.value)}
+                  style={styles.selectInput}
+                >
+                  <option value="high-council">Miembro del Sumo Consejo</option>
+                  <option value="other-leader">Otro líder (solo comités)</option>
+                </select>
+              </label>
+            </div>
+            <button type="button" style={styles.addBtn} onClick={addLeader}>Agregar miembro</button>
+          </div>
 
           <div style={styles.committeeBox}>
             <h4 style={styles.unitTitle}>Asignaciones de barrios (solo Sumo Consejo)</h4>
             {leaders.map((leader) => (
               <div key={`units-${leader.id}`} style={styles.committeeRow}>
                 <div style={styles.committeeHeader}>
-                  <span style={styles.committeeLeaderName}>{leader.name}</span>
+                  <div style={styles.leaderInfoInputs}>
+                    <label style={styles.inputLabel}>
+                      Nombre
+                      <input
+                        type="text"
+                        value={leader.name}
+                        onChange={(event) => updateLeaderField(leader.id, 'name', event.target.value)}
+                        style={styles.textInput}
+                      />
+                    </label>
+                    <label style={styles.inputLabel}>
+                      Llamamiento / asignación
+                      <input
+                        type="text"
+                        value={leader.assignmentTitle}
+                        onChange={(event) => updateLeaderField(leader.id, 'assignmentTitle', event.target.value)}
+                        style={styles.textInput}
+                      />
+                    </label>
+                  </div>
                   <label style={styles.checkLabel}>
                     <input
                       type="checkbox"
@@ -240,7 +303,39 @@ export default function CouncilAssignments({ canEdit }) {
             <h4 style={styles.unitTitle}>Asignaciones de comités</h4>
             {leaders.map((leader) => (
               <div key={`committee-${leader.id}`} style={styles.committeeRow}>
-                <span style={styles.committeeLeaderName}>{leader.name}</span>
+                <div style={styles.committeeHeader}>
+                  <div style={styles.leaderInfoInputs}>
+                    <label style={styles.inputLabel}>
+                      Nombre
+                      <input
+                        type="text"
+                        value={leader.name}
+                        onChange={(event) => updateLeaderField(leader.id, 'name', event.target.value)}
+                        style={styles.textInput}
+                      />
+                    </label>
+                    <label style={styles.inputLabel}>
+                      Llamamiento / asignación
+                      <input
+                        type="text"
+                        value={leader.assignmentTitle}
+                        onChange={(event) => updateLeaderField(leader.id, 'assignmentTitle', event.target.value)}
+                        style={styles.textInput}
+                      />
+                    </label>
+                    <label style={styles.inputLabel}>
+                      Tipo
+                      <select
+                        value={leader.isHighCouncil ? 'high-council' : 'other-leader'}
+                        onChange={(event) => updateLeaderField(leader.id, 'isHighCouncil', event.target.value === 'high-council')}
+                        style={styles.selectInput}
+                      >
+                        <option value="high-council">Sumo Consejo</option>
+                        <option value="other-leader">Otro líder</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
                 <div style={styles.committeeChecks}>
                   {plan.committees.map((committee) => (
                     <label key={`${leader.id}-${committee.id}`} style={styles.checkLabel}>
@@ -264,7 +359,11 @@ export default function CouncilAssignments({ canEdit }) {
             {status ? <span style={styles.status}>{status}</span> : null}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div style={styles.sectionCard}>
+          <p style={styles.emptyHint}>Solo la Presidencia puede editar estas asignaciones.</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -283,9 +382,6 @@ const styles = {
   },
   title: { margin: 0, color: '#0f172a' },
   subtitle: { marginTop: '6px', marginBottom: 0, color: '#475569' },
-  tabsRow: { marginTop: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' },
-  tabBtn: { border: '1px solid #cbd5e1', background: '#fff', borderRadius: '999px', padding: '8px 14px', cursor: 'pointer' },
-  tabBtnActive: { background: '#0b7ea8', color: '#fff', borderColor: '#0b7ea8' },
   sectionCard: {
     background: '#fff',
     borderRadius: '12px',
@@ -294,6 +390,8 @@ const styles = {
   },
   sectionTitle: { marginTop: 0, color: '#0f172a' },
   hint: { marginTop: '-4px', color: '#64748b' },
+  addLeaderBox: { marginTop: '18px', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' },
+  addLeaderGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' },
   unitsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -322,11 +420,16 @@ const styles = {
   tagOther: { margin: '6px 0 0', color: '#92400e', fontSize: '12px', fontWeight: 600 },
   committeeBox: { marginTop: '18px', borderTop: '1px solid #e2e8f0', paddingTop: '14px' },
   committeeRow: { borderBottom: '1px solid #f1f5f9', padding: '8px 0', display: 'grid', gap: '8px' },
-  committeeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' },
+  committeeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px', flexWrap: 'wrap' },
+  leaderInfoInputs: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', flex: '1 1 420px' },
+  inputLabel: { display: 'grid', gap: '4px', color: '#334155', fontSize: '13px' },
+  textInput: { border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 10px', fontSize: '14px' },
+  selectInput: { border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 10px', fontSize: '14px', background: '#fff' },
   committeeLeaderName: { color: '#0f172a', fontWeight: 600 },
   committeeChecks: { display: 'flex', gap: '12px', flexWrap: 'wrap' },
   checkLabel: { display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#334155', fontSize: '14px' },
   actionsRow: { marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' },
+  addBtn: { border: '1px solid #0b7ea8', borderRadius: '8px', background: '#ecfeff', color: '#0b7ea8', padding: '8px 12px', cursor: 'pointer', marginTop: '12px' },
   saveBtn: {
     border: 'none',
     borderRadius: '8px',
