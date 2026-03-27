@@ -113,7 +113,15 @@ export default function App() {
           />
           <Route
             path="/mensajes-estaca"
-            element={canManageLists ? <StakeMessagesPlan /> : <Navigate to="/" replace />}
+            element={<Navigate to={canManageLists ? '/mensajes/editar' : '/mensajes/ver'} replace />}
+          />
+          <Route
+            path="/mensajes/ver"
+            element={<StakeMessagesPlan canEdit={false} />}
+          />
+          <Route
+            path="/mensajes/editar"
+            element={canManageLists ? <StakeMessagesPlan canEdit /> : <Navigate to="/mensajes/ver" replace />}
           />
           <Route
             path="/sumo-consejo"
