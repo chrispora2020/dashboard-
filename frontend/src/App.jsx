@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard'
 import ImportacionConversos from './components/ImportacionConversos'
 import Login from './components/Login'
 import Navbar from './components/Navbar'
+import CouncilAssignments from './components/CouncilAssignments'
 import StakeMessagesPlan from './components/StakeMessagesPlan'
 import SpeakersPlanView from './components/SpeakersPlanView'
 import Upload from './components/Upload'
@@ -108,6 +109,10 @@ export default function App() {
           <Route
             path="/mensajes-estaca"
             element={canManageLists ? <StakeMessagesPlan /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/sumo-consejo"
+            element={<CouncilAssignments canEdit={canManageLists} />}
           />
           <Route path="/plan-discursos" element={<SpeakersPlanView />} />
           <Route path="*" element={<Navigate to="/" replace />} />
