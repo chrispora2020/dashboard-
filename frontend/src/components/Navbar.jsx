@@ -7,6 +7,8 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900)
   const [menuOpen, setMenuOpen] = useState(false)
   const [openGroup, setOpenGroup] = useState('indicadores')
+  const [hoveredGroup, setHoveredGroup] = useState('')
+  const [hoveredLink, setHoveredLink] = useState('')
 
   const headerByPath = {
     '/': 'Indicadores Estaca Maroñas',
@@ -102,23 +104,65 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
         >
           {groups.map((group) => {
             const isOpen = openGroup === group.id
+            const hasSingleLink = group.links.length === 1
+            const singleLink = hasSingleLink ? group.links[0] : null
+            const isGroupHovered = hoveredGroup === group.id
+            const isSingleLinkActive = singleLink?.to === location.pathname
             return (
-              <div key={group.id} style={styles.group}>
-                <button
-                  type="button"
-                  style={styles.groupTitleButton}
-                  onClick={() => setOpenGroup((prev) => (prev === group.id ? '' : group.id))}
-                >
-                  <span>{group.title}</span>
-                  <span style={{ ...styles.chevron, ...(isOpen ? styles.chevronOpen : {}) }}>▾</span>
-                </button>
-                {isOpen ? (
-                  <div style={styles.submenu}>
-                    {group.links.map((link) => (
-                      <Link key={link.to} to={link.to} style={styles.link}>{link.label}</Link>
-                    ))}
-                  </div>
-                ) : null}
+              <div
+                key={group.id}
+                style={{
+                  ...styles.group,
+                  ...(!isMobile && (isOpen || isGroupHovered) ? styles.groupActiveDesktop : {})
+                }}
+                onMouseEnter={() => !isMobile && setHoveredGroup(group.id)}
+                onMouseLeave={() => !isMobile && setHoveredGroup('')}
+              >
+                {hasSingleLink && singleLink ? (
+                  <Link
+                    to={singleLink.to}
+                    style={{
+                      ...styles.groupSingleLink,
+                      ...(!isMobile && isGroupHovered ? styles.groupSingleLinkHoverDesktop : {}),
+                      ...(isSingleLinkActive ? styles.groupSingleLinkActive : {})
+                    }}
+                  >
+                    {singleLink.label}
+                  </Link>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      style={{
+                        ...styles.groupTitleButton,
+                        ...(!isMobile && (isOpen || isGroupHovered) ? styles.groupTitleButtonDesktopActive : {})
+                      }}
+                      onClick={() => setOpenGroup((prev) => (prev === group.id ? '' : group.id))}
+                    >
+                      <span>{group.title}</span>
+                      <span style={{ ...styles.chevron, ...(isOpen ? styles.chevronOpen : {}) }}>▾</span>
+                    </button>
+                    {isOpen ? (
+                      <div style={styles.submenu}>
+                        {group.links.map((link) => (
+                          <Link
+                            key={link.to}
+                            to={link.to}
+                            style={{
+                              ...styles.link,
+                              ...(link.to === location.pathname ? styles.linkActive : {}),
+                              ...(!isMobile && hoveredLink === link.to ? styles.linkHoverDesktop : {})
+                            }}
+                            onMouseEnter={() => !isMobile && setHoveredLink(link.to)}
+                            onMouseLeave={() => !isMobile && setHoveredLink('')}
+                          >
+                            {link.label}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                )}
               </div>
             )
           })}
@@ -197,15 +241,31 @@ const styles = {
     textDecoration: 'none',
     fontSize: '15px',
     fontWeight: '500',
-    transition: 'opacity 0.3s',
-    padding: '4px 0'
+    transition: 'all 0.2s ease',
+    padding: '4px 8px',
+    borderRadius: '6px'
+  },
+  linkActive: {
+    background: 'rgba(255,255,255,0.18)',
+    fontWeight: 700
+  },
+  linkHoverDesktop: {
+    transform: 'translateX(2px)',
+    background: 'rgba(255,255,255,0.12)'
   },
   group: {
     border: '1px solid rgba(255,255,255,0.25)',
     borderRadius: '10px',
     padding: '6px 10px',
     minWidth: '190px',
-    background: 'rgba(255,255,255,0.05)'
+    background: 'rgba(255,255,255,0.05)',
+    transition: 'all 0.22s ease'
+  },
+  groupActiveDesktop: {
+    background: 'rgba(255,255,255,0.12)',
+    boxShadow: '0 10px 22px rgba(2, 34, 49, 0.28)',
+    border: '1px solid rgba(255,255,255,0.38)',
+    transform: 'translateY(-1px)'
   },
   groupTitleButton: {
     width: '100%',
@@ -218,7 +278,27 @@ const styles = {
     cursor: 'pointer',
     fontWeight: 700,
     fontSize: '14px',
-    padding: 0
+    padding: 0,
+    transition: 'color 0.2s ease'
+  },
+  groupTitleButtonDesktopActive: {
+    color: '#e8f6ff'
+  },
+  groupSingleLink: {
+    color: 'white',
+    textDecoration: 'none',
+    display: 'block',
+    fontWeight: 700,
+    fontSize: '14px',
+    borderRadius: '6px',
+    padding: '2px 4px',
+    transition: 'all 0.2s ease'
+  },
+  groupSingleLinkHoverDesktop: {
+    background: 'rgba(255,255,255,0.14)'
+  },
+  groupSingleLinkActive: {
+    color: '#e8f6ff'
   },
   chevron: {
     display: 'inline-block',
