@@ -1,10 +1,25 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
+const MOBILE_BREAKPOINT = 640
 
 export default function Login({ onLogin }) {
   const [role, setRole] = useState('consejo')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT)
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT)
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
 
   const credentialsByRole = {
     consejo: {
@@ -43,11 +58,11 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
+    <div style={{ ...styles.container, ...(isMobile ? styles.containerMobile : null) }}>
+      <div style={{ ...styles.card, ...(isMobile ? styles.cardMobile : null) }}>
         <h2 style={styles.title}>Iniciar sesión</h2>
         <p style={styles.subtitle}>Seleccione rol y contraseña</p>
-        
+
         <form onSubmit={handleSubmit} style={styles.form}>
           <label style={styles.label}>
             Rol
@@ -56,7 +71,7 @@ export default function Login({ onLogin }) {
               <option value="presidencia">Presidencia</option>
             </select>
           </label>
-          
+
           <div style={styles.passwordField}>
             <input
               type={showPassword ? 'text' : 'password'}
@@ -80,9 +95,9 @@ export default function Login({ onLogin }) {
               👁️
             </button>
           </div>
-          
+
           {error && <div style={styles.error}>{error}</div>}
-          
+
           <button type="submit" style={styles.button}>
             Ingresar
           </button>
@@ -101,6 +116,9 @@ const styles = {
     background: 'linear-gradient(135deg, #00587c 0%, #0b7ea8 100%)',
     fontFamily: 'Arial, sans-serif'
   },
+  containerMobile: {
+    alignItems: 'stretch'
+  },
   card: {
     background: 'white',
     padding: '40px',
@@ -108,6 +126,14 @@ const styles = {
     boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
     width: '100%',
     maxWidth: '400px'
+  },
+  cardMobile: {
+    minHeight: '100vh',
+    maxWidth: 'none',
+    borderRadius: 0,
+    boxShadow: 'none',
+    padding: '28px 22px',
+    boxSizing: 'border-box'
   },
   title: {
     marginTop: 0,
