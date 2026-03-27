@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
-export default function Navbar({ user, onLogout, canManageLists }) {
+export default function Navbar({ user, onLogout, canManageLists, isPresidencia }) {
   const userLabel = user?.name || user?.email || 'Usuario local'
   const location = useLocation()
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900)
@@ -11,7 +11,9 @@ export default function Navbar({ user, onLogout, canManageLists }) {
     '/': 'Indicadores Estaca Maroñas',
     '/conversos': 'Cargar listas',
     '/mensajes-estaca': 'Editar plan',
-    '/sumo-consejo': 'Miembros y asignaciones',
+    '/sumo-consejo': 'Asignaciones',
+    '/asignaciones/ver': 'Asignaciones',
+    '/asignaciones/editar': 'Editar asignaciones',
     '/plan-discursos': 'Plan de discursos',
     '/upload': 'Cargar listas',
     '/dashboard-api': 'Dashboard API'
@@ -66,7 +68,14 @@ export default function Navbar({ user, onLogout, canManageLists }) {
             <Link to="/conversos" style={styles.link}>Cargar Listas</Link>
           ) : null}
           <Link to="/plan-discursos" style={styles.link}>Plan de discursos</Link>
-          <Link to="/sumo-consejo" style={styles.link}>Sumo consejo</Link>
+          {isPresidencia ? (
+            <>
+              <Link to="/asignaciones/ver" style={styles.link}>Ver asignaciones</Link>
+              <Link to="/asignaciones/editar" style={styles.link}>Editar asignaciones</Link>
+            </>
+          ) : (
+            <Link to="/asignaciones/ver" style={styles.link}>Asignaciones</Link>
+          )}
           {canManageLists ? (
             <Link to="/mensajes-estaca" style={styles.link}>Editar plan</Link>
           ) : null}

@@ -90,7 +90,12 @@ export default function App() {
   return (
     <HashRouter>
       <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-        <Navbar user={user} onLogout={handleLogout} canManageLists={canManageLists} />
+        <Navbar
+          user={user}
+          onLogout={handleLogout}
+          canManageLists={canManageLists}
+          isPresidencia={canManageLists}
+        />
 
         <Routes>
           <Route path="/" element={<Dashboard />} />
@@ -113,6 +118,14 @@ export default function App() {
           <Route
             path="/sumo-consejo"
             element={<CouncilAssignments canEdit={canManageLists} />}
+          />
+          <Route
+            path="/asignaciones/ver"
+            element={<CouncilAssignments canEdit={false} />}
+          />
+          <Route
+            path="/asignaciones/editar"
+            element={canManageLists ? <CouncilAssignments canEdit /> : <Navigate to="/asignaciones/ver" replace />}
           />
           <Route path="/plan-discursos" element={<SpeakersPlanView />} />
           <Route path="*" element={<Navigate to="/" replace />} />
