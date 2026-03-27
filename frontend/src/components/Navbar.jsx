@@ -6,6 +6,7 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
   const location = useLocation()
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [openGroup, setOpenGroup] = useState('indicadores')
 
   const headerByPath = {
     '/': 'Indicadores Estaca Maroñas',
@@ -42,6 +43,40 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
     }
   }, [location.pathname, isMobile])
 
+  const groups = [
+    {
+      id: 'indicadores',
+      title: 'Indicadores',
+      links: [
+        { to: '/', label: 'Dashboard' },
+        ...(canManageLists ? [{ to: '/conversos', label: 'Cargar lista indicadores' }] : [])
+      ]
+    },
+    {
+      id: 'mensajes',
+      title: 'Mensajes',
+      links: [
+        { to: '/plan-discursos', label: 'Ver plan de discursos' },
+        ...(canManageLists ? [{ to: '/mensajes/editar', label: 'Editar plan de mensajes' }] : [])
+      ]
+    },
+    {
+      id: 'asignaciones',
+      title: 'Asignaciones',
+      links: [
+        { to: '/asignaciones/ver', label: 'Ver asignaciones' },
+        ...(isPresidencia ? [{ to: '/asignaciones/editar', label: 'Editar asignaciones' }] : [])
+      ]
+    }
+  ]
+
+  useEffect(() => {
+    const activeGroup = groups.find((group) => group.links.some((link) => link.to === location.pathname))
+    if (activeGroup) {
+      setOpenGroup(activeGroup.id)
+    }
+  }, [location.pathname, canManageLists, isPresidencia])
+
   return (
     <nav style={styles.nav}>
       <div style={styles.container}>
@@ -65,36 +100,28 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
             ...(isMobile && menuOpen ? styles.menuMobileOpen : {})
           }}
         >
-          <details style={styles.group}>
-            <summary style={styles.groupTitle}>Indicadores</summary>
-            <div style={styles.submenu}>
-              <Link to="/" style={styles.link}>Dashboard</Link>
-              {canManageLists ? (
-                <Link to="/conversos" style={styles.link}>Cargar lista indicadores</Link>
-              ) : null}
-            </div>
-          </details>
-
-          <details style={styles.group}>
-            <summary style={styles.groupTitle}>Mensajes</summary>
-            <div style={styles.submenu}>
-              <Link to="/mensajes/ver" style={styles.link}>Ver plan de mensajes</Link>
-              <Link to="/plan-discursos" style={styles.link}>Ver plan de discursos</Link>
-              {canManageLists ? (
-                <Link to="/mensajes/editar" style={styles.link}>Editar plan de mensajes</Link>
-              ) : null}
-            </div>
-          </details>
-
-          <details style={styles.group}>
-            <summary style={styles.groupTitle}>Asignaciones</summary>
-            <div style={styles.submenu}>
-              <Link to="/asignaciones/ver" style={styles.link}>Ver asignaciones</Link>
-              {isPresidencia ? (
-                <Link to="/asignaciones/editar" style={styles.link}>Editar asignaciones</Link>
-              ) : null}
-            </div>
-          </details>
+          {groups.map((group) => {
+            const isOpen = openGroup === group.id
+            return (
+              <div key={group.id} style={styles.group}>
+                <button
+                  type="button"
+                  style={styles.groupTitleButton}
+                  onClick={() => setOpenGroup((prev) => (prev === group.id ? '' : group.id))}
+                >
+                  <span>{group.title}</span>
+                  <span style={{ ...styles.chevron, ...(isOpen ? styles.chevronOpen : {}) }}>▾</span>
+                </button>
+                {isOpen ? (
+                  <div style={styles.submenu}>
+                    {group.links.map((link) => (
+                      <Link key={link.to} to={link.to} style={styles.link}>{link.label}</Link>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            )
+          })}
 
 
           <div style={{ ...styles.user, ...(isMobile ? styles.userMobile : {}) }}>
@@ -170,18 +197,35 @@ const styles = {
     textDecoration: 'none',
     fontSize: '15px',
     fontWeight: '500',
-    transition: 'opacity 0.3s'
+    transition: 'opacity 0.3s',
+    padding: '4px 0'
   },
   group: {
     border: '1px solid rgba(255,255,255,0.25)',
     borderRadius: '10px',
     padding: '6px 10px',
-    minWidth: '190px'
+    minWidth: '190px',
+    background: 'rgba(255,255,255,0.05)'
   },
-  groupTitle: {
+  groupTitleButton: {
+    width: '100%',
+    border: 'none',
+    background: 'transparent',
+    color: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     cursor: 'pointer',
     fontWeight: 700,
-    fontSize: '14px'
+    fontSize: '14px',
+    padding: 0
+  },
+  chevron: {
+    display: 'inline-block',
+    transition: 'transform 0.2s ease'
+  },
+  chevronOpen: {
+    transform: 'rotate(180deg)'
   },
   submenu: {
     display: 'flex',
