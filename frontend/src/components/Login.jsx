@@ -4,6 +4,7 @@ export default function Login({ onLogin }) {
   const [role, setRole] = useState('consejo')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   const credentialsByRole = {
     consejo: {
@@ -56,14 +57,29 @@ export default function Login({ onLogin }) {
             </select>
           </label>
           
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={styles.input}
-          />
+          <div style={styles.passwordField}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{ ...styles.input, ...styles.passwordInput }}
+            />
+            <button
+              type="button"
+              onMouseDown={() => setShowPassword(true)}
+              onMouseUp={() => setShowPassword(false)}
+              onMouseLeave={() => setShowPassword(false)}
+              onTouchStart={() => setShowPassword(true)}
+              onTouchEnd={() => setShowPassword(false)}
+              style={styles.eyeButton}
+              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            >
+              👁️
+            </button>
+          </div>
           
           {error && <div style={styles.error}>{error}</div>}
           
@@ -124,6 +140,26 @@ const styles = {
     borderRadius: '6px',
     outline: 'none',
     transition: 'border 0.3s'
+  },
+
+  passwordField: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center'
+  },
+  passwordInput: {
+    width: '100%',
+    paddingRight: '44px'
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: '10px',
+    border: 'none',
+    background: 'transparent',
+    cursor: 'pointer',
+    fontSize: '18px',
+    lineHeight: 1,
+    padding: '4px'
   },
   button: {
     padding: '12px',
