@@ -361,7 +361,54 @@ export default function CouncilAssignments({ canEdit }) {
         </div>
       ) : (
         <div style={styles.sectionCard}>
-          <p style={styles.emptyHint}>Solo la Presidencia puede editar estas asignaciones.</p>
+          <h3 style={styles.sectionTitle}>Vista de asignaciones</h3>
+          <p style={styles.hint}>Solo la Presidencia puede editar estas asignaciones.</p>
+
+          <div style={styles.committeeBox}>
+            <h4 style={styles.unitTitle}>Asignaciones de barrios (Sumo Consejo)</h4>
+            <div style={styles.unitsGrid}>
+              {highCouncilByUnit.map((unit) => (
+                <section key={unit.id} style={styles.unitColumn}>
+                  <h5 style={styles.unitTitle}>{unit.name}</h5>
+                  {unit.leaders.length ? (
+                    unit.leaders.map((leader) => (
+                      <LeaderCard
+                        key={`${unit.id}-${leader.id}`}
+                        leader={leader}
+                        unitNames={leader.unitIds.map((id) => unitsMap[id]).filter(Boolean)}
+                        committeesMap={committeesMap}
+                      />
+                    ))
+                  ) : (
+                    <p style={styles.emptyHint}>Sin miembros asignados.</p>
+                  )}
+                </section>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.committeeBox}>
+            <h4 style={styles.unitTitle}>Asignaciones de comités</h4>
+            <div style={styles.unitsGrid}>
+              {committeesWithLeaders.map((committee) => (
+                <section key={committee.id} style={styles.unitColumn}>
+                  <h5 style={styles.unitTitle}>{committee.name}</h5>
+                  {committee.leaders.length ? (
+                    committee.leaders.map((leader) => (
+                      <LeaderCard
+                        key={`${committee.id}-${leader.id}`}
+                        leader={leader}
+                        unitNames={leader.unitIds.map((id) => unitsMap[id]).filter(Boolean)}
+                        committeesMap={committeesMap}
+                      />
+                    ))
+                  ) : (
+                    <p style={styles.emptyHint}>Sin miembros asignados.</p>
+                  )}
+                </section>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
