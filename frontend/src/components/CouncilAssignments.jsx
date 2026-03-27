@@ -9,23 +9,19 @@ import {
 
 const API_PATH = '/api/council-assignments'
 
-function LeaderCard({ leader, unitName, committeesMap, draggable, onDragStart }) {
+function LeaderCard({ leader, unitNames, committeesMap }) {
   return (
-    <article
-      style={{ ...styles.leaderCard, ...(draggable ? styles.leaderCardDraggable : {}) }}
-      draggable={draggable}
-      onDragStart={(event) => onDragStart?.(event, leader.id)}
-    >
+    <article style={styles.leaderCard}>
       <p style={styles.leaderName}>
         {leader.name}
         {leader.isTraveler ? <span title="Miembro viajante" style={styles.travelerIcon}>🧭</span> : null}
       </p>
       {leader.assignmentTitle ? <p style={styles.leaderSubtitle}>{leader.assignmentTitle}</p> : null}
-      <p style={styles.metaText}>Unidad: {unitName || 'Sin unidad'}</p>
+      <p style={styles.metaText}>Barrios: {unitNames.length ? unitNames.join(', ') : 'Sin barrios asignados'}</p>
       <p style={styles.metaText}>
         Comité: {leader.committeeIds.map((id) => committeesMap[id]).filter(Boolean).join(', ') || 'Sin comité'}
       </p>
-      {!leader.isHighCouncil ? <p style={styles.tagOther}>Otro líder</p> : null}
+      {!leader.isHighCouncil ? <p style={styles.tagOther}>Solo para comité</p> : null}
     </article>
   )
 }
@@ -35,7 +31,7 @@ export default function CouncilAssignments({ canEdit }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
-  const [activeTab, setActiveTab] = useState(canEdit ? 'editar' : 'miembros')
+  const [activeTab, setActiveTab] = useState(canEdit ? 'ver' : 'ver')
 
   const unitsMap = useMemo(() => Object.fromEntries(plan.units.map((unit) => [unit.id, unit.name])), [plan.units])
   const committeesMap = useMemo(() => Object.fromEntries(plan.committees.map((committee) => [committee.id, committee.name])), [plan.committees])
@@ -60,39 +56,55 @@ export default function CouncilAssignments({ canEdit }) {
     loadPlan()
   }, [])
 
-  const leadersByUnit = useMemo(() => {
+  const leaders = useMemo(
+    () => plan.leaders.map((leader) => ({ ...leader, unitIds: Array.isArray(leader.unitIds) ? leader.unitIds : [] })),
+    [plan.leaders]
+  )
+
+  const highCouncilLeaders = useMemo(() => leaders.filter((leader) => leader.isHighCouncil), [leaders])
+
+  const highCouncilByUnit = useMemo(() => {
     return plan.units.map((unit) => ({
       ...unit,
-      leaders: plan.leaders.filter((leader) => leader.unitId === unit.id)
+      leaders: highCouncilLeaders.filter((leader) => leader.unitIds.includes(unit.id))
     }))
-  }, [plan])
+  }, [highCouncilLeaders, plan.units])
 
-  const unassignedLeaders = useMemo(() => plan.leaders.filter((leader) => !leader.unitId), [plan.leaders])
-  const travelers = useMemo(() => plan.leaders.filter((leader) => leader.isTraveler), [plan.leaders])
+  const committeesWithLeaders = useMemo(() => {
+    return plan.committees.map((committee) => ({
+      ...committee,
+      leaders: leaders.filter((leader) => leader.committeeIds.includes(committee.id))
+    }))
+  }, [leaders, plan.committees])
 
-  function assignUnit(leaderId, unitId) {
+  function toggleLeaderUnit(leaderId, unitId) {
     setPlan((prev) => ({
       ...prev,
-      leaders: prev.leaders.map((leader) => (leader.id === leaderId ? { ...leader, unitId } : leader))
+      leaders: prev.leaders.map((leader) => {
+        if (leader.id !== leaderId || !leader.isHighCouncil) return leader
+
+        const currentUnitIds = Array.isArray(leader.unitIds)
+          ? leader.unitIds
+          : (leader.unitId ? [leader.unitId] : [])
+        const isAssigned = currentUnitIds.includes(unitId)
+        const nextUnitIds = isAssigned
+          ? currentUnitIds.filter((id) => id !== unitId)
+          : [...currentUnitIds, unitId]
+
+        return {
+          ...leader,
+          unitIds: nextUnitIds,
+          unitId: nextUnitIds[0] || ''
+        }
+      })
     }))
   }
 
-  function handleDragStart(event, leaderId) {
-    event.dataTransfer.setData('text/plain', leaderId)
-  }
-
-  function handleDropUnit(event, unitId) {
-    event.preventDefault()
-    const leaderId = event.dataTransfer.getData('text/plain')
-    if (!leaderId) return
-    assignUnit(leaderId, unitId)
-  }
-
-  function handleDropUnassigned(event) {
-    event.preventDefault()
-    const leaderId = event.dataTransfer.getData('text/plain')
-    if (!leaderId) return
-    assignUnit(leaderId, '')
+  function toggleTraveler(leaderId) {
+    setPlan((prev) => ({
+      ...prev,
+      leaders: prev.leaders.map((leader) => (leader.id === leaderId ? { ...leader, isTraveler: !leader.isTraveler } : leader))
+    }))
   }
 
   function toggleCommittee(leaderId, committeeId) {
@@ -135,42 +147,50 @@ export default function CouncilAssignments({ canEdit }) {
     <div style={styles.page}>
       <div style={styles.headerCard}>
         <h2 style={styles.title}>Asignación de Sumo Consejo y comités</h2>
-        <p style={styles.subtitle}>Vista clara por unidad, comité y estado viajante. El icono 🧭 identifica miembros viajantes.</p>
+        <p style={styles.subtitle}>Separamos la vista de asignaciones de la pantalla de edición.</p>
 
         <div style={styles.tabsRow}>
-          <button type="button" style={{ ...styles.tabBtn, ...(activeTab === 'miembros' ? styles.tabBtnActive : {}) }} onClick={() => setActiveTab('miembros')}>Miembros</button>
+          <button type="button" style={{ ...styles.tabBtn, ...(activeTab === 'ver' ? styles.tabBtnActive : {}) }} onClick={() => setActiveTab('ver')}>Ver asignaciones</button>
           {canEdit ? (
-            <button type="button" style={{ ...styles.tabBtn, ...(activeTab === 'editar' ? styles.tabBtnActive : {}) }} onClick={() => setActiveTab('editar')}>Editar (drag & drop)</button>
+            <button type="button" style={{ ...styles.tabBtn, ...(activeTab === 'editar' ? styles.tabBtnActive : {}) }} onClick={() => setActiveTab('editar')}>Editar</button>
           ) : null}
         </div>
       </div>
 
-      {activeTab === 'miembros' ? (
+      {activeTab === 'ver' ? (
         <div style={styles.sectionCard}>
-          <h3 style={styles.sectionTitle}>Unidades y miembros asignados</h3>
+          <h3 style={styles.sectionTitle}>Distribución de miembros de Sumo Consejo</h3>
           <div style={styles.unitsGrid}>
-            {leadersByUnit.map((unit) => (
+            {highCouncilByUnit.map((unit) => (
               <section key={unit.id} style={styles.unitColumn}>
                 <h4 style={styles.unitTitle}>{unit.name}</h4>
                 {unit.leaders.length ? unit.leaders.map((leader) => (
-                  <LeaderCard key={leader.id} leader={leader} unitName={unitsMap[leader.unitId]} committeesMap={committeesMap} />
-                )) : <p style={styles.emptyHint}>Sin asignaciones.</p>}
+                  <LeaderCard
+                    key={leader.id}
+                    leader={leader}
+                    unitNames={leader.unitIds.map((unitId) => unitsMap[unitId]).filter(Boolean)}
+                    committeesMap={committeesMap}
+                  />
+                )) : <p style={styles.emptyHint}>Sin miembros asignados.</p>}
               </section>
             ))}
+          </div>
 
-            <section style={styles.unitColumn}>
-              <h4 style={styles.unitTitle}>Sin unidad</h4>
-              {unassignedLeaders.length ? unassignedLeaders.map((leader) => (
-                <LeaderCard key={leader.id} leader={leader} unitName="" committeesMap={committeesMap} />
-              )) : <p style={styles.emptyHint}>Todos están asignados.</p>}
-            </section>
-
-            <section style={styles.unitColumn}>
-              <h4 style={styles.unitTitle}>Sector viajante</h4>
-              {travelers.length ? travelers.map((leader) => (
-                <LeaderCard key={leader.id} leader={leader} unitName={unitsMap[leader.unitId]} committeesMap={committeesMap} />
-              )) : <p style={styles.emptyHint}>No hay viajantes configurados.</p>}
-            </section>
+          <h3 style={{ ...styles.sectionTitle, marginTop: '20px' }}>Distribución de comités</h3>
+          <div style={styles.unitsGrid}>
+            {committeesWithLeaders.map((committee) => (
+              <section key={committee.id} style={styles.unitColumn}>
+                <h4 style={styles.unitTitle}>{committee.name}</h4>
+                {committee.leaders.length ? committee.leaders.map((leader) => (
+                  <LeaderCard
+                    key={`${committee.id}-${leader.id}`}
+                    leader={leader}
+                    unitNames={leader.unitIds.map((unitId) => unitsMap[unitId]).filter(Boolean)}
+                    committeesMap={committeesMap}
+                  />
+                )) : <p style={styles.emptyHint}>Sin miembros en este comité.</p>}
+              </section>
+            ))}
           </div>
         </div>
       ) : null}
@@ -178,52 +198,47 @@ export default function CouncilAssignments({ canEdit }) {
       {activeTab === 'editar' && canEdit ? (
         <div style={styles.sectionCard}>
           <h3 style={styles.sectionTitle}>Editor para Presidencia</h3>
-          <p style={styles.hint}>Arrastra un miembro hacia una unidad o al cuadro “Sin unidad”. También puedes marcar sus comités.</p>
+          <p style={styles.hint}>Ahora puedes asignar varios barrios al mismo miembro del Sumo Consejo y marcar si es viajante.</p>
 
-          <div style={styles.unitsGrid}>
-            {leadersByUnit.map((unit) => (
-              <section
-                key={unit.id}
-                style={styles.unitColumn}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => handleDropUnit(event, unit.id)}
-              >
-                <h4 style={styles.unitTitle}>{unit.name}</h4>
-                {unit.leaders.length ? unit.leaders.map((leader) => (
-                  <LeaderCard
-                    key={leader.id}
-                    leader={leader}
-                    unitName={unitsMap[leader.unitId]}
-                    committeesMap={committeesMap}
-                    draggable
-                    onDragStart={handleDragStart}
-                  />
-                )) : <p style={styles.emptyHint}>Arrastra miembros aquí.</p>}
-              </section>
+          <div style={styles.committeeBox}>
+            <h4 style={styles.unitTitle}>Asignaciones de barrios (solo Sumo Consejo)</h4>
+            {leaders.map((leader) => (
+              <div key={`units-${leader.id}`} style={styles.committeeRow}>
+                <div style={styles.committeeHeader}>
+                  <span style={styles.committeeLeaderName}>{leader.name}</span>
+                  <label style={styles.checkLabel}>
+                    <input
+                      type="checkbox"
+                      checked={leader.isTraveler}
+                      onChange={() => toggleTraveler(leader.id)}
+                    />
+                    Viajante
+                  </label>
+                </div>
+
+                {leader.isHighCouncil ? (
+                  <div style={styles.committeeChecks}>
+                    {plan.units.map((unit) => (
+                      <label key={`${leader.id}-${unit.id}`} style={styles.checkLabel}>
+                        <input
+                          type="checkbox"
+                          checked={leader.unitIds.includes(unit.id)}
+                          onChange={() => toggleLeaderUnit(leader.id, unit.id)}
+                        />
+                        {unit.name}
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={styles.emptyHint}>Este miembro no se asigna a barrios; solo participa en comités.</p>
+                )}
+              </div>
             ))}
-
-            <section
-              style={styles.unitColumn}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={handleDropUnassigned}
-            >
-              <h4 style={styles.unitTitle}>Sin unidad</h4>
-              {unassignedLeaders.length ? unassignedLeaders.map((leader) => (
-                <LeaderCard
-                  key={leader.id}
-                  leader={leader}
-                  unitName=""
-                  committeesMap={committeesMap}
-                  draggable
-                  onDragStart={handleDragStart}
-                />
-              )) : <p style={styles.emptyHint}>No hay miembros sin unidad.</p>}
-            </section>
           </div>
 
           <div style={styles.committeeBox}>
-            <h4 style={styles.unitTitle}>Comités</h4>
-            {plan.leaders.map((leader) => (
+            <h4 style={styles.unitTitle}>Asignaciones de comités</h4>
+            {leaders.map((leader) => (
               <div key={`committee-${leader.id}`} style={styles.committeeRow}>
                 <span style={styles.committeeLeaderName}>{leader.name}</span>
                 <div style={styles.committeeChecks}>
@@ -300,7 +315,6 @@ const styles = {
     marginBottom: '8px',
     background: '#fff'
   },
-  leaderCardDraggable: { cursor: 'grab' },
   leaderName: { margin: 0, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#0f172a' },
   travelerIcon: { fontSize: '15px' },
   leaderSubtitle: { margin: '3px 0 0', color: '#334155', fontSize: '13px' },
@@ -308,6 +322,7 @@ const styles = {
   tagOther: { margin: '6px 0 0', color: '#92400e', fontSize: '12px', fontWeight: 600 },
   committeeBox: { marginTop: '18px', borderTop: '1px solid #e2e8f0', paddingTop: '14px' },
   committeeRow: { borderBottom: '1px solid #f1f5f9', padding: '8px 0', display: 'grid', gap: '8px' },
+  committeeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' },
   committeeLeaderName: { color: '#0f172a', fontWeight: 600 },
   committeeChecks: { display: 'flex', gap: '12px', flexWrap: 'wrap' },
   checkLabel: { display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#334155', fontSize: '14px' },

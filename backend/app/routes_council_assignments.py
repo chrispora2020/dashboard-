@@ -162,6 +162,15 @@ def _normalize_plan_payload(plan: dict):
             'isHighCouncil': bool(leader.get('isHighCouncil', False)),
             'isTraveler': bool(leader.get('isTraveler', False)),
             'unitId': str(leader.get('unitId') or ''),
+            'unitIds': [
+                str(unit_id or '')
+                for unit_id in (
+                    leader.get('unitIds')
+                    if isinstance(leader.get('unitIds'), list)
+                    else ([leader.get('unitId')] if leader.get('unitId') else [])
+                )
+                if str(unit_id or '')
+            ],
             'committeeIds': leader.get('committeeIds') if isinstance(leader.get('committeeIds'), list) else [],
         })
 
