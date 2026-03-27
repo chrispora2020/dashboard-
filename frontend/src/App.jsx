@@ -113,7 +113,7 @@ export default function App() {
           />
           <Route
             path="/mensajes-estaca"
-            element={<Navigate to={canManageLists ? '/mensajes/editar' : '/mensajes/ver'} replace />}
+            element={<Navigate to="/mensajes/ver" replace />}
           />
           <Route
             path="/mensajes/ver"
