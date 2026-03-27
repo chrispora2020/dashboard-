@@ -63,6 +63,7 @@ export default function StakeMessagesPlan() {
   const [status, setStatus] = useState('')
   const [selectedMonthId, setSelectedMonthId] = useState('abril')
   const [previewLoadingId, setPreviewLoadingId] = useState('')
+  const [isMobile, setIsMobile] = useState(false)
 
   const quarterOptions = useMemo(
     () => Object.entries(planData.quarters).map(([id, value]) => ({ id, label: value.quarterLabel || id })),
@@ -114,6 +115,16 @@ export default function StakeMessagesPlan() {
     }
 
     loadPlan()
+  }, [])
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+
+    updateViewport()
+    window.addEventListener('resize', updateViewport)
+    return () => window.removeEventListener('resize', updateViewport)
   }, [])
 
   const selectedMonth = useMemo(
@@ -234,6 +245,26 @@ export default function StakeMessagesPlan() {
     setStatus(`✅ Mensaje copiado para enviar ${daysBefore} días antes.`)
   }
 
+  function clearMonthLink(monthId) {
+    updateMonth(monthId, { topicUrl: '' })
+    setStatus('🧹 Link limpiado. Puedes pegar uno nuevo.')
+  }
+
+  async function pasteMonthLink(monthId) {
+    try {
+      const value = await navigator.clipboard.readText()
+      if (!value?.trim()) {
+        setStatus('⚠️ El portapapeles está vacío.')
+        return
+      }
+
+      updateMonth(monthId, { topicUrl: value.trim() })
+      setStatus('📋 Link pegado desde portapapeles.')
+    } catch (error) {
+      setStatus('⚠️ No se pudo leer el portapapeles. Revisa permisos del navegador.')
+    }
+  }
+
   if (loading || !activeQuarter) {
     return <div style={styles.page}>Cargando plan trimestral...</div>
   }
@@ -315,12 +346,21 @@ export default function StakeMessagesPlan() {
             <p style={styles.note}>El tema y link de este mes son generales para todo el grupo.</p>
 
             <label style={styles.label}>Link del tema</label>
-            <div style={styles.row}>
+            <div style={{ ...styles.row, ...styles.linkRow, ...(isMobile ? styles.linkRowMobile : null) }}>
               <input
-                style={{ ...styles.input, marginBottom: 0, flex: 1 }}
+                style={{ ...styles.input, ...styles.linkInput, marginBottom: 0, flex: 1 }}
                 value={month.topicUrl}
                 onChange={(event) => updateMonth(month.id, { topicUrl: event.target.value })}
+                placeholder="Pega aquí el link del tema"
               />
+              <div style={{ ...styles.linkActions, ...(isMobile ? styles.linkActionsMobile : null) }}>
+                <button type="button" style={styles.iconBtn} onClick={() => clearMonthLink(month.id)} title="Limpiar link">
+                  🧹 Limpiar
+                </button>
+                <button type="button" style={styles.iconBtn} onClick={() => pasteMonthLink(month.id)} title="Pegar link">
+                  📋 Pegar
+                </button>
+              </div>
               <button type="button" style={styles.secondaryBtn} onClick={() => fetchLinkPreview(month.id)} disabled={previewLoadingId === month.id}>
                 {previewLoadingId === month.id ? 'Cargando preview...' : 'Cargar preview'}
               </button>
@@ -459,7 +499,9 @@ const styles = {
     borderRadius: '8px',
     border: '1px solid #d1d5db',
     padding: '10px 12px',
-    marginBottom: '10px'
+    marginBottom: '10px',
+    fontSize: '16px',
+    minHeight: '42px'
   },
   textarea: {
     width: '100%',
@@ -468,7 +510,8 @@ const styles = {
     borderRadius: '8px',
     border: '1px solid #d1d5db',
     padding: '10px 12px',
-    marginBottom: '10px'
+    marginBottom: '10px',
+    fontSize: '16px'
   },
   table: {
     width: '100%',
@@ -502,7 +545,35 @@ const styles = {
     border: '1px solid #cbd5e1',
     borderRadius: '8px',
     padding: '10px 12px',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    minHeight: '42px'
+  },
+  iconBtn: {
+    background: '#f8fafc',
+    color: '#0f172a',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '10px 12px',
+    cursor: 'pointer',
+    minHeight: '42px',
+    whiteSpace: 'nowrap'
+  },
+  linkRow: {
+    alignItems: 'stretch'
+  },
+  linkRowMobile: {
+    flexDirection: 'column'
+  },
+  linkInput: {
+    minHeight: '46px'
+  },
+  linkActions: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center'
+  },
+  linkActionsMobile: {
+    width: '100%'
   },
   reminderBox: {
     marginTop: '20px',
