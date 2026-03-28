@@ -29,7 +29,7 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
       id: 'indicadores',
       title: 'Indicadores',
       links: [
-        { to: '/', label: 'Dashboard' },
+        { to: '/', label: 'Ver indicadores' },
         ...(canManageLists ? [{ to: '/conversos', label: 'Cargar lista indicadores' }] : [])
       ]
     },
