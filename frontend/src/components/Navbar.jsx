@@ -29,7 +29,7 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
       id: 'indicadores',
       title: 'Indicadores',
       links: [
-        { to: '/', label: 'Dashboard' },
+        { to: '/', label: 'Ver indicadores' },
         ...(canManageLists ? [{ to: '/conversos', label: 'Cargar lista indicadores' }] : [])
       ]
     },
@@ -203,12 +203,17 @@ const styles = {
   toggler: {
     marginLeft: 'auto',
     border: '1px solid rgba(255, 255, 255, 0.35)',
-    borderRadius: '6px',
+    borderRadius: '8px',
     background: 'rgba(255, 255, 255, 0.18)',
     color: '#ffffff',
-    padding: '4px 10px',
-    fontSize: '20px',
+    width: '40px',
+    height: '40px',
+    padding: 0,
+    fontSize: '24px',
     lineHeight: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     cursor: 'pointer'
   },
   togglerDesktop: {

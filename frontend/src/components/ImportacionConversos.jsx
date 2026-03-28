@@ -367,7 +367,7 @@ export default function ImportacionConversos() {
             )}
             <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
               <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#be185d', color:'#fff', borderColor:'#be185d'}}>
-                Ver Dashboard
+                Ver indicadores
               </button>
               <button onClick={() => { setAsResult(null); setAsFile(null) }} style={cardStyles.resetBtn}>
                 Cargar otro archivo
@@ -459,7 +459,7 @@ export default function ImportacionConversos() {
                   </div>
                 ))}
                 <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#334155', color:'#fff', borderColor:'#334155'}}>Ver Dashboard</button>
+                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#334155', color:'#fff', borderColor:'#334155'}}>Ver indicadores</button>
                   <button onClick={() => { setLoteFiles([]); setLoteResults([]) }} style={cardStyles.resetBtn}>Limpiar</button>
                 </div>
               </div>
@@ -481,7 +481,7 @@ export default function ImportacionConversos() {
                   <p style={{margin:'4px 0 0 0',fontSize:12,color:'#92400e'}}>⚠ {conversoResult.advertencias.length} advertencia(s) — los datos fueron importados igualmente</p>
                 )}
                 <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#7c3aed', color:'#fff', borderColor:'#7c3aed'}}>Ver Dashboard</button>
+                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#7c3aed', color:'#fff', borderColor:'#7c3aed'}}>Ver indicadores</button>
                   <button onClick={() => { setConversoResult(null); setConversoFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
                 </div>
               </div>
@@ -526,7 +526,7 @@ export default function ImportacionConversos() {
                 <strong>✓ Importados: {adultoResult.importados} adultos</strong>
                 <p style={{margin:'4px 0 0 0',fontSize:13}}>(reemplaza todos los datos anteriores)</p>
                 <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#d97706', color:'#fff', borderColor:'#d97706'}}>Ver Dashboard</button>
+                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#d97706', color:'#fff', borderColor:'#d97706'}}>Ver indicadores</button>
                   <button onClick={() => { setAdultoResult(null); setAdultoFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
                 </div>
               </div>
@@ -573,7 +573,7 @@ export default function ImportacionConversos() {
                   <p style={{margin:'4px 0 0 0',fontSize:13}}>Misión de servicio a la Iglesia: <strong>{misioneroResult.mision_servicio}</strong></p>
                 )}
                 <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#1d4ed8', color:'#fff', borderColor:'#1d4ed8'}}>Ver Dashboard</button>
+                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#1d4ed8', color:'#fff', borderColor:'#1d4ed8'}}>Ver indicadores</button>
                   <button onClick={() => { setMisioneroResult(null); setMisioneroFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
                 </div>
               </div>
@@ -645,7 +645,7 @@ export default function ImportacionConversos() {
               Resumen actual: <strong>{ministeringSummary.overallPercent}%</strong> · Hombres {ministeringSummary.brothersRatio} · Mujeres {ministeringSummary.sistersRatio}
             </p>
             <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-              <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#0369a1', color:'#fff', borderColor:'#0369a1'}}>Ver Dashboard</button>
+              <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#0369a1', color:'#fff', borderColor:'#0369a1'}}>Ver indicadores</button>
               <button onClick={() => { setMinisteringText(''); localStorage.removeItem(MINISTERING_STORAGE_KEY) }} style={cardStyles.resetBtn}>Limpiar</button>
             </div>
             {ministeringError && <p style={cardStyles.errorText}>⚠ {ministeringError}</p>}
@@ -663,7 +663,7 @@ export default function ImportacionConversos() {
                 <strong>✓ Importados: {jovenResult.importados} jóvenes</strong>
                 <p style={{margin:'4px 0 0 0',fontSize:13}}>(reemplaza todos los datos anteriores)</p>
                 <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#16a34a', color:'#fff', borderColor:'#16a34a'}}>Ver Dashboard</button>
+                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#16a34a', color:'#fff', borderColor:'#16a34a'}}>Ver indicadores</button>
                   <button onClick={() => { setJovenResult(null); setJovenFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
                 </div>
               </div>
@@ -709,7 +709,7 @@ export default function ImportacionConversos() {
             <div style={{fontSize: '48px', marginBottom: '20px'}}>⚡</div>
             <h2 style={{fontSize: '24px', color: '#333', marginBottom: '10px'}}>Procesando datos...</h2>
             <p style={{color: '#666', fontSize: '16px'}}>Importando y mapeando automáticamente</p>
-            <p style={{color: '#666', fontSize: '14px', marginTop: '10px'}}>Serás redirigido al dashboard en un momento</p>
+            <p style={{color: '#666', fontSize: '14px', marginTop: '10px'}}>Serás redirigido a Ver indicadores en un momento</p>
           </div>
         </div>
       </div>
@@ -831,7 +831,7 @@ export default function ImportacionConversos() {
           <div style={styles.nextSteps}>
             <h3 style={styles.nextStepsTitle}>Próximos pasos:</h3>
             <ul style={styles.nextStepsList}>
-              <li>Ve al <a href="/" style={styles.link}>Dashboard</a> para ver los indicadores calculados</li>
+              <li>Ve a <a href="/" style={styles.link}>Ver indicadores</a> para ver los indicadores calculados</li>
               <li>Los KPIs se actualizarán automáticamente con los nuevos datos</li>
               <li>Revisa el breakdown por unidad y la tendencia mensual</li>
               <li>Si faltan datos de edad o sexo, completa el enriquecimiento</li>
@@ -849,7 +849,7 @@ export default function ImportacionConversos() {
               onClick={() => window.location.href = '/'}
               style={styles.buttonPrimary}
             >
-              Ir al Dashboard →
+              Ir a Ver indicadores →
             </button>
           </div>
         </div>
