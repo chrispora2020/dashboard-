@@ -7,7 +7,6 @@ import Login from './components/Login'
 import Navbar from './components/Navbar'
 import CouncilAssignments from './components/CouncilAssignments'
 import StakeMessagesPlan from './components/StakeMessagesPlan'
-import SpeakersPlanView from './components/SpeakersPlanView'
 import Upload from './components/Upload'
 
 const LOCAL_USER_KEY = 'user'
@@ -143,7 +142,7 @@ export default function App() {
             path="/asignaciones/editar"
             element={canManageLists ? <CouncilAssignments canEdit /> : <Navigate to="/asignaciones/ver" replace />}
           />
-          <Route path="/plan-discursos" element={<SpeakersPlanView />} />
+          <Route path="/plan-discursos" element={<Navigate to="/mensajes/ver" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

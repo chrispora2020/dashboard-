@@ -19,7 +19,6 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
     '/asignaciones/sumo-consejo': 'Asignación Sumo Consejo',
     '/asignaciones/comites': 'Asignación de Comités',
     '/asignaciones/editar': 'Editar asignaciones',
-    '/plan-discursos': 'Plan de discursos',
     '/upload': 'Cargar listas',
     '/dashboard-api': 'Dashboard API'
   }
@@ -39,7 +38,6 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
       id: 'mensajes',
       title: 'Mensajes',
       links: [
-        { to: '/plan-discursos', label: 'Ver plan de discursos' },
         { to: '/mensajes/ver', label: 'Ver plan de mensajes' },
         ...(canManageLists ? [{ to: '/mensajes/editar', label: 'Editar plan de mensajes' }] : [])
       ]

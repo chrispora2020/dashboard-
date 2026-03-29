@@ -399,11 +399,12 @@ export default function StakeMessagesPlan({ canEdit = true }) {
               placeholder="Ej: Si hay conferencia de unidad, no hay mensaje de estaca."
             />
 
+            <p style={styles.assignedTalksTitle}>Discursos asignados por unidad</p>
             <table style={styles.table}>
               <thead>
                 <tr>
                   <th style={styles.th}>Unidad</th>
-                  <th style={styles.th}>Discursante asignado</th>
+                  <th style={styles.th}>Discurso asignado</th>
                 </tr>
               </thead>
               <tbody>
@@ -536,6 +537,12 @@ const styles = {
     width: '100%',
     borderCollapse: 'collapse',
     marginTop: '8px'
+  },
+  assignedTalksTitle: {
+    marginTop: '12px',
+    marginBottom: '6px',
+    color: '#0f172a',
+    fontWeight: 700
   },
   th: {
     textAlign: 'left',
