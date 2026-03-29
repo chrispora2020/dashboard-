@@ -16,6 +16,8 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
     '/mensajes-estaca': 'Plan de mensajes',
     '/sumo-consejo': 'Asignaciones',
     '/asignaciones/ver': 'Asignaciones',
+    '/asignaciones/sumo-consejo': 'Asignación Sumo Consejo',
+    '/asignaciones/comites': 'Asignación de Comités',
     '/asignaciones/editar': 'Editar asignaciones',
     '/plan-discursos': 'Plan de discursos',
     '/upload': 'Cargar listas',
@@ -46,7 +48,8 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
       id: 'asignaciones',
       title: 'Asignaciones',
       links: [
-        { to: '/asignaciones/ver', label: 'Ver asignaciones' },
+        { to: '/asignaciones/sumo-consejo', label: 'Asignación Sumo Consejo' },
+        { to: '/asignaciones/comites', label: 'Asignación Comités' },
         ...(isPresidencia ? [{ to: '/asignaciones/editar', label: 'Editar asignaciones' }] : [])
       ]
     }

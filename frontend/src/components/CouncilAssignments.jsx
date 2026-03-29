@@ -34,7 +34,7 @@ function LeaderCard({ leader, unitNames, committeesMap }) {
   )
 }
 
-export default function CouncilAssignments({ canEdit }) {
+export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
   const [plan, setPlan] = useState(DEFAULT_COUNCIL_ASSIGNMENTS_PLAN)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -190,11 +190,22 @@ export default function CouncilAssignments({ canEdit }) {
     return <div style={styles.page}>Cargando asignaciones...</div>
   }
 
+  const showHighCouncilSection = canEdit || viewSection === 'all' || viewSection === 'high-council'
+  const showCommitteesSection = canEdit || viewSection === 'all' || viewSection === 'committees'
+
   return (
     <div style={styles.page}>
       <div style={styles.headerCard}>
         <h2 style={styles.title}>Asignación de Sumo Consejo y comités</h2>
-        <p style={styles.subtitle}>Pantalla de edición de asignaciones para Presidencia.</p>
+        <p style={styles.subtitle}>
+          {canEdit
+            ? 'Pantalla de edición de asignaciones para Presidencia.'
+            : showHighCouncilSection && !showCommitteesSection
+              ? 'Vista dedicada a la asignación del Sumo Consejo por barrio.'
+              : !showHighCouncilSection && showCommitteesSection
+                ? 'Vista dedicada a la asignación por comités.'
+                : 'Vista consolidada de asignaciones.'}
+        </p>
         <p style={styles.legend}>Referencia: 🧭 indica que el miembro está marcado como viajante.</p>
       </div>
 
@@ -243,7 +254,7 @@ export default function CouncilAssignments({ canEdit }) {
             <button type="button" style={styles.addBtn} onClick={addLeader}>Agregar miembro</button>
           </div>
 
-          <div style={styles.committeeBox}>
+          {showHighCouncilSection ? <div style={styles.committeeBox}>
             <h4 style={styles.unitTitle}>Asignaciones de barrios (solo Sumo Consejo)</h4>
             {leaders.map((leader) => (
               <div key={`units-${leader.id}`} style={styles.committeeRow}>
@@ -296,9 +307,9 @@ export default function CouncilAssignments({ canEdit }) {
                 )}
               </div>
             ))}
-          </div>
+          </div> : null}
 
-          <div style={styles.committeeBox}>
+          {showCommitteesSection ? <div style={styles.committeeBox}>
             <h4 style={styles.unitTitle}>Asignaciones de comités</h4>
             {leaders.map((leader) => (
               <div key={`committee-${leader.id}`} style={styles.committeeRow}>
@@ -349,7 +360,7 @@ export default function CouncilAssignments({ canEdit }) {
                 </div>
               </div>
             ))}
-          </div>
+          </div> : null}
 
           <div style={styles.actionsRow}>
             <button type="button" style={styles.saveBtn} onClick={savePlan} disabled={saving}>
@@ -363,7 +374,7 @@ export default function CouncilAssignments({ canEdit }) {
           <h3 style={styles.sectionTitle}>Vista de asignaciones</h3>
           <p style={styles.hint}>Estas asignaciones pueden ser consultadas tanto por Consejo como por Presidencia.</p>
 
-          <div style={styles.committeeBox}>
+          {showHighCouncilSection ? <div style={styles.committeeBox}>
             <h4 style={styles.unitTitle}>Asignaciones de barrios (Sumo Consejo)</h4>
             <div style={styles.unitsGrid}>
               {highCouncilByUnit.map((unit) => (
@@ -384,11 +395,11 @@ export default function CouncilAssignments({ canEdit }) {
                 </section>
               ))}
             </div>
-          </div>
+          </div> : null}
 
-          <div style={styles.committeeBox}>
+          {showCommitteesSection ? <div style={styles.committeeBox}>
             <h4 style={styles.unitTitle}>Asignaciones de comités</h4>
-            <div style={styles.unitsGrid}>
+            <div style={styles.committeesGrid}>
               {committeesWithLeaders.map((committee) => (
                 <section key={committee.id} style={styles.unitColumn}>
                   <h5 style={styles.unitTitle}>{committee.name}</h5>
@@ -407,7 +418,7 @@ export default function CouncilAssignments({ canEdit }) {
                 </section>
               ))}
             </div>
-          </div>
+          </div> : null}
         </div>
       )}
     </div>
@@ -441,24 +452,31 @@ const styles = {
   addLeaderGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' },
   unitsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '12px'
+    gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))',
+    gap: '14px'
+  },
+  committeesGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gap: '14px'
   },
   unitColumn: {
-    border: '1px dashed #cbd5e1',
-    borderRadius: '10px',
-    padding: '10px',
-    background: '#f8fafc',
-    minHeight: '140px'
+    border: '1px solid #dbe7f5',
+    borderRadius: '14px',
+    padding: '14px',
+    background: 'linear-gradient(180deg, #fbfdff 0%, #f8fbff 100%)',
+    minHeight: '140px',
+    boxShadow: '0 8px 20px rgba(15, 23, 42, 0.05)'
   },
-  unitTitle: { marginTop: 0, marginBottom: '10px', color: '#1e293b' },
+  unitTitle: { marginTop: 0, marginBottom: '12px', color: '#1e293b' },
   emptyHint: { color: '#64748b', fontSize: '14px' },
   leaderCard: {
     border: '1px solid #dbeafe',
-    borderRadius: '10px',
-    padding: '10px',
-    marginBottom: '8px',
-    background: '#fff'
+    borderRadius: '12px',
+    padding: '12px',
+    marginBottom: '10px',
+    background: '#fff',
+    boxShadow: '0 4px 14px rgba(30, 64, 175, 0.08)'
   },
   leaderName: { margin: 0, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#0f172a' },
   travelerIcon: { fontSize: '15px' },

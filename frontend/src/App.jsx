@@ -125,11 +125,19 @@ export default function App() {
           />
           <Route
             path="/sumo-consejo"
-            element={<CouncilAssignments canEdit={canManageLists} />}
+            element={<CouncilAssignments canEdit={canManageLists} viewSection="high-council" />}
           />
           <Route
             path="/asignaciones/ver"
-            element={<CouncilAssignments canEdit={false} />}
+            element={<Navigate to="/asignaciones/sumo-consejo" replace />}
+          />
+          <Route
+            path="/asignaciones/sumo-consejo"
+            element={<CouncilAssignments canEdit={false} viewSection="high-council" />}
+          />
+          <Route
+            path="/asignaciones/comites"
+            element={<CouncilAssignments canEdit={false} viewSection="committees" />}
           />
           <Route
             path="/asignaciones/editar"
