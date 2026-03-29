@@ -7,6 +7,7 @@ import Login from './components/Login'
 import Navbar from './components/Navbar'
 import CouncilAssignments from './components/CouncilAssignments'
 import StakeMessagesPlan from './components/StakeMessagesPlan'
+import SpeakersPlanView from './components/SpeakersPlanView'
 import Upload from './components/Upload'
 
 const LOCAL_USER_KEY = 'user'
@@ -116,7 +117,7 @@ export default function App() {
           />
           <Route
             path="/mensajes/ver"
-            element={<StakeMessagesPlan canEdit={false} />}
+            element={<SpeakersPlanView />}
           />
           <Route
             path="/mensajes/editar"
