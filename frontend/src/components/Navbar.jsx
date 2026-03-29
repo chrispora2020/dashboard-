@@ -38,6 +38,7 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
       title: 'Mensajes',
       links: [
         { to: '/plan-discursos', label: 'Ver plan de discursos' },
+        { to: '/mensajes/ver', label: 'Ver plan de mensajes' },
         ...(canManageLists ? [{ to: '/mensajes/editar', label: 'Editar plan de mensajes' }] : [])
       ]
     },
@@ -74,143 +75,197 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
   }
 
   return (
-    <nav style={styles.navbar}>
-      <div style={styles.containerFluid}>
-        <Link to="/" style={styles.brand}>
-          {pageTitle}
-        </Link>
+    <header style={styles.wrapper}>
+      <div style={styles.brandBar}>
+        <div style={styles.containerFluid}>
+          <div style={styles.brandWrap}>
+            <img
+              alt="La Iglesia de Jesucristo de los Santos de los Últimos Días"
+              src="https://www.churchofjesuschrist.org/imgs/c730fd12d24c640f7649912008ddf828afd93403/full/60%2C/0/default.png"
+              style={styles.logoImage}
+            />
+            <span style={styles.brandTitle}>{pageTitle}</span>
+          </div>
 
-        <button
-          type="button"
-          style={{ ...styles.toggler, ...(!isMobile ? styles.togglerDesktop : {}) }}
-          onClick={() => setMenuOpen((prev) => !prev)}
-          aria-controls="navbarSupportedContent"
-          aria-expanded={menuOpen}
-          aria-label="Toggle navigation"
-        >
-          ☰
-        </button>
-
-        <div
-          id="navbarSupportedContent"
-          style={{
-            ...styles.collapse,
-            ...(menuOpen || !isMobile ? styles.collapseOpen : {}),
-            ...(isMobile ? styles.collapseMobile : {})
-          }}
-        >
-          <ul style={{ ...styles.navbarNav, ...(isMobile ? styles.navbarNavMobile : {}) }}>
-            {menuGroups.map((group) => {
-              const groupActive = isRouteActive(group)
-              if (group.links.length === 1) {
-                const onlyLink = group.links[0]
-                return (
-                <li key={group.id} style={styles.navItem}>
-                  <Link
-                    to={onlyLink.to}
-                    style={{
-                      ...styles.navLink,
-                      ...(isMobile ? styles.navLinkMobile : {}),
-                      ...(onlyLink.to === location.pathname ? styles.navLinkActive : {})
-                    }}
-                  >
-                      {onlyLink.label}
-                    </Link>
-                  </li>
-                )
-              }
-
-              const isOpen = openDropdown === group.id
-              return (
-                <li
-                  key={group.id}
-                  style={{ ...styles.dropdownWrapper, ...(isMobile ? styles.dropdownWrapperMobile : {}) }}
-                >
-                  <button
-                    type="button"
-                    style={{
-                      ...styles.dropdownToggle,
-                      ...(isMobile ? styles.dropdownToggleMobile : {}),
-                      ...(groupActive ? styles.navLinkActive : {})
-                    }}
-                    onClick={() => setOpenDropdown((prev) => (prev === group.id ? '' : group.id))}
-                    aria-expanded={isOpen}
-                  >
-                    {group.title} ▾
-                  </button>
-
-                  {isOpen ? (
-                    <ul style={{ ...styles.dropdownMenu, ...(isMobile ? styles.dropdownMenuMobile : {}) }}>
-                      {group.links.map((link) => (
-                        <li key={link.to}>
-                          <Link
-                            to={link.to}
-                            style={{
-                              ...styles.dropdownItem,
-                              ...(link.to === location.pathname ? styles.dropdownItemActive : {})
-                            }}
-                          >
-                            {link.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </li>
-              )
-            })}
-          </ul>
-
-          <div style={{ ...styles.userSection, ...(isMobile ? styles.userSectionMobile : {}) }}>
+          <div style={styles.userSectionTop}>
             <span style={styles.userName}>{userLabel}</span>
-            <button onClick={onLogout} style={styles.logoutBtn}>
-              Cerrar sesión
-            </button>
+            <button onClick={onLogout} style={styles.logoutBtn}>Salir</button>
           </div>
         </div>
       </div>
-    </nav>
+
+      <nav style={styles.menuBar}>
+        <div style={styles.containerFluid}>
+          <Link to="/" style={styles.homeLink} aria-label="Inicio">⌂</Link>
+
+          <button
+            type="button"
+            style={{ ...styles.toggler, ...(!isMobile ? styles.togglerDesktop : {}) }}
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-controls="navbarSupportedContent"
+            aria-expanded={menuOpen}
+            aria-label="Toggle navigation"
+          >
+            ☰
+          </button>
+
+          <div
+            id="navbarSupportedContent"
+            style={{
+              ...styles.collapse,
+              ...(menuOpen || !isMobile ? styles.collapseOpen : {}),
+              ...(isMobile ? styles.collapseMobile : {})
+            }}
+          >
+            <ul style={{ ...styles.navbarNav, ...(isMobile ? styles.navbarNavMobile : {}) }}>
+              {menuGroups.map((group) => {
+                const groupActive = isRouteActive(group)
+                if (group.links.length === 1) {
+                  const onlyLink = group.links[0]
+                  return (
+                    <li key={group.id} style={styles.navItem}>
+                      <Link
+                        to={onlyLink.to}
+                        style={{
+                          ...styles.navLink,
+                          ...(isMobile ? styles.navLinkMobile : {}),
+                          ...(onlyLink.to === location.pathname ? styles.navLinkActive : {})
+                        }}
+                      >
+                        {onlyLink.label}
+                      </Link>
+                    </li>
+                  )
+                }
+
+                const isOpen = openDropdown === group.id
+                return (
+                  <li
+                    key={group.id}
+                    style={{ ...styles.dropdownWrapper, ...(isMobile ? styles.dropdownWrapperMobile : {}) }}
+                  >
+                    <button
+                      type="button"
+                      style={{
+                        ...styles.dropdownToggle,
+                        ...(isMobile ? styles.dropdownToggleMobile : {}),
+                        ...(groupActive ? styles.navLinkActive : {})
+                      }}
+                      onClick={() => setOpenDropdown((prev) => (prev === group.id ? '' : group.id))}
+                      aria-expanded={isOpen}
+                    >
+                      {group.title} ▾
+                    </button>
+
+                    {isOpen ? (
+                      <ul style={{ ...styles.dropdownMenu, ...(isMobile ? styles.dropdownMenuMobile : {}) }}>
+                        {group.links.map((link) => (
+                          <li key={link.to}>
+                            <Link
+                              to={link.to}
+                              style={{
+                                ...styles.dropdownItem,
+                                ...(link.to === location.pathname ? styles.dropdownItemActive : {})
+                              }}
+                            >
+                              {link.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        </div>
+      </nav>
+    </header>
   )
 }
 
 const styles = {
-  navbar: {
-    background: 'linear-gradient(135deg, #00587c 0%, #0b7ea8 100%)',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.25)',
-    padding: '10px 0',
+  wrapper: {
     position: 'sticky',
     top: 0,
     zIndex: 20,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
+  },
+  brandBar: {
+    background: '#ececec',
+    borderBottom: '1px solid #d4d4d4'
+  },
+  menuBar: {
+    background: '#ffffff',
+    borderBottom: '1px solid #d1d1d1'
   },
   containerFluid: {
     width: '100%',
     boxSizing: 'border-box',
-    maxWidth: '1200px',
+    maxWidth: '1280px',
     margin: '0 auto',
-    padding: '0 18px',
+    padding: '0 12px',
     display: 'flex',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '10px'
+    gap: '10px',
+    minHeight: '56px'
   },
-  brand: {
+  brandWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    minWidth: 0,
+    flexGrow: 1
+  },
+  logoImage: {
+    width: '22px',
+    height: '34px',
+    objectFit: 'cover',
+    background: '#4f246a'
+  },
+  brandTitle: {
     fontSize: '1.05rem',
-    color: '#ffffff',
+    color: '#1f2937',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  userSectionTop: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  userName: {
+    color: '#334155',
+    fontSize: '0.86rem'
+  },
+  logoutBtn: {
+    border: '1px solid #c8c8c8',
+    background: '#fff',
+    color: '#111827',
+    borderRadius: '6px',
+    padding: '6px 10px',
+    cursor: 'pointer',
+    fontSize: '0.85rem'
+  },
+  homeLink: {
     textDecoration: 'none',
-    fontWeight: 700,
-    marginRight: '8px'
+    color: '#111827',
+    fontSize: '1.4rem',
+    lineHeight: 1,
+    marginRight: '6px'
   },
   toggler: {
     marginLeft: 'auto',
-    border: '1px solid rgba(255, 255, 255, 0.35)',
-    borderRadius: '8px',
-    background: 'rgba(255, 255, 255, 0.18)',
-    color: '#ffffff',
-    width: '40px',
-    height: '40px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    background: '#fff',
+    color: '#111827',
+    width: '38px',
+    height: '38px',
     padding: 0,
-    fontSize: '24px',
+    fontSize: '22px',
     lineHeight: 1,
     display: 'flex',
     alignItems: 'center',
@@ -221,52 +276,50 @@ const styles = {
     display: 'none'
   },
   collapse: {
-    width: '100%',
     display: 'none',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '14px',
-    position: 'relative'
+    width: '100%'
   },
   collapseOpen: {
     display: 'flex'
   },
   collapseMobile: {
-    flexDirection: 'column',
-    alignItems: 'stretch'
+    width: '100%',
+    marginTop: '8px'
   },
   navbarNav: {
     listStyle: 'none',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '2px',
     margin: 0,
     padding: 0,
-    flexWrap: 'wrap'
+    width: '100%'
   },
   navbarNavMobile: {
     flexDirection: 'column',
     alignItems: 'stretch',
-    width: '100%'
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
+    padding: '6px'
   },
   navItem: {
     position: 'relative'
   },
   navLink: {
     textDecoration: 'none',
-    color: '#ffffff',
-    padding: '8px 12px',
-    borderRadius: '6px',
-    display: 'inline-block',
-    fontWeight: 500
+    color: '#111827',
+    fontSize: '1.05rem',
+    padding: '12px 16px',
+    borderRadius: '4px',
+    display: 'inline-block'
   },
   navLinkMobile: {
     display: 'block',
     width: '100%'
   },
   navLinkActive: {
-    color: '#e8f6ff',
-    background: 'rgba(255,255,255,0.18)'
+    background: '#f1f5f9'
   },
   dropdownWrapper: {
     position: 'relative'
@@ -277,10 +330,10 @@ const styles = {
   dropdownToggle: {
     border: 'none',
     background: 'transparent',
-    color: '#ffffff',
-    padding: '8px 12px',
-    borderRadius: '6px',
-    fontWeight: 500,
+    color: '#111827',
+    padding: '12px 16px',
+    borderRadius: '4px',
+    fontSize: '1.05rem',
     cursor: 'pointer'
   },
   dropdownToggleMobile: {
@@ -293,58 +346,31 @@ const styles = {
     position: 'absolute',
     top: '100%',
     left: 0,
-    marginTop: '4px',
+    marginTop: '2px',
     listStyle: 'none',
-    padding: '8px',
+    padding: '6px',
     minWidth: '230px',
-    background: 'rgba(8, 56, 79, 0.95)',
-    border: '1px solid rgba(255,255,255,0.25)',
-    borderRadius: '8px',
-    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
+    background: '#fff',
+    border: '1px solid #d9d9d9',
+    borderRadius: '6px',
+    boxShadow: '0 10px 24px rgba(0, 0, 0, 0.1)',
     zIndex: 30
   },
   dropdownMenuMobile: {
     position: 'static',
-    width: '100%',
-    marginTop: 0,
     boxShadow: 'none',
-    paddingLeft: '6px'
+    marginTop: 0,
+    paddingLeft: '8px',
+    border: 'none'
   },
   dropdownItem: {
     textDecoration: 'none',
-    color: '#ffffff',
+    color: '#111827',
     padding: '8px 10px',
-    borderRadius: '6px',
+    borderRadius: '4px',
     display: 'block'
   },
   dropdownItemActive: {
-    color: '#e8f6ff',
-    background: 'rgba(255,255,255,0.18)'
-  },
-  userSection: {
-    marginLeft: 'auto',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px'
-  },
-  userSectionMobile: {
-    marginLeft: 0,
-    width: '100%',
-    justifyContent: 'space-between',
-    borderTop: '1px solid rgba(255, 255, 255, 0.3)',
-    paddingTop: '10px'
-  },
-  userName: {
-    color: '#e8f6ff',
-    fontSize: '0.9rem'
-  },
-  logoutBtn: {
-    border: '1px solid rgba(255,255,255,0.3)',
-    background: 'rgba(255,255,255,0.2)',
-    color: '#ffffff',
-    borderRadius: '6px',
-    padding: '7px 11px',
-    cursor: 'pointer',
-    fontWeight: 600
+    background: '#f1f5f9'
   }
 }
