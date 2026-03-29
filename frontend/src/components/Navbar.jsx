@@ -1,62 +1,37 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
+const TOP_MENU_ITEMS = [
+  { id: 'miembros', label: 'Miembros' },
+  { id: 'llamamientos', label: 'Llamamientos' },
+  { id: 'confidencial', label: 'Confidencial' },
+  { id: 'ministering', label: 'Ministración y bienestar' },
+  { id: 'finanzas', label: 'Finanzas' },
+  { id: 'misionero', label: 'Misionero' },
+  { id: 'templo', label: 'Templo' },
+  { id: 'informes', label: 'Informes' },
+  { id: 'ayuda', label: 'Ayuda' }
+]
+
+const DASHBOARD_LINKS = [
+  { to: '/', label: 'Página de inicio de LCR' },
+  { to: '/plan-discursos', label: 'Plan de discursos' },
+  { to: '/mensajes/ver', label: 'Plan de mensajes' },
+  { to: '/asignaciones/ver', label: 'Asignaciones' }
+]
+
 export default function Navbar({ user, onLogout, canManageLists, isPresidencia }) {
-  const userLabel = user?.name || user?.email || 'Usuario local'
   const location = useLocation()
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 991)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [openDropdown, setOpenDropdown] = useState('')
-
-  const headerByPath = {
-    '/': 'Indicadores Estaca Maroñas',
-    '/mensajes/ver': 'Plan de mensajes',
-    '/mensajes/editar': 'Editar plan de mensajes',
-    '/conversos': 'Cargar listas',
-    '/mensajes-estaca': 'Plan de mensajes',
-    '/sumo-consejo': 'Asignaciones',
-    '/asignaciones/ver': 'Asignaciones',
-    '/asignaciones/editar': 'Editar asignaciones',
-    '/plan-discursos': 'Plan de discursos',
-    '/upload': 'Cargar listas',
-    '/dashboard-api': 'Dashboard API'
-  }
-
-  const pageTitle = headerByPath[location.pathname] || 'Indicadores Estaca Maroñas'
-
-  const menuGroups = [
-    {
-      id: 'indicadores',
-      title: 'Indicadores',
-      links: [
-        { to: '/', label: 'Ver indicadores' },
-        ...(canManageLists ? [{ to: '/conversos', label: 'Cargar lista indicadores' }] : [])
-      ]
-    },
-    {
-      id: 'mensajes',
-      title: 'Mensajes',
-      links: [
-        { to: '/plan-discursos', label: 'Ver plan de discursos' },
-        ...(canManageLists ? [{ to: '/mensajes/editar', label: 'Editar plan de mensajes' }] : [])
-      ]
-    },
-    {
-      id: 'asignaciones',
-      title: 'Asignaciones',
-      links: [
-        { to: '/asignaciones/ver', label: 'Ver asignaciones' },
-        ...(isPresidencia ? [{ to: '/asignaciones/editar', label: 'Editar asignaciones' }] : [])
-      ]
-    }
-  ]
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileDashboardOpen, setMobileDashboardOpen] = useState(false)
 
   useEffect(() => {
     function onResize() {
       const mobile = window.innerWidth <= 991
       setIsMobile(mobile)
       if (!mobile) {
-        setMenuOpen(false)
+        setMobileOpen(false)
       }
     }
 
@@ -65,286 +40,233 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
   }, [])
 
   useEffect(() => {
-    setMenuOpen(false)
-    setOpenDropdown('')
+    setMobileOpen(false)
+    setMobileDashboardOpen(false)
   }, [location.pathname])
 
-  function isRouteActive(group) {
-    return group.links.some((link) => link.to === location.pathname)
-  }
+  const userLabel = user?.name || user?.email || 'Usuario local'
 
   return (
-    <nav style={styles.navbar}>
-      <div style={styles.containerFluid}>
-        <Link to="/" style={styles.brand}>
-          {pageTitle}
-        </Link>
+    <header style={styles.wrapper}>
+      <div style={styles.brandBar}>
+        <div style={styles.brandInner}>
+          <div style={styles.brandLeft}>
+            <a href="https://www.churchofjesuschrist.org?lang=spa" style={styles.logoAnchor}>
+              <img
+                src="https://www.churchofjesuschrist.org/imgs/c730fd12d24c640f7649912008ddf828afd93403/full/60%2C/0/default.png"
+                alt="La Iglesia de Jesucristo de los Santos de los Últimos Días"
+                style={styles.logoImage}
+              />
+            </a>
+            <div style={styles.purpleRay} />
+            <span style={styles.brandTitle}>Fuentes de recursos para líderes y secretarios</span>
+          </div>
 
-        <button
-          type="button"
-          style={{ ...styles.toggler, ...(!isMobile ? styles.togglerDesktop : {}) }}
-          onClick={() => setMenuOpen((prev) => !prev)}
-          aria-controls="navbarSupportedContent"
-          aria-expanded={menuOpen}
-          aria-label="Toggle navigation"
-        >
-          ☰
-        </button>
-
-        <div
-          id="navbarSupportedContent"
-          style={{
-            ...styles.collapse,
-            ...(menuOpen || !isMobile ? styles.collapseOpen : {}),
-            ...(isMobile ? styles.collapseMobile : {})
-          }}
-        >
-          <ul style={{ ...styles.navbarNav, ...(isMobile ? styles.navbarNavMobile : {}) }}>
-            {menuGroups.map((group) => {
-              const groupActive = isRouteActive(group)
-              if (group.links.length === 1) {
-                const onlyLink = group.links[0]
-                return (
-                <li key={group.id} style={styles.navItem}>
-                  <Link
-                    to={onlyLink.to}
-                    style={{
-                      ...styles.navLink,
-                      ...(isMobile ? styles.navLinkMobile : {}),
-                      ...(onlyLink.to === location.pathname ? styles.navLinkActive : {})
-                    }}
-                  >
-                      {onlyLink.label}
-                    </Link>
-                  </li>
-                )
-              }
-
-              const isOpen = openDropdown === group.id
-              return (
-                <li
-                  key={group.id}
-                  style={{ ...styles.dropdownWrapper, ...(isMobile ? styles.dropdownWrapperMobile : {}) }}
-                >
-                  <button
-                    type="button"
-                    style={{
-                      ...styles.dropdownToggle,
-                      ...(isMobile ? styles.dropdownToggleMobile : {}),
-                      ...(groupActive ? styles.navLinkActive : {})
-                    }}
-                    onClick={() => setOpenDropdown((prev) => (prev === group.id ? '' : group.id))}
-                    aria-expanded={isOpen}
-                  >
-                    {group.title} ▾
-                  </button>
-
-                  {isOpen ? (
-                    <ul style={{ ...styles.dropdownMenu, ...(isMobile ? styles.dropdownMenuMobile : {}) }}>
-                      {group.links.map((link) => (
-                        <li key={link.to}>
-                          <Link
-                            to={link.to}
-                            style={{
-                              ...styles.dropdownItem,
-                              ...(link.to === location.pathname ? styles.dropdownItemActive : {})
-                            }}
-                          >
-                            {link.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </li>
-              )
-            })}
-          </ul>
-
-          <div style={{ ...styles.userSection, ...(isMobile ? styles.userSectionMobile : {}) }}>
+          <div style={styles.userPanel}>
             <span style={styles.userName}>{userLabel}</span>
-            <button onClick={onLogout} style={styles.logoutBtn}>
-              Cerrar sesión
-            </button>
+            <button onClick={onLogout} style={styles.logoutBtn}>Salir</button>
           </div>
         </div>
       </div>
-    </nav>
+
+      <nav style={styles.menuBar}>
+        <div style={styles.menuInner}>
+          <Link to="/" style={styles.homeIcon} title="Inicio" aria-label="Inicio">⌂</Link>
+
+          {isMobile ? (
+            <>
+              <button style={styles.hamburgerBtn} onClick={() => setMobileOpen((prev) => !prev)}>
+                ☰ Menú
+              </button>
+              {mobileOpen ? (
+                <ul style={styles.mobileMenuList}>
+                  <li>
+                    <button
+                      style={styles.mobileMainItem}
+                      onClick={() => setMobileDashboardOpen((prev) => !prev)}
+                    >
+                      Dashboard ▾
+                    </button>
+                    {mobileDashboardOpen ? (
+                      <ul style={styles.mobileSubMenu}>
+                        {DASHBOARD_LINKS.map((item) => (
+                          <li key={item.to}>
+                            <Link to={item.to} style={styles.mobileLink}>{item.label}</Link>
+                          </li>
+                        ))}
+                        {canManageLists ? (
+                          <>
+                            <li><Link to="/conversos" style={styles.mobileLink}>Cargar lista indicadores</Link></li>
+                            <li><Link to="/mensajes/editar" style={styles.mobileLink}>Editar plan de mensajes</Link></li>
+                          </>
+                        ) : null}
+                        {isPresidencia ? (
+                          <li><Link to="/asignaciones/editar" style={styles.mobileLink}>Editar asignaciones</Link></li>
+                        ) : null}
+                      </ul>
+                    ) : null}
+                  </li>
+                  {TOP_MENU_ITEMS.map((item) => (
+                    <li key={item.id} style={styles.mobileMainItem}>{item.label}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          ) : (
+            <ul style={styles.desktopMenuList}>
+              {TOP_MENU_ITEMS.map((item) => (
+                <li key={item.id}>
+                  <button style={styles.desktopMenuItem}>{item.label} ▾</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </nav>
+    </header>
   )
 }
 
 const styles = {
-  navbar: {
-    background: 'linear-gradient(135deg, #00587c 0%, #0b7ea8 100%)',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.25)',
-    padding: '10px 0',
+  wrapper: {
     position: 'sticky',
     top: 0,
     zIndex: 20,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+    boxShadow: '0 2px 7px rgba(0, 0, 0, 0.08)'
   },
-  containerFluid: {
-    width: '100%',
-    boxSizing: 'border-box',
-    maxWidth: '1200px',
+  brandBar: {
+    background: '#ececec',
+    borderBottom: '1px solid #d2d2d2'
+  },
+  brandInner: {
+    maxWidth: '1280px',
     margin: '0 auto',
-    padding: '0 18px',
+    height: '56px',
+    padding: '0 10px',
     display: 'flex',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '10px'
-  },
-  brand: {
-    fontSize: '1.05rem',
-    color: '#ffffff',
-    textDecoration: 'none',
-    fontWeight: 700,
-    marginRight: '8px'
-  },
-  toggler: {
-    marginLeft: 'auto',
-    border: '1px solid rgba(255, 255, 255, 0.35)',
-    borderRadius: '8px',
-    background: 'rgba(255, 255, 255, 0.18)',
-    color: '#ffffff',
-    width: '40px',
-    height: '40px',
-    padding: 0,
-    fontSize: '24px',
-    lineHeight: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer'
-  },
-  togglerDesktop: {
-    display: 'none'
-  },
-  collapse: {
-    width: '100%',
-    display: 'none',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '14px',
-    position: 'relative'
+    gap: '14px'
   },
-  collapseOpen: {
-    display: 'flex'
+  brandLeft: {
+    minWidth: 0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px'
   },
-  collapseMobile: {
-    flexDirection: 'column',
-    alignItems: 'stretch'
+  logoAnchor: {
+    display: 'flex',
+    alignItems: 'center'
   },
-  navbarNav: {
-    listStyle: 'none',
+  logoImage: {
+    width: '24px',
+    height: '36px',
+    objectFit: 'cover',
+    background: '#4f246a'
+  },
+  purpleRay: {
+    width: '30px',
+    height: '44px',
+    background: 'linear-gradient(120deg, rgba(85,43,111,.35) 0%, rgba(85,43,111,.1) 75%, transparent 100%)'
+  },
+  brandTitle: {
+    fontSize: '1.8rem',
+    lineHeight: 1.2,
+    color: '#28323b',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  userPanel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
+  },
+  userName: {
+    color: '#334155',
+    fontSize: '0.88rem'
+  },
+  logoutBtn: {
+    border: '1px solid #c9c9c9',
+    background: '#ffffff',
+    color: '#1f2937',
+    borderRadius: '6px',
+    padding: '6px 10px',
+    cursor: 'pointer'
+  },
+  menuBar: {
+    background: '#ffffff',
+    borderBottom: '1px solid #cfcfcf'
+  },
+  menuInner: {
+    maxWidth: '1280px',
+    margin: '0 auto',
+    minHeight: '56px',
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
+    padding: '0 8px'
+  },
+  homeIcon: {
+    color: '#111827',
+    textDecoration: 'none',
+    fontSize: '28px',
+    width: '28px',
+    display: 'inline-flex',
+    justifyContent: 'center'
+  },
+  desktopMenuList: {
+    listStyle: 'none',
     margin: 0,
     padding: 0,
-    flexWrap: 'wrap'
-  },
-  navbarNavMobile: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    width: '100%'
-  },
-  navItem: {
-    position: 'relative'
-  },
-  navLink: {
-    textDecoration: 'none',
-    color: '#ffffff',
-    padding: '8px 12px',
-    borderRadius: '6px',
-    display: 'inline-block',
-    fontWeight: 500
-  },
-  navLinkMobile: {
-    display: 'block',
-    width: '100%'
-  },
-  navLinkActive: {
-    color: '#e8f6ff',
-    background: 'rgba(255,255,255,0.18)'
-  },
-  dropdownWrapper: {
-    position: 'relative'
-  },
-  dropdownWrapperMobile: {
-    width: '100%'
-  },
-  dropdownToggle: {
-    border: 'none',
-    background: 'transparent',
-    color: '#ffffff',
-    padding: '8px 12px',
-    borderRadius: '6px',
-    fontWeight: 500,
-    cursor: 'pointer'
-  },
-  dropdownToggleMobile: {
-    width: '100%',
-    textAlign: 'left',
-    display: 'flex',
-    justifyContent: 'space-between'
-  },
-  dropdownMenu: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    marginTop: '4px',
-    listStyle: 'none',
-    padding: '8px',
-    minWidth: '230px',
-    background: 'rgba(8, 56, 79, 0.95)',
-    border: '1px solid rgba(255,255,255,0.25)',
-    borderRadius: '8px',
-    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
-    zIndex: 30
-  },
-  dropdownMenuMobile: {
-    position: 'static',
-    width: '100%',
-    marginTop: 0,
-    boxShadow: 'none',
-    paddingLeft: '6px'
-  },
-  dropdownItem: {
-    textDecoration: 'none',
-    color: '#ffffff',
-    padding: '8px 10px',
-    borderRadius: '6px',
-    display: 'block'
-  },
-  dropdownItemActive: {
-    color: '#e8f6ff',
-    background: 'rgba(255,255,255,0.18)'
-  },
-  userSection: {
-    marginLeft: 'auto',
     display: 'flex',
     alignItems: 'center',
-    gap: '10px'
+    gap: '2px',
+    overflowX: 'auto'
   },
-  userSectionMobile: {
-    marginLeft: 0,
-    width: '100%',
-    justifyContent: 'space-between',
-    borderTop: '1px solid rgba(255, 255, 255, 0.3)',
-    paddingTop: '10px'
+  desktopMenuItem: {
+    border: 'none',
+    background: 'transparent',
+    color: '#111827',
+    fontSize: '16px',
+    padding: '11px 14px',
+    whiteSpace: 'nowrap',
+    cursor: 'pointer'
   },
-  userName: {
-    color: '#e8f6ff',
-    fontSize: '0.9rem'
-  },
-  logoutBtn: {
-    border: '1px solid rgba(255,255,255,0.3)',
-    background: 'rgba(255,255,255,0.2)',
-    color: '#ffffff',
+  hamburgerBtn: {
+    border: '1px solid #d1d5db',
+    background: '#fff',
+    padding: '8px 10px',
     borderRadius: '6px',
-    padding: '7px 11px',
-    cursor: 'pointer',
-    fontWeight: 600
+    color: '#111827'
+  },
+  mobileMenuList: {
+    listStyle: 'none',
+    margin: '8px 0',
+    padding: '8px',
+    width: '100%',
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
+    background: '#fff'
+  },
+  mobileMainItem: {
+    display: 'block',
+    width: '100%',
+    textAlign: 'left',
+    border: 'none',
+    background: 'transparent',
+    padding: '9px 8px',
+    color: '#111827'
+  },
+  mobileSubMenu: {
+    listStyle: 'none',
+    margin: 0,
+    padding: '0 0 0 12px'
+  },
+  mobileLink: {
+    display: 'block',
+    padding: '8px 8px',
+    textDecoration: 'none',
+    color: '#0f172a'
   }
 }
