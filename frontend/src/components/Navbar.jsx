@@ -219,9 +219,11 @@ const styles = {
     flexGrow: 1
   },
   logoImage: {
-    width: '22px',
-    height: '34px',
-    objectFit: 'cover',
+    width: '24px',
+    height: '36px',
+    objectFit: 'contain',
+    objectPosition: 'center',
+    display: 'block',
     background: '#4f246a'
   },
   brandTitle: {
