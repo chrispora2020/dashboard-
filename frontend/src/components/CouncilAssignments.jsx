@@ -402,16 +402,18 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
             <div style={styles.committeesGrid}>
               {committeesWithLeaders.map((committee) => (
                 <section key={committee.id} style={styles.unitColumn}>
-                  <h5 style={styles.unitTitle}>{committee.name}</h5>
+                  <h5 style={styles.committeeNameTitle}>{committee.name}</h5>
                   {committee.leaders.length ? (
-                    committee.leaders.map((leader) => (
-                      <LeaderCard
-                        key={`${committee.id}-${leader.id}`}
-                        leader={leader}
-                        unitNames={leader.unitIds.map((id) => unitsMap[id]).filter(Boolean)}
-                        committeesMap={committeesMap}
-                      />
-                    ))
+                    <div style={styles.leaderCardsGrid}>
+                      {committee.leaders.map((leader) => (
+                        <LeaderCard
+                          key={`${committee.id}-${leader.id}`}
+                          leader={leader}
+                          unitNames={leader.unitIds.map((id) => unitsMap[id]).filter(Boolean)}
+                          committeesMap={committeesMap}
+                        />
+                      ))}
+                    </div>
                   ) : (
                     <p style={styles.emptyHint}>Sin miembros asignados.</p>
                   )}
@@ -469,12 +471,18 @@ const styles = {
     boxShadow: '0 8px 20px rgba(15, 23, 42, 0.05)'
   },
   unitTitle: { marginTop: 0, marginBottom: '12px', color: '#1e293b' },
+  committeeNameTitle: { marginTop: 0, marginBottom: '12px', color: '#1e293b', fontSize: '22px', lineHeight: 1.2 },
   emptyHint: { color: '#64748b', fontSize: '14px' },
+  leaderCardsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '10px'
+  },
   leaderCard: {
     border: '1px solid #dbeafe',
     borderRadius: '12px',
     padding: '12px',
-    marginBottom: '10px',
+    marginBottom: 0,
     background: '#fff',
     boxShadow: '0 4px 14px rgba(30, 64, 175, 0.08)'
   },
