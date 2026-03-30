@@ -80,11 +80,6 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
       <div style={styles.brandBar}>
         <div style={styles.containerFluid}>
           <div style={styles.brandWrap}>
-            <img
-              alt="La Iglesia de Jesucristo de los Santos de los Últimos Días"
-              src="https://www.churchofjesuschrist.org/imgs/c730fd12d24c640f7649912008ddf828afd93403/full/60%2C/0/default.png"
-              style={styles.logoImage}
-            />
             <span style={styles.brandTitle}>{pageTitle}</span>
           </div>
 
@@ -218,14 +213,6 @@ const styles = {
     gap: '10px',
     minWidth: 0,
     flexGrow: 1
-  },
-  logoImage: {
-    width: '24px',
-    height: '36px',
-    objectFit: 'contain',
-    objectPosition: 'center',
-    display: 'block',
-    background: '#4f246a'
   },
   brandTitle: {
     fontSize: '1.05rem',
