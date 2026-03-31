@@ -45,6 +45,31 @@ function cleanUnitLabel(label = '') {
     .trim()
 }
 
+function isLikelyUnitLine(line = '') {
+  const cleaned = cleanUnitLabel(line)
+  if (!cleaned) return false
+
+  const normalized = cleaned.toLowerCase()
+  if (isMetaLine(normalized)) return false
+
+  return /^(barrio|rama|distrito|unidad)\b/i.test(cleaned)
+}
+
+function isMetaLine(normalizedLine = '') {
+  return (
+    normalizedLine.includes('companerismos entrevistados') ||
+    normalizedLine.includes('compañerismos entrevistados') ||
+    normalizedLine.includes('total de companerismos') ||
+    normalizedLine.includes('total de compañerismos') ||
+    normalizedLine.startsWith('trimestre') ||
+    normalizedLine.startsWith('estaca ')
+  )
+}
+
+function isPercentOnlyLine(line = '') {
+  return /^\d+\s*%\s*\d*\s*%?\s*$/u.test(line.trim())
+}
+
 function calcPercent(data) {
   if (!data || !data.total) return 0
   return Math.round((data.interviewed / data.total) * 100)
@@ -62,7 +87,7 @@ export function parseMinisteringText(rawText = '') {
   }
 
   let currentSection = null
-  let previousLabel = ''
+  let lastUnitCandidate = ''
 
   for (const line of lines) {
     const normalized = line.toLowerCase()
@@ -70,7 +95,7 @@ export function parseMinisteringText(rawText = '') {
 
     if (detectedSection) {
       currentSection = detectedSection
-      previousLabel = ''
+      lastUnitCandidate = ''
       continue
     }
 
@@ -78,15 +103,26 @@ export function parseMinisteringText(rawText = '') {
       continue
     }
 
+    if (isLikelyUnitLine(line)) {
+      lastUnitCandidate = cleanUnitLabel(line)
+      continue
+    }
+
     const ratio = extractRatioFromLine(line)
     if (!ratio) {
-      previousLabel = line
+      if (isPercentOnlyLine(line) || isMetaLine(normalized)) {
+        continue
+      }
       continue
     }
 
     const labelFromCurrentLine = extractLabelFromRatioLine(line)
-    const rawLabel = labelFromCurrentLine || cleanUnitLabel(previousLabel)
-    const unitName = rawLabel || `${currentSection === 'brothers' ? 'Hermanos' : 'Hermanas'} ${result[currentSection].units.length + 1}`
+    const rawLabel = labelFromCurrentLine || lastUnitCandidate
+    const hasTotal = Boolean(result[currentSection].total)
+    const isUnitRatio = Boolean(rawLabel) && !isMetaLine(rawLabel.toLowerCase())
+    const unitName = isUnitRatio
+      ? rawLabel
+      : `${currentSection === 'brothers' ? 'Hermanos' : 'Hermanas'} ${result[currentSection].units.length + 1}`
     const detail = {
       unidad: unitName,
       interviewed: ratio.interviewed,
@@ -94,12 +130,15 @@ export function parseMinisteringText(rawText = '') {
       percent: calcPercent(ratio)
     }
 
-    if (!result[currentSection].total) {
+    if (!hasTotal) {
       result[currentSection].total = { ...ratio, percent: detail.percent }
     }
 
-    result[currentSection].units.push(detail)
-    previousLabel = ''
+    if (isUnitRatio || hasTotal) {
+      result[currentSection].units.push(detail)
+    }
+
+    lastUnitCandidate = ''
   }
 
   return result
