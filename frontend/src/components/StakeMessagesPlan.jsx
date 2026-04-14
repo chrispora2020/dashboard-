@@ -345,6 +345,20 @@ export default function StakeMessagesPlan({ canEdit = true }) {
 
   return (
     <div style={styles.page}>
+      {autoWhatsappReminder ? (
+        <div style={styles.topReminderWrap}>
+          <div style={styles.quickReminderCard}>
+            <p style={styles.quickReminderTitle}>Recordatorio activo</p>
+            <p style={styles.quickReminderText}>
+              Estamos a <strong>{autoWhatsappReminder.daysUntilSunday} días</strong> del mensaje de{' '}
+              <strong>{autoWhatsappReminder.month.monthLabel}</strong>.
+            </p>
+            <button type="button" style={styles.quickReminderBtn} onClick={openAutoWhatsAppReminder}>
+              Enviar recordatorio de mensajes
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div style={styles.card}>
         <div style={styles.headerRow}>
           <div>
@@ -353,18 +367,6 @@ export default function StakeMessagesPlan({ canEdit = true }) {
               {canEdit ? 'Plan editable y persistente para el trimestre.' : 'Vista de solo lectura del plan trimestral.'}
             </p>
           </div>
-          {autoWhatsappReminder ? (
-            <div style={styles.quickReminderCard}>
-              <p style={styles.quickReminderTitle}>Recordatorio activo</p>
-              <p style={styles.quickReminderText}>
-                Estamos a <strong>{autoWhatsappReminder.daysUntilSunday} días</strong> del mensaje de{' '}
-                <strong>{autoWhatsappReminder.month.monthLabel}</strong>.
-              </p>
-              <button type="button" style={styles.quickReminderBtn} onClick={openAutoWhatsAppReminder}>
-                Enviar recordatorio de mensajes
-              </button>
-            </div>
-          ) : null}
         </div>
 
         <div style={styles.row}>
@@ -579,6 +581,12 @@ const styles = {
   page: {
     padding: '24px'
   },
+  topReminderWrap: {
+    maxWidth: '1280px',
+    margin: '0 auto 12px',
+    display: 'flex',
+    justifyContent: 'flex-end'
+  },
   card: {
     maxWidth: '1080px',
     margin: '0 auto',
@@ -603,9 +611,6 @@ const styles = {
     color: '#4b5563'
   },
   quickReminderCard: {
-    position: 'sticky',
-    top: '12px',
-    alignSelf: 'flex-start',
     minWidth: '280px',
     maxWidth: '360px',
     background: '#ecfdf5',
