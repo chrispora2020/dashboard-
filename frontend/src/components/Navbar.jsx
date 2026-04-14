@@ -89,6 +89,17 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
               ...(isMobile ? styles.userSectionTopMobile : {})
             }}
           >
+            {isPresidencia ? (
+              <Link
+                to="/mensajes/editar"
+                style={{
+                  ...styles.reminderShortcut,
+                  ...(location.pathname === '/mensajes/editar' ? styles.reminderShortcutActive : {})
+                }}
+              >
+                🔔 Recordatorio activo
+              </Link>
+            ) : null}
             <span style={styles.userName}>{userLabel}</span>
             <button onClick={onLogout} style={styles.logoutBtn}>Salir</button>
           </div>
@@ -243,6 +254,21 @@ const styles = {
     fontSize: '0.86rem',
     overflow: 'hidden',
     textOverflow: 'ellipsis'
+  },
+  reminderShortcut: {
+    textDecoration: 'none',
+    background: '#dcfce7',
+    color: '#166534',
+    border: '1px solid #86efac',
+    borderRadius: '999px',
+    padding: '5px 10px',
+    fontSize: '0.78rem',
+    fontWeight: 700,
+    whiteSpace: 'nowrap'
+  },
+  reminderShortcutActive: {
+    background: '#bbf7d0',
+    borderColor: '#4ade80'
   },
   logoutBtn: {
     border: '1px solid #c8c8c8',
