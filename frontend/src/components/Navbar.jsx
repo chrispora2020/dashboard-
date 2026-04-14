@@ -83,7 +83,12 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
             <span style={styles.brandTitle}>{pageTitle}</span>
           </div>
 
-          <div style={styles.userSectionTop}>
+          <div
+            style={{
+              ...styles.userSectionTop,
+              ...(isMobile ? styles.userSectionTopMobile : {})
+            }}
+          >
             <span style={styles.userName}>{userLabel}</span>
             <button onClick={onLogout} style={styles.logoutBtn}>Salir</button>
           </div>
@@ -224,11 +229,20 @@ const styles = {
   userSectionTop: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: '8px',
+    marginLeft: 'auto',
+    flexShrink: 0,
+    whiteSpace: 'nowrap'
+  },
+  userSectionTopMobile: {
+    maxWidth: '55%',
+    overflow: 'hidden'
   },
   userName: {
     color: '#334155',
-    fontSize: '0.86rem'
+    fontSize: '0.86rem',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   },
   logoutBtn: {
     border: '1px solid #c8c8c8',
