@@ -58,6 +58,7 @@ function buildQuarterId(monthStartLabel) {
 
 export default function StakeMessagesPlan({ canEdit = true }) {
   const [planData, setPlanData] = useState(DEFAULT_PLAN)
+  const [lastSavedPlanSnapshot, setLastSavedPlanSnapshot] = useState(JSON.stringify(DEFAULT_PLAN))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
@@ -86,6 +87,7 @@ export default function StakeMessagesPlan({ canEdit = true }) {
         if (data?.plan && Object.keys(data.plan).length) {
           const normalized = normalizePlanPayload(data.plan)
           setPlanData(normalized)
+          setLastSavedPlanSnapshot(JSON.stringify(normalized))
           const firstMonthId = normalized.quarters[normalized.activeQuarterId]?.months?.[0]?.id || 'abril'
           setSelectedMonthId(firstMonthId)
           localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(normalized))
@@ -94,6 +96,7 @@ export default function StakeMessagesPlan({ canEdit = true }) {
           if (cachedPlan) {
             const normalized = normalizePlanPayload(JSON.parse(cachedPlan))
             setPlanData(normalized)
+            setLastSavedPlanSnapshot(JSON.stringify(normalized))
             setSelectedMonthId(normalized.quarters[normalized.activeQuarterId]?.months?.[0]?.id || 'abril')
           }
         }
@@ -103,6 +106,7 @@ export default function StakeMessagesPlan({ canEdit = true }) {
           if (cachedPlan) {
             const normalized = normalizePlanPayload(JSON.parse(cachedPlan))
             setPlanData(normalized)
+            setLastSavedPlanSnapshot(JSON.stringify(normalized))
             setSelectedMonthId(normalized.quarters[normalized.activeQuarterId]?.months?.[0]?.id || 'abril')
           }
         } catch (cacheError) {
@@ -130,6 +134,10 @@ export default function StakeMessagesPlan({ canEdit = true }) {
   const selectedMonth = useMemo(
     () => activeQuarter?.months?.find((month) => month.id === selectedMonthId) || activeQuarter?.months?.[0],
     [activeQuarter, selectedMonthId]
+  )
+  const hasUnsavedChanges = useMemo(
+    () => JSON.stringify(planData) !== lastSavedPlanSnapshot,
+    [planData, lastSavedPlanSnapshot]
   )
 
   function updateActiveQuarter(patch) {
@@ -235,6 +243,7 @@ export default function StakeMessagesPlan({ canEdit = true }) {
     try {
       await axios.post(`${API_BASE}${API_PATH}`, { plan: planData })
       localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(planData))
+      setLastSavedPlanSnapshot(JSON.stringify(planData))
       setStatus('✅ Plan guardado correctamente.')
     } catch (error) {
       setStatus(`❌ No se pudo guardar: ${error.response?.data?.detail || error.message}`)
@@ -247,6 +256,18 @@ export default function StakeMessagesPlan({ canEdit = true }) {
     const text = buildReminderText(activeQuarter, selectedMonth, daysBefore)
     await navigator.clipboard.writeText(text)
     setStatus(`✅ Mensaje copiado para enviar ${daysBefore} días antes.`)
+  }
+
+  function openWhatsAppReminder(daysBefore) {
+    if (!selectedMonth) {
+      setStatus('⚠️ Selecciona un mes para generar el recordatorio.')
+      return
+    }
+
+    const text = buildReminderText(activeQuarter, selectedMonth, daysBefore)
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setStatus(`✅ WhatsApp abierto con recordatorio de ${daysBefore} días (envío manual).`)
   }
 
   function clearMonthLink(monthId) {
@@ -434,7 +455,7 @@ export default function StakeMessagesPlan({ canEdit = true }) {
         ))}
 
         {canEdit ? (
-          <button type="button" onClick={savePlan} style={styles.saveBtn} disabled={saving}>
+          <button type="button" onClick={savePlan} style={styles.saveBtn} disabled={saving || !hasUnsavedChanges}>
             {saving ? 'Guardando...' : 'Guardar plan trimestral'}
           </button>
         ) : null}
@@ -460,11 +481,19 @@ export default function StakeMessagesPlan({ canEdit = true }) {
           <div style={styles.row}>
             <button type="button" style={styles.reminderBtn} onClick={() => copyReminder(5)}>Copiar mensaje (5 días antes)</button>
             <button type="button" style={styles.reminderBtn} onClick={() => copyReminder(2)}>Copiar mensaje (2 días antes)</button>
+            <button type="button" style={styles.whatsappBtn} onClick={() => openWhatsAppReminder(5)}>Abrir WhatsApp (5 días)</button>
+            <button type="button" style={styles.whatsappBtn} onClick={() => openWhatsAppReminder(2)}>Abrir WhatsApp (2 días)</button>
           </div>
+          <p style={styles.note}>Nota: desde este sitio se puede preparar y abrir el mensaje en WhatsApp Web, pero el envío automático programado requiere integrar WhatsApp Business API + un job backend (cron/Celery).</p>
         </div>
 
         {status && <p style={styles.status}>{status}</p>}
       </div>
+      {canEdit && hasUnsavedChanges ? (
+        <button type="button" onClick={savePlan} style={styles.floatingSaveBtn} disabled={saving}>
+          {saving ? 'Guardando...' : '💾 Guardar cambios'}
+        </button>
+      ) : null}
     </div>
   )
 }
@@ -563,7 +592,8 @@ const styles = {
     borderRadius: '8px',
     padding: '10px 14px',
     cursor: 'pointer',
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    opacity: 1
   },
   secondaryBtn: {
     background: '#e2e8f0',
@@ -616,6 +646,14 @@ const styles = {
     padding: '10px 12px',
     cursor: 'pointer'
   },
+  whatsappBtn: {
+    background: '#16a34a',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '10px 12px',
+    cursor: 'pointer'
+  },
   note: {
     marginTop: '6px',
     marginBottom: '8px',
@@ -647,5 +685,19 @@ const styles = {
   status: {
     marginTop: '14px',
     fontWeight: 600
+  },
+  floatingSaveBtn: {
+    position: 'fixed',
+    right: '20px',
+    bottom: '20px',
+    zIndex: 1000,
+    background: '#1d4ed8',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '999px',
+    padding: '12px 18px',
+    cursor: 'pointer',
+    fontWeight: 700,
+    boxShadow: '0 12px 24px rgba(29, 78, 216, 0.35)'
   }
 }
