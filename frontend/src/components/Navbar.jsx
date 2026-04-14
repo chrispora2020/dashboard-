@@ -84,6 +84,7 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
           </div>
 
           <div style={styles.userSectionTop}>
+            <Link to="/" style={styles.homeLinkTop} aria-label="Inicio">⌂</Link>
             <span style={styles.userName}>{userLabel}</span>
             <button onClick={onLogout} style={styles.logoutBtn}>Salir</button>
           </div>
@@ -92,8 +93,6 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
 
       <nav style={styles.menuBar}>
         <div style={styles.containerFluid}>
-          <Link to="/" style={styles.homeLink} aria-label="Inicio">⌂</Link>
-
           <button
             type="button"
             style={{ ...styles.toggler, ...(!isMobile ? styles.togglerDesktop : {}) }}
@@ -239,12 +238,12 @@ const styles = {
     cursor: 'pointer',
     fontSize: '0.85rem'
   },
-  homeLink: {
+  homeLinkTop: {
     textDecoration: 'none',
     color: '#111827',
-    fontSize: '1.4rem',
+    fontSize: '1.25rem',
     lineHeight: 1,
-    marginRight: '6px'
+    marginRight: '2px'
   },
   toggler: {
     marginLeft: 'auto',
