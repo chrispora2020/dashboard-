@@ -23,13 +23,10 @@ function shiftDays(isoDate, amount) {
   return date.toISOString().slice(0, 10)
 }
 
-function buildReminderText(plan, month, daysBefore) {
-  const heading = daysBefore === 5
-    ? 'Recordatorio (5 días antes)'
-    : 'Recordatorio (2 días antes)'
-
+function buildReminderText(plan, month, daysBefore, options = {}) {
+  const { includeHeading = true } = options
   const lines = [
-    `${heading} · Mensaje de Estaca`,
+    ...(includeHeading ? [`Mensaje de Estaca · Recordatorio ${daysBefore} días antes`] : []),
     `Fecha: ${toSpanishDate(month.sundayDate)}`,
     '',
     `Tema: ${month.topicTitle}`,
@@ -54,6 +51,24 @@ function buildReminderText(plan, month, daysBefore) {
 
 function buildQuarterId(monthStartLabel) {
   return `${monthStartLabel.toLowerCase().replaceAll(' ', '-')}-${Date.now()}`
+}
+
+function parseDateAtMidnight(isoDate) {
+  if (!isoDate) return null
+  const date = new Date(`${isoDate}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return null
+  return date
+}
+
+function startOfToday() {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return today
+}
+
+function diffInDays(fromDate, toDate) {
+  const millisecondsPerDay = 1000 * 60 * 60 * 24
+  return Math.round((toDate - fromDate) / millisecondsPerDay)
 }
 
 export default function StakeMessagesPlan({ canEdit = true }) {
@@ -135,6 +150,27 @@ export default function StakeMessagesPlan({ canEdit = true }) {
     () => activeQuarter?.months?.find((month) => month.id === selectedMonthId) || activeQuarter?.months?.[0],
     [activeQuarter, selectedMonthId]
   )
+  const autoWhatsappReminder = useMemo(() => {
+    if (!canEdit || !activeQuarter?.months?.length) return null
+
+    const today = startOfToday()
+    const in14Days = new Date(today)
+    in14Days.setDate(in14Days.getDate() + 14)
+
+    const candidates = activeQuarter.months
+      .map((month) => ({ month, sundayDate: parseDateAtMidnight(month.sundayDate) }))
+      .filter(({ sundayDate }) => sundayDate && sundayDate >= today && sundayDate <= in14Days)
+      .sort((a, b) => a.sundayDate - b.sundayDate)
+
+    if (!candidates.length) return null
+
+    const closestMonth = candidates[0].month
+    const sundayDate = parseDateAtMidnight(closestMonth.sundayDate)
+    const daysUntilSunday = diffInDays(today, sundayDate)
+    const daysBefore = Math.abs(daysUntilSunday - 5) <= Math.abs(daysUntilSunday - 2) ? 5 : 2
+
+    return { month: closestMonth, daysBefore }
+  }, [activeQuarter, canEdit])
   const hasUnsavedChanges = useMemo(
     () => JSON.stringify(planData) !== lastSavedPlanSnapshot,
     [planData, lastSavedPlanSnapshot]
@@ -268,6 +304,19 @@ export default function StakeMessagesPlan({ canEdit = true }) {
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`
     window.open(url, '_blank', 'noopener,noreferrer')
     setStatus(`✅ WhatsApp abierto con recordatorio de ${daysBefore} días (envío manual).`)
+  }
+
+  function openAutoWhatsAppReminder() {
+    if (!autoWhatsappReminder?.month) {
+      setStatus('⚠️ No hay domingo en los próximos 14 días para enviar recordatorio.')
+      return
+    }
+
+    const { month, daysBefore } = autoWhatsappReminder
+    const text = buildReminderText(activeQuarter, month, daysBefore, { includeHeading: false })
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setStatus(`✅ WhatsApp abierto con el recordatorio más próximo (${month.monthLabel}, domingo ${toSpanishDate(month.sundayDate)}).`)
   }
 
   function clearMonthLink(monthId) {
@@ -483,7 +532,18 @@ export default function StakeMessagesPlan({ canEdit = true }) {
             <button type="button" style={styles.reminderBtn} onClick={() => copyReminder(2)}>Copiar mensaje (2 días antes)</button>
             <button type="button" style={styles.whatsappBtn} onClick={() => openWhatsAppReminder(5)}>Abrir WhatsApp (5 días)</button>
             <button type="button" style={styles.whatsappBtn} onClick={() => openWhatsAppReminder(2)}>Abrir WhatsApp (2 días)</button>
+            {autoWhatsappReminder ? (
+              <button type="button" style={styles.whatsappBtnPrimary} onClick={openAutoWhatsAppReminder}>
+                Enviar por WhatsApp (más próximo)
+              </button>
+            ) : null}
           </div>
+          {autoWhatsappReminder ? (
+            <p style={styles.note}>
+              Se usará <strong>{autoWhatsappReminder.month.monthLabel}</strong> ({toSpanishDate(autoWhatsappReminder.month.sundayDate)})
+              {' '}con el texto de recordatorio más cercano a la fecha actual.
+            </p>
+          ) : null}
           <p style={styles.note}>Nota: desde este sitio se puede preparar y abrir el mensaje en WhatsApp Web, pero el envío automático programado requiere integrar WhatsApp Business API + un job backend (cron/Celery).</p>
         </div>
 
@@ -653,6 +713,15 @@ const styles = {
     borderRadius: '8px',
     padding: '10px 12px',
     cursor: 'pointer'
+  },
+  whatsappBtnPrimary: {
+    background: '#15803d',
+    color: '#fff',
+    border: '2px solid #14532d',
+    borderRadius: '8px',
+    padding: '10px 12px',
+    cursor: 'pointer',
+    fontWeight: 700
   },
   note: {
     marginTop: '6px',
