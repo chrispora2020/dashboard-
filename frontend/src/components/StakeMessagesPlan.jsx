@@ -169,7 +169,7 @@ export default function StakeMessagesPlan({ canEdit = true }) {
     const daysUntilSunday = diffInDays(today, sundayDate)
     const daysBefore = Math.abs(daysUntilSunday - 5) <= Math.abs(daysUntilSunday - 2) ? 5 : 2
 
-    return { month: closestMonth, daysBefore }
+    return { month: closestMonth, daysBefore, daysUntilSunday }
   }, [activeQuarter, canEdit])
   const hasUnsavedChanges = useMemo(
     () => JSON.stringify(planData) !== lastSavedPlanSnapshot,
@@ -346,10 +346,26 @@ export default function StakeMessagesPlan({ canEdit = true }) {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <h2 style={styles.title}>Mensajes de Estaca Maroñas</h2>
-        <p style={styles.subtitle}>
-          {canEdit ? 'Plan editable y persistente para el trimestre.' : 'Vista de solo lectura del plan trimestral.'}
-        </p>
+        <div style={styles.headerRow}>
+          <div>
+            <h2 style={styles.title}>Mensajes de Estaca Maroñas</h2>
+            <p style={styles.subtitle}>
+              {canEdit ? 'Plan editable y persistente para el trimestre.' : 'Vista de solo lectura del plan trimestral.'}
+            </p>
+          </div>
+          {autoWhatsappReminder ? (
+            <div style={styles.quickReminderCard}>
+              <p style={styles.quickReminderTitle}>Recordatorio activo</p>
+              <p style={styles.quickReminderText}>
+                Estamos a <strong>{autoWhatsappReminder.daysUntilSunday} días</strong> del mensaje de{' '}
+                <strong>{autoWhatsappReminder.month.monthLabel}</strong>.
+              </p>
+              <button type="button" style={styles.quickReminderBtn} onClick={openAutoWhatsAppReminder}>
+                Enviar recordatorio de mensajes
+              </button>
+            </div>
+          ) : null}
+        </div>
 
         <div style={styles.row}>
           <div style={styles.col}>
@@ -541,7 +557,8 @@ export default function StakeMessagesPlan({ canEdit = true }) {
           {autoWhatsappReminder ? (
             <p style={styles.note}>
               Se usará <strong>{autoWhatsappReminder.month.monthLabel}</strong> ({toSpanishDate(autoWhatsappReminder.month.sundayDate)})
-              {' '}con el texto de recordatorio más cercano a la fecha actual.
+              {' '}con el texto de recordatorio más cercano a la fecha actual. Estamos a{' '}
+              <strong>{autoWhatsappReminder.daysUntilSunday} días</strong> del mensaje.
             </p>
           ) : null}
           <p style={styles.note}>Nota: desde este sitio se puede preparar y abrir el mensaje en WhatsApp Web, pero el envío automático programado requiere integrar WhatsApp Business API + un job backend (cron/Celery).</p>
@@ -574,9 +591,48 @@ const styles = {
     marginTop: 0,
     marginBottom: '4px'
   },
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '14px',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap'
+  },
   subtitle: {
     marginTop: 0,
     color: '#4b5563'
+  },
+  quickReminderCard: {
+    position: 'sticky',
+    top: '12px',
+    alignSelf: 'flex-start',
+    minWidth: '280px',
+    maxWidth: '360px',
+    background: '#ecfdf5',
+    border: '1px solid #86efac',
+    borderRadius: '12px',
+    padding: '12px',
+    boxShadow: '0 6px 18px rgba(22, 163, 74, 0.15)'
+  },
+  quickReminderTitle: {
+    margin: 0,
+    fontWeight: 800,
+    color: '#166534'
+  },
+  quickReminderText: {
+    marginTop: '6px',
+    marginBottom: '10px',
+    color: '#14532d'
+  },
+  quickReminderBtn: {
+    width: '100%',
+    background: '#15803d',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '10px 12px',
+    cursor: 'pointer',
+    fontWeight: 700
   },
   monthSection: {
     marginTop: '24px',
