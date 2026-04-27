@@ -2,9 +2,9 @@ import axios from 'axios'
 import { useEffect, useMemo, useState } from 'react'
 import API_BASE from '../config'
 import {
-  COUNCIL_ASSIGNMENTS_STORAGE_KEY,
-  DEFAULT_COUNCIL_ASSIGNMENTS_PLAN,
-  normalizeCouncilAssignmentsPayload
+    COUNCIL_ASSIGNMENTS_STORAGE_KEY,
+    DEFAULT_COUNCIL_ASSIGNMENTS_PLAN,
+    normalizeCouncilAssignmentsPayload
 } from '../utils/councilAssignments'
 
 const API_PATH = '/api/council-assignments'
@@ -181,6 +181,24 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
       setStatus('✅ Asignaciones guardadas correctamente.')
     } catch (error) {
       setStatus(`❌ No se pudo guardar: ${error.response?.data?.detail || error.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function restoreBackup() {
+    if (!window.confirm('¿Restaurar los datos de respaldo? Esto reemplazará las asignaciones actuales con la lista original.')) return
+    setSaving(true)
+    setStatus('')
+    try {
+      await axios.post(`${API_BASE}${API_PATH}`, { plan: DEFAULT_COUNCIL_ASSIGNMENTS_PLAN })
+      localStorage.setItem(COUNCIL_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(DEFAULT_COUNCIL_ASSIGNMENTS_PLAN))
+      setPlan(DEFAULT_COUNCIL_ASSIGNMENTS_PLAN)
+      setStatus('✅ Datos de respaldo restaurados y guardados.')
+    } catch {
+      setPlan(DEFAULT_COUNCIL_ASSIGNMENTS_PLAN)
+      localStorage.setItem(COUNCIL_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(DEFAULT_COUNCIL_ASSIGNMENTS_PLAN))
+      setStatus('⚠️ Respaldo cargado localmente (no se pudo guardar en el servidor).')
     } finally {
       setSaving(false)
     }
@@ -366,6 +384,9 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
             <button type="button" style={styles.saveBtn} onClick={savePlan} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar asignaciones'}
             </button>
+            <button type="button" style={styles.restoreBtn} onClick={restoreBackup} disabled={saving}>
+              🔄 Restaurar datos de respaldo
+            </button>
             {status ? <span style={styles.status}>{status}</span> : null}
           </div>
         </div>
@@ -509,6 +530,15 @@ const styles = {
     color: '#fff',
     padding: '10px 16px',
     cursor: 'pointer'
+  },
+  restoreBtn: {
+    border: '1px solid #b45309',
+    borderRadius: '8px',
+    background: '#fffbeb',
+    color: '#b45309',
+    padding: '10px 16px',
+    cursor: 'pointer',
+    fontSize: '14px'
   },
   status: { color: '#0f172a', fontWeight: 600 }
 }
