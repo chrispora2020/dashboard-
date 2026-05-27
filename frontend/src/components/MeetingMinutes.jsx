@@ -18,36 +18,40 @@ function saveMinutes(records) {
 
 function summarizeText(text, participants = '') {
   const normalized = (text || '').trim().replace(/\s+/g, ' ')
-  if (!normalized) {
-    return ''
-  }
+  if (!normalized) return ''
 
   const sentences = normalized
     .split(/(?<=[.!?])\s+/)
     .map((sentence) => sentence.trim())
-    .filter(Boolean)
+    .filter((sentence) => sentence.length > 0)
 
-  const topicCandidates = sentences
-    .flatMap((sentence) => sentence.split(/[,;:]/))
-    .map((part) => part.trim())
-    .filter((part) => part.length > 10)
+  const keywords = ['acord', 'tarea', 'responsable', 'fecha', 'meta', 'objetivo', 'riesgo', 'decisi', 'proximo', 'seguimiento']
+  const scored = sentences.map((sentence, index) => {
+    const lower = sentence.toLowerCase()
+    const keywordScore = keywords.reduce((acc, key) => acc + (lower.includes(key) ? 2 : 0), 0)
+    const lengthScore = Math.min(Math.floor(sentence.length / 40), 2)
+    const positionScore = index < 2 ? 1 : 0
+    return { sentence, score: keywordScore + lengthScore + positionScore }
+  })
 
-  const uniqueTopics = [...new Set(topicCandidates)].slice(0, 4)
-  const actionSentences = sentences.filter((sentence) => /\b(haremos|acordamos|asignad[oa]|responsable|fecha|meta|objetivo|tarea|pr[oó]ximo)\b/i.test(sentence))
-  const quoteSource = sentences.find((sentence) => sentence.length >= 40) || sentences[0]
+  const topContext = scored
+    .slice()
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map((item) => item.sentence)
 
-  const personas = participants
-    .split(',')
-    .map((name) => name.trim())
-    .filter(Boolean)
+  const actionSentences = sentences.filter((sentence) => /\b(haremos|acordamos|asignad[oa]|responsable|fecha|meta|objetivo|tarea|pr[oó]ximo|seguimiento)\b/i.test(sentence))
+  const quoteSource = topContext.find((sentence) => sentence.length >= 40) || sentences[0]
 
+  const personas = participants.split(',').map((name) => name.trim()).filter(Boolean)
   const participantsLine = personas.length
-    ? personas.map((name) => `- ${name}: aportes y temas principales registrados en la conversación.`).join('\n')
+    ? personas.map((name) => `- ${name}: revisar pendientes y acuerdos en próxima reunión.`).join('\n')
     : '- No se especificaron participantes.'
 
-  const contexto = sentences.slice(0, 2).join(' ') || normalized.slice(0, 180)
-  const temas = uniqueTopics.length ? uniqueTopics.map((topic) => `- ${topic}`).join('\n') : '- No se detectaron temas claros.'
-  const tareas = actionSentences.length ? actionSentences.slice(0, 3).map((item) => `- ${item}`).join('\n') : '- No se detectaron tareas explícitas. Definir responsables y fechas.'
+  const contexto = topContext.slice(0, 2).join(' ') || normalized.slice(0, 220)
+  const temas = [...new Set(topContext.flatMap((sentence) => sentence.split(/[,;:]/)).map((part) => part.trim()).filter((part) => part.length > 12))]
+  const temasTexto = temas.length ? temas.slice(0, 5).map((topic) => `- ${topic}`).join('\n') : '- No se detectaron temas claros.'
+  const tareas = actionSentences.length ? actionSentences.slice(0, 4).map((item) => `- ${item}`).join('\n') : '- No se detectaron tareas explícitas. Definir responsables y fechas.'
   const citas = quoteSource ? `- “${quoteSource}”` : '- Sin cita destacada.'
 
   return [
@@ -55,7 +59,7 @@ function summarizeText(text, participants = '') {
     contexto,
     '',
     'Temas tratados:',
-    temas,
+    temasTexto,
     '',
     'Tareas y metas:',
     tareas,
@@ -75,6 +79,7 @@ export default function MeetingMinutes({ canEdit }) {
   const [recognitionError, setRecognitionError] = useState('')
   const recognitionRef = useRef(null)
   const transcriptFinalRef = useRef('')
+  const transcriptInterimRef = useRef('')
   const pauseRequestedRef = useRef(false)
   const stopRequestedRef = useRef(false)
 
@@ -123,6 +128,7 @@ export default function MeetingMinutes({ canEdit }) {
 
   function resetTranscriptState(baseTranscript = '') {
     transcriptFinalRef.current = (baseTranscript || '').trim()
+    transcriptInterimRef.current = ''
   }
 
   function createRecognition() {
@@ -152,6 +158,12 @@ export default function MeetingMinutes({ canEdit }) {
         return
       }
 
+      if (transcriptInterimRef.current.trim()) {
+        transcriptFinalRef.current = `${transcriptFinalRef.current} ${transcriptInterimRef.current}`.trim()
+        transcriptInterimRef.current = ''
+        setForm((prev) => ({ ...prev, transcript: transcriptFinalRef.current }))
+      }
+
       const restartedRecognition = createRecognition()
       recognitionRef.current = restartedRecognition
       restartedRecognition.start()
@@ -171,7 +183,8 @@ export default function MeetingMinutes({ canEdit }) {
         }
       }
 
-      const nextTranscript = `${transcriptFinalRef.current} ${interimTranscript}`.trim()
+      transcriptInterimRef.current = interimTranscript.trim()
+      const nextTranscript = `${transcriptFinalRef.current} ${transcriptInterimRef.current}`.trim()
       setForm((prev) => ({ ...prev, transcript: nextTranscript }))
     }
 
@@ -277,7 +290,7 @@ export default function MeetingMinutes({ canEdit }) {
               <button type="button" onClick={pauseTranscription} disabled={!isListening}>⏸️ Pausar</button>
               <button type="button" onClick={resumeTranscription} disabled={!isPaused}>▶️ Retomar</button>
               <button type="button" onClick={stopTranscription} disabled={!isListening && !isPaused}>⏹️ Terminar</button>
-              <button type="button" onClick={handleAISummary}>✨ Generar resumen (IA local gratis)</button>
+              <button type="button" onClick={handleAISummary}>✨ Generar resumen (IA local avanzada)</button>
             </div>
 
             {recognitionError ? <p style={{ color: '#b91c1c' }}>{recognitionError}</p> : null}
