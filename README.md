@@ -175,3 +175,37 @@ Resuelto mediante volumen anónimo para `node_modules` que preserva la versión 
 4. Conexión Dashboard → datos reales desde DB
 5. Mapeo asistido de campos
 6. Reglas/motor de cálculo extensible
+
+## Análisis de reuniones con IA local (Whisper.cpp + Ollama)
+
+Se agregaron endpoints para guardar contexto y responder preguntas posteriores:
+
+- `POST /api/ai/meetings/analyze`
+- `POST /api/ai/meetings/ask`
+
+Variables opcionales backend:
+
+- `OLLAMA_URL` (default `http://localhost:11434/api/chat`)
+- `OLLAMA_MODEL` (default `llama3.1:8b`)
+
+Ejemplo `analyze`:
+
+```bash
+curl -X POST http://localhost:8000/api/ai/meetings/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "org_id":"default",
+    "meeting_id":"reunion-2026-05-27",
+    "date":"2026-05-27",
+    "participants":["Ana","Luis"],
+    "transcript":"Texto de transcripción real..."
+  }'
+```
+
+Ejemplo `ask`:
+
+```bash
+curl -X POST http://localhost:8000/api/ai/meetings/ask \
+  -H "Content-Type: application/json" \
+  -d '{"org_id":"default","question":"¿Qué acuerdos quedaron pendientes?"}'
+```
