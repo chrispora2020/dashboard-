@@ -20,8 +20,12 @@ function summarizeText(text, participants = '') {
   const normalized = (text || '').trim().replace(/\s+/g, ' ')
   if (!normalized) return ''
 
-  const sentences = normalized
-    .split(/(?<=[.!?])\s+/)
+  const hasPunctuation = /[.!?]/.test(normalized)
+  const rawSentences = hasPunctuation
+    ? normalized.split(/(?<=[.!?])\s+/)
+    : normalized.split(/\b(?:tarea\s*\d+|adem[aá]s|tamb[ií]en|luego|despu[eé]s|por favor|pero|entonces)\b/gi)
+
+  const sentences = rawSentences
     .map((sentence) => sentence.trim())
     .filter((sentence) => sentence.length > 0)
 
@@ -40,7 +44,7 @@ function summarizeText(text, participants = '') {
     .slice(0, 5)
     .map((item) => item.sentence)
 
-  const actionSentences = sentences.filter((sentence) => /\b(haremos|acordamos|asignad[oa]|responsable|fecha|meta|objetivo|tarea|pr[oó]ximo|seguimiento)\b/i.test(sentence))
+  const actionSentences = sentences.filter((sentence) => /\b(haremos|acordamos|asignad[oa]|responsable|fecha|meta|objetivo|tarea|pr[oó]ximo|seguimiento|resumir|corregir|revisar)\b/i.test(sentence))
   const quoteSource = topContext.find((sentence) => sentence.length >= 40) || sentences[0]
 
   const personas = participants.split(',').map((name) => name.trim()).filter(Boolean)
@@ -49,9 +53,14 @@ function summarizeText(text, participants = '') {
     : '- No se especificaron participantes.'
 
   const contexto = topContext.slice(0, 2).join(' ') || normalized.slice(0, 220)
+  const detectedTasks = [...normalized.matchAll(/tarea\s*(\d+)/gi)].map((match) => `Tarea ${match[1]}`)
   const temas = [...new Set(topContext.flatMap((sentence) => sentence.split(/[,;:]/)).map((part) => part.trim()).filter((part) => part.length > 12))]
   const temasTexto = temas.length ? temas.slice(0, 5).map((topic) => `- ${topic}`).join('\n') : '- No se detectaron temas claros.'
-  const tareas = actionSentences.length ? actionSentences.slice(0, 4).map((item) => `- ${item}`).join('\n') : '- No se detectaron tareas explícitas. Definir responsables y fechas.'
+  const tareasDetectadas = [
+    ...detectedTasks.map((task) => `- ${task}: definir responsable y fecha compromiso.`),
+    ...actionSentences.slice(0, 4).map((item) => `- ${item}`)
+  ]
+  const tareas = tareasDetectadas.length ? tareasDetectadas.slice(0, 6).join('\n') : '- No se detectaron tareas explícitas. Definir responsables y fechas.'
   const citas = quoteSource ? `- “${quoteSource}”` : '- Sin cita destacada.'
 
   return [
@@ -75,6 +84,7 @@ function summarizeText(text, participants = '') {
 export default function MeetingMinutes({ canEdit }) {
   const [records, setRecords] = useState(() => loadMinutes())
   const [form, setForm] = useState({ date: '', participants: '', transcript: '', summary: '' })
+  const [editingId, setEditingId] = useState(null)
   const [listeningState, setListeningState] = useState('idle')
   const [recognitionError, setRecognitionError] = useState('')
   const recognitionRef = useRef(null)
@@ -103,22 +113,44 @@ export default function MeetingMinutes({ canEdit }) {
       return
     }
 
-    const next = [
-      {
-        id: Date.now(),
-        date: form.date,
-        participants: form.participants,
-        transcript: form.transcript,
-        summary: form.summary,
-        createdAt: new Date().toISOString()
-      },
-      ...records
-    ]
+    const payload = {
+      date: form.date,
+      participants: form.participants,
+      transcript: form.transcript,
+      summary: form.summary,
+      createdAt: new Date().toISOString()
+    }
+
+    const next = editingId
+      ? records.map((record) => (record.id === editingId ? { ...record, ...payload } : record))
+      : [{ id: Date.now(), ...payload }, ...records]
 
     setRecords(next)
     saveMinutes(next)
     setForm({ date: '', participants: '', transcript: '', summary: '' })
+    setEditingId(null)
     setRecognitionError('')
+  }
+
+  function handleEdit(record) {
+    setForm({
+      date: record.date || '',
+      participants: record.participants || '',
+      transcript: record.transcript || '',
+      summary: record.summary || ''
+    })
+    setEditingId(record.id)
+    setRecognitionError('')
+  }
+
+  function handleDelete(recordId) {
+    const next = records.filter((record) => record.id !== recordId)
+    setRecords(next)
+    saveMinutes(next)
+    if (editingId === recordId) {
+      setEditingId(null)
+      setForm({ date: '', participants: '', transcript: '', summary: '' })
+    }
   }
 
   function handleAISummary() {
@@ -310,7 +342,10 @@ export default function MeetingMinutes({ canEdit }) {
               />
             </label>
 
-            <button type="submit">Guardar acta</button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="submit">{editingId ? 'Actualizar acta' : 'Guardar acta'}</button>
+              {editingId ? <button type="button" onClick={() => { setEditingId(null); setForm({ date: '', participants: '', transcript: '', summary: '' }) }}>Cancelar edición</button> : null}
+            </div>
           </div>
         </form>
       ) : null}
@@ -324,6 +359,12 @@ export default function MeetingMinutes({ canEdit }) {
             <p><strong>Participantes:</strong> {record.participants || 'No especificados'}</p>
             <p style={{ whiteSpace: 'pre-wrap' }}><strong>Resumen:</strong> {record.summary}</p>
             {record.transcript ? <p><strong>Transcripción:</strong> {record.transcript}</p> : null}
+            {canEdit ? (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                <button type="button" onClick={() => handleEdit(record)}>Editar</button>
+                <button type="button" onClick={() => handleDelete(record.id)}>Eliminar</button>
+              </div>
+            ) : null}
           </article>
         ))}
       </section>
