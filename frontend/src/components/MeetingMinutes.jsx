@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import API_BASE from '../config'
 
 const STORAGE_KEY = 'meeting_minutes_records'
 
@@ -87,6 +88,10 @@ export default function MeetingMinutes({ canEdit }) {
   const [editingId, setEditingId] = useState(null)
   const [listeningState, setListeningState] = useState('idle')
   const [recognitionError, setRecognitionError] = useState('')
+  const [summaryPrompt, setSummaryPrompt] = useState('')
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const [promptSaving, setPromptSaving] = useState(false)
+  const [aiError, setAiError] = useState('')
   const recognitionRef = useRef(null)
   const transcriptFinalRef = useRef('')
   const transcriptInterimRef = useRef('')
@@ -153,9 +158,56 @@ export default function MeetingMinutes({ canEdit }) {
     }
   }
 
-  function handleAISummary() {
+  async function handleAISummary() {
     const source = form.transcript || form.summary
-    setForm((prev) => ({ ...prev, summary: summarizeText(source, prev.participants) }))
+    if (!source?.trim()) {
+      setAiError('Escribe o transcribe contenido antes de generar resumen.')
+      return
+    }
+
+    setSummaryLoading(true)
+    setAiError('')
+    try {
+      const response = await fetch(`${API_BASE}/api/ai/meetings/summarize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: source, prompt: summaryPrompt })
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data?.detail || 'No se pudo generar el resumen con IA.')
+      setForm((prev) => ({ ...prev, summary: data.summary || '' }))
+    } catch (error) {
+      console.error(error)
+      setAiError(error.message || 'Error generando resumen con IA.')
+      setForm((prev) => ({ ...prev, summary: summarizeText(source, prev.participants) }))
+    } finally {
+      setSummaryLoading(false)
+    }
+  }
+
+  async function handleSavePrompt() {
+    if (!summaryPrompt.trim()) {
+      setAiError('El prompt no puede estar vacío.')
+      return
+    }
+
+    setPromptSaving(true)
+    setAiError('')
+    try {
+      const response = await fetch(`${API_BASE}/api/ai/meetings/summary-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: summaryPrompt })
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data?.detail || 'No se pudo guardar el prompt.')
+      setSummaryPrompt(data.prompt || summaryPrompt)
+    } catch (error) {
+      console.error(error)
+      setAiError(error.message || 'Error guardando prompt.')
+    } finally {
+      setPromptSaving(false)
+    }
   }
 
   function resetTranscriptState(baseTranscript = '') {
@@ -281,6 +333,28 @@ export default function MeetingMinutes({ canEdit }) {
     stopRequestedRef.current = true
     recognitionRef.current?.stop()
   }, [])
+
+
+  useEffect(() => {
+    let active = true
+
+    async function loadPrompt() {
+      try {
+        const response = await fetch(`${API_BASE}/api/ai/meetings/summary-prompt`)
+        const data = await response.json()
+        if (!response.ok) return
+        if (active) setSummaryPrompt(data.prompt || '')
+      } catch (error) {
+        console.error('No se pudo cargar prompt de resumen.', error)
+      }
+    }
+
+    loadPrompt()
+    return () => {
+      active = false
+    }
+  }, [])
+
   return (
     <main style={{ padding: '20px' }}>
       <h2>Actas de reuniones</h2>
@@ -322,12 +396,29 @@ export default function MeetingMinutes({ canEdit }) {
               <button type="button" onClick={pauseTranscription} disabled={!isListening}>⏸️ Pausar</button>
               <button type="button" onClick={resumeTranscription} disabled={!isPaused}>▶️ Retomar</button>
               <button type="button" onClick={stopTranscription} disabled={!isListening && !isPaused}>⏹️ Terminar</button>
-              <button type="button" onClick={handleAISummary}>✨ Generar resumen (IA local avanzada)</button>
+              <button type="button" onClick={handleAISummary} disabled={summaryLoading}>{summaryLoading ? 'Generando resumen...' : '✨ Generar resumen (IA real)'}</button>
             </div>
 
             {recognitionError ? <p style={{ color: '#b91c1c' }}>{recognitionError}</p> : null}
+            {aiError ? <p style={{ color: '#b91c1c' }}>{aiError}</p> : null}
             {isListening ? <p style={{ color: '#166534' }}>🟢 Grabando y transcribiendo en tiempo real…</p> : null}
             {isPaused ? <p style={{ color: '#92400e' }}>🟡 Transcripción pausada. Puedes retomar o terminar.</p> : null}
+
+            <label>
+              Prompt de resumen IA (editable)
+              <textarea
+                name="summaryPrompt"
+                value={summaryPrompt}
+                onChange={(event) => setSummaryPrompt(event.target.value)}
+                rows={7}
+                placeholder="Define aquí el prompt que usará la IA para resumir"
+                style={{ width: '100%' }}
+              />
+            </label>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" onClick={handleSavePrompt} disabled={promptSaving}>{promptSaving ? 'Guardando prompt...' : 'Guardar prompt IA'}</button>
+            </div>
 
             <label>
               Resumen de la reunión

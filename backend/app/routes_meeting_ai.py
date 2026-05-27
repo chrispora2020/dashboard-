@@ -42,6 +42,27 @@ class AskRequest(BaseModel):
     question: str
 
 
+class SummarizeRequest(BaseModel):
+    org_id: str = "default"
+    text: str
+    prompt: str | None = None
+
+
+DEFAULT_SUMMARY_PROMPT = """Eres un asistente experto en resumir textos en español.
+
+Genera una respuesta clara, accionable y breve con este formato:
+1) Resumen ejecutivo (1 párrafo)
+2) Ideas clave (viñetas)
+3) Tareas/acciones (viñetas con responsable sugerido si aplica)
+4) Próximos pasos (máximo 3)
+
+Reglas:
+- No inventes datos que no aparezcan en el texto.
+- Si falta contexto, indícalo.
+- Mantén lenguaje simple y profesional.
+"""
+
+
 def _get_setting(db: Session, key: str, default: Any):
     row = db.get(AppSetting, key)
     if not row:
@@ -70,6 +91,80 @@ def _chat_ollama(messages: list[dict[str, str]]) -> str:
         return resp.json().get("message", {}).get("content", "")
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"No se pudo conectar a Ollama: {exc}")
+
+
+def _chat_openai(messages: list[dict[str, str]]) -> str:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Falta configurar OPENAI_API_KEY en el servidor.")
+
+    base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+    try:
+        resp = requests.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": model, "messages": messages, "temperature": 0.2},
+            timeout=120,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"].strip()
+    except requests.HTTPError as exc:
+        detail = exc.response.text if exc.response is not None else str(exc)
+        raise HTTPException(status_code=502, detail=f"Error en API de OpenAI: {detail}")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"No se pudo conectar a OpenAI: {exc}")
+
+
+@router.get("/ai/meetings/summary-prompt")
+def get_summary_prompt(org_id: str = "default"):
+    db = SessionLocal()
+    try:
+        key = f"meeting_ai:{org_id}:summary_prompt"
+        prompt = _get_setting(db, key, DEFAULT_SUMMARY_PROMPT)
+        return {"ok": True, "prompt": prompt}
+    finally:
+        db.close()
+
+
+@router.post("/ai/meetings/summary-prompt")
+def save_summary_prompt(body: dict[str, str]):
+    org_id = body.get("org_id", "default")
+    prompt = (body.get("prompt") or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="El prompt no puede estar vacío.")
+
+    db = SessionLocal()
+    try:
+        key = f"meeting_ai:{org_id}:summary_prompt"
+        _set_setting(db, key, prompt)
+        db.commit()
+        return {"ok": True, "prompt": prompt}
+    finally:
+        db.close()
+
+
+@router.post("/ai/meetings/summarize")
+def summarize_text(body: SummarizeRequest):
+    text = (body.text or "").strip()
+    if len(text) < 20:
+        raise HTTPException(status_code=400, detail="El texto es demasiado corto para resumir.")
+
+    db = SessionLocal()
+    try:
+        key = f"meeting_ai:{body.org_id}:summary_prompt"
+        saved_prompt = _get_setting(db, key, DEFAULT_SUMMARY_PROMPT)
+        prompt = (body.prompt or saved_prompt or DEFAULT_SUMMARY_PROMPT).strip()
+    finally:
+        db.close()
+
+    summary = _chat_openai([
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": text},
+    ])
+    return {"ok": True, "summary": summary, "prompt_used": prompt}
 
 
 @router.post("/ai/meetings/analyze")
