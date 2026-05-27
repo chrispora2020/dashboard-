@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
 const STORAGE_KEY = 'meeting_minutes_records'
 
@@ -16,8 +16,8 @@ function saveMinutes(records) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
 }
 
-function summarizeText(text) {
-  const normalized = (text || '').trim()
+function summarizeText(text, participants = '') {
+  const normalized = (text || '').trim().replace(/\s+/g, ' ')
   if (!normalized) {
     return ''
   }
@@ -27,15 +27,57 @@ function summarizeText(text) {
     .map((sentence) => sentence.trim())
     .filter(Boolean)
 
-  return sentences.slice(0, 3).join(' ')
+  const topicCandidates = sentences
+    .flatMap((sentence) => sentence.split(/[,;:]/))
+    .map((part) => part.trim())
+    .filter((part) => part.length > 10)
+
+  const uniqueTopics = [...new Set(topicCandidates)].slice(0, 4)
+  const actionSentences = sentences.filter((sentence) => /\b(haremos|acordamos|asignad[oa]|responsable|fecha|meta|objetivo|tarea|pr[oó]ximo)\b/i.test(sentence))
+  const quoteSource = sentences.find((sentence) => sentence.length >= 40) || sentences[0]
+
+  const personas = participants
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean)
+
+  const participantsLine = personas.length
+    ? personas.map((name) => `- ${name}: aportes y temas principales registrados en la conversación.`).join('\n')
+    : '- No se especificaron participantes.'
+
+  const contexto = sentences.slice(0, 2).join(' ') || normalized.slice(0, 180)
+  const temas = uniqueTopics.length ? uniqueTopics.map((topic) => `- ${topic}`).join('\n') : '- No se detectaron temas claros.'
+  const tareas = actionSentences.length ? actionSentences.slice(0, 3).map((item) => `- ${item}`).join('\n') : '- No se detectaron tareas explícitas. Definir responsables y fechas.'
+  const citas = quoteSource ? `- “${quoteSource}”` : '- Sin cita destacada.'
+
+  return [
+    'Contexto general:',
+    contexto,
+    '',
+    'Temas tratados:',
+    temas,
+    '',
+    'Tareas y metas:',
+    tareas,
+    '',
+    'Citas importantes:',
+    citas,
+    '',
+    'Resumen por participante:',
+    participantsLine
+  ].join('\n')
 }
 
 export default function MeetingMinutes({ canEdit }) {
   const [records, setRecords] = useState(() => loadMinutes())
   const [form, setForm] = useState({ date: '', participants: '', transcript: '', summary: '' })
-  const [isListening, setIsListening] = useState(false)
+  const [listeningState, setListeningState] = useState('idle')
   const [recognitionError, setRecognitionError] = useState('')
+  const recognitionRef = useRef(null)
+  const pauseRequestedRef = useRef(false)
 
+  const isListening = listeningState === 'listening'
+  const isPaused = listeningState === 'paused'
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
 
   const sortedRecords = useMemo(
@@ -74,27 +116,26 @@ export default function MeetingMinutes({ canEdit }) {
 
   function handleAISummary() {
     const source = form.transcript || form.summary
-    setForm((prev) => ({ ...prev, summary: summarizeText(source) }))
+    setForm((prev) => ({ ...prev, summary: summarizeText(source, prev.participants) }))
   }
 
-  function startTranscription() {
-    if (!SpeechRecognition) {
-      setRecognitionError('Tu navegador no soporta transcripción automática. Usa Chrome o Edge actualizado.')
-      return
-    }
-
-    setRecognitionError('')
+  function createRecognition() {
     const recognition = new SpeechRecognition()
     recognition.lang = 'es-ES'
     recognition.continuous = true
     recognition.interimResults = true
 
-    recognition.onstart = () => setIsListening(true)
+    recognition.onstart = () => setListeningState('listening')
     recognition.onerror = () => {
       setRecognitionError('No se pudo acceder al micrófono para transcribir.')
-      setIsListening(false)
+      setListeningState('idle')
     }
-    recognition.onend = () => setIsListening(false)
+    recognition.onend = () => {
+      setListeningState((prev) => (pauseRequestedRef.current ? 'paused' : 'idle'))
+      if (!pauseRequestedRef.current) {
+        recognitionRef.current = null
+      }
+    }
 
     recognition.onresult = (event) => {
       let transcript = ''
@@ -104,8 +145,54 @@ export default function MeetingMinutes({ canEdit }) {
       setForm((prev) => ({ ...prev, transcript: `${prev.transcript} ${transcript}`.trim() }))
     }
 
-    recognition.start()
+    return recognition
+  }
 
+  function startTranscription() {
+    if (!SpeechRecognition) {
+      setRecognitionError('Tu navegador no soporta transcripción automática. Usa Chrome o Edge actualizado.')
+      return
+    }
+
+    setRecognitionError('')
+    pauseRequestedRef.current = false
+    const recognition = createRecognition()
+    recognitionRef.current = recognition
+    recognition.start()
+  }
+
+  function pauseTranscription() {
+    if (!recognitionRef.current || !isListening) {
+      return
+    }
+    pauseRequestedRef.current = true
+    setListeningState('paused')
+    recognitionRef.current.stop()
+  }
+
+  function resumeTranscription() {
+    if (!SpeechRecognition) {
+      setRecognitionError('Tu navegador no soporta transcripción automática. Usa Chrome o Edge actualizado.')
+      return
+    }
+    if (!isPaused) {
+      return
+    }
+
+    setRecognitionError('')
+    pauseRequestedRef.current = false
+    const recognition = createRecognition()
+    recognitionRef.current = recognition
+    recognition.start()
+  }
+
+  function stopTranscription() {
+    if (recognitionRef.current) {
+      pauseRequestedRef.current = false
+      recognitionRef.current.stop()
+      recognitionRef.current = null
+    }
+    setListeningState('idle')
   }
 
   return (
@@ -145,12 +232,16 @@ export default function MeetingMinutes({ canEdit }) {
             </label>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button type="button" onClick={startTranscription}>🎙️ Transcribir</button>
-              <button type="button" onClick={handleAISummary}>✨ Resumir IA</button>
+              <button type="button" onClick={startTranscription} disabled={isListening || isPaused}>🎙️ Iniciar transcripción</button>
+              <button type="button" onClick={pauseTranscription} disabled={!isListening}>⏸️ Pausar</button>
+              <button type="button" onClick={resumeTranscription} disabled={!isPaused}>▶️ Retomar</button>
+              <button type="button" onClick={stopTranscription} disabled={!isListening && !isPaused}>⏹️ Terminar</button>
+              <button type="button" onClick={handleAISummary}>✨ Generar resumen</button>
             </div>
 
             {recognitionError ? <p style={{ color: '#b91c1c' }}>{recognitionError}</p> : null}
-            {isListening ? <p style={{ color: '#166534' }}>Grabando y transcribiendo en tiempo real…</p> : null}
+            {isListening ? <p style={{ color: '#166534' }}>🟢 Grabando y transcribiendo en tiempo real…</p> : null}
+            {isPaused ? <p style={{ color: '#92400e' }}>🟡 Transcripción pausada. Puedes retomar o terminar.</p> : null}
 
             <label>
               Resumen de la reunión
@@ -158,9 +249,9 @@ export default function MeetingMinutes({ canEdit }) {
                 name="summary"
                 value={form.summary}
                 onChange={handleChange}
-                rows={4}
+                rows={10}
                 required
-                placeholder="Resumen final del acta"
+                placeholder="Incluye contexto, temas, tareas/metas, citas y resumen por participante"
                 style={{ width: '100%' }}
               />
             </label>
@@ -177,7 +268,7 @@ export default function MeetingMinutes({ canEdit }) {
           <article key={record.id} style={{ background: '#fff', padding: 16, borderRadius: 8 }}>
             <h3>{record.date}</h3>
             <p><strong>Participantes:</strong> {record.participants || 'No especificados'}</p>
-            <p><strong>Resumen:</strong> {record.summary}</p>
+            <p style={{ whiteSpace: 'pre-wrap' }}><strong>Resumen:</strong> {record.summary}</p>
             {record.transcript ? <p><strong>Transcripción:</strong> {record.transcript}</p> : null}
           </article>
         ))}
