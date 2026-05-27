@@ -20,7 +20,9 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
     '/asignaciones/comites': 'Asignación de Comités',
     '/asignaciones/editar': 'Editar asignaciones',
     '/upload': 'Cargar listas',
-    '/dashboard-api': 'Dashboard API'
+    '/dashboard-api': 'Dashboard API',
+    '/actas/ver': 'Actas de reuniones',
+    '/actas/editar': 'Registrar acta de reunión'
   }
 
   const pageTitle = headerByPath[location.pathname] || 'Indicadores Estaca Maroñas'
@@ -40,6 +42,14 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
       links: [
         { to: '/mensajes/ver', label: 'Ver plan de mensajes' },
         ...(canManageLists ? [{ to: '/mensajes/editar', label: 'Editar plan de mensajes' }] : [])
+      ]
+    },
+    {
+      id: 'actas',
+      title: 'Actas',
+      links: [
+        { to: '/actas/ver', label: 'Ver actas de reuniones' },
+        ...(isPresidencia ? [{ to: '/actas/editar', label: 'Agregar acta de reunión' }] : [])
       ]
     },
     {

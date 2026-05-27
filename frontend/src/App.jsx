@@ -9,6 +9,7 @@ import CouncilAssignments from './components/CouncilAssignments'
 import StakeMessagesPlan from './components/StakeMessagesPlan'
 import SpeakersPlanView from './components/SpeakersPlanView'
 import Upload from './components/Upload'
+import MeetingMinutes from './components/MeetingMinutes'
 
 const LOCAL_USER_KEY = 'user'
 const SESSION_ROLE_KEY = 'dashboard_role'
@@ -142,6 +143,14 @@ export default function App() {
           <Route
             path="/asignaciones/editar"
             element={canManageLists ? <CouncilAssignments canEdit /> : <Navigate to="/asignaciones/ver" replace />}
+          />
+          <Route
+            path="/actas/ver"
+            element={<MeetingMinutes canEdit={false} />}
+          />
+          <Route
+            path="/actas/editar"
+            element={canManageLists ? <MeetingMinutes canEdit /> : <Navigate to="/actas/ver" replace />}
           />
           <Route path="/plan-discursos" element={<Navigate to="/mensajes/ver" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
