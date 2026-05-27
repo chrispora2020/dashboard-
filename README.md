@@ -22,6 +22,15 @@ Aplicación web para seguimiento de indicadores (KPI) a partir de PDFs cargados 
 cd C:\c\_DESA\proyectos\dashboard
 ```
 
+
+### 2.1 Configurar variables de entorno (incluye OpenAI)
+```bash
+cp .env.example .env
+# Edita .env y completa OPENAI_API_KEY con tu clave real
+```
+
+> Si no configuras `OPENAI_API_KEY`, el backend responderá con error 500 al usar funciones de IA.
+
 ### 2. Levantar todos los servicios
 ```bash
 docker-compose up -d
