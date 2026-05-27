@@ -74,6 +74,7 @@ export default function MeetingMinutes({ canEdit }) {
   const [listeningState, setListeningState] = useState('idle')
   const [recognitionError, setRecognitionError] = useState('')
   const recognitionRef = useRef(null)
+  const transcriptFinalRef = useRef('')
   const pauseRequestedRef = useRef(false)
   const stopRequestedRef = useRef(false)
 
@@ -120,6 +121,10 @@ export default function MeetingMinutes({ canEdit }) {
     setForm((prev) => ({ ...prev, summary: summarizeText(source, prev.participants) }))
   }
 
+  function resetTranscriptState(baseTranscript = '') {
+    transcriptFinalRef.current = (baseTranscript || '').trim()
+  }
+
   function createRecognition() {
     const recognition = new SpeechRecognition()
     recognition.lang = 'es-ES'
@@ -153,11 +158,21 @@ export default function MeetingMinutes({ canEdit }) {
     }
 
     recognition.onresult = (event) => {
-      let transcript = ''
+      let interimTranscript = ''
+
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        transcript += event.results[i][0].transcript
+        const result = event.results[i]
+        const text = result[0]?.transcript || ''
+
+        if (result.isFinal) {
+          transcriptFinalRef.current = `${transcriptFinalRef.current} ${text}`.trim()
+        } else {
+          interimTranscript += text
+        }
       }
-      setForm((prev) => ({ ...prev, transcript: `${prev.transcript} ${transcript}`.trim() }))
+
+      const nextTranscript = `${transcriptFinalRef.current} ${interimTranscript}`.trim()
+      setForm((prev) => ({ ...prev, transcript: nextTranscript }))
     }
 
     return recognition
@@ -170,6 +185,7 @@ export default function MeetingMinutes({ canEdit }) {
     }
 
     setRecognitionError('')
+    resetTranscriptState(form.transcript)
     pauseRequestedRef.current = false
     stopRequestedRef.current = false
     const recognition = createRecognition()
@@ -197,6 +213,7 @@ export default function MeetingMinutes({ canEdit }) {
     }
 
     setRecognitionError('')
+    resetTranscriptState(form.transcript)
     pauseRequestedRef.current = false
     stopRequestedRef.current = false
     const recognition = createRecognition()
