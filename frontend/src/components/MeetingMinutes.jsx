@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 const STORAGE_KEY = 'meeting_minutes_records'
 
@@ -75,6 +75,7 @@ export default function MeetingMinutes({ canEdit }) {
   const [recognitionError, setRecognitionError] = useState('')
   const recognitionRef = useRef(null)
   const pauseRequestedRef = useRef(false)
+  const stopRequestedRef = useRef(false)
 
   const isListening = listeningState === 'listening'
   const isPaused = listeningState === 'paused'
@@ -126,15 +127,29 @@ export default function MeetingMinutes({ canEdit }) {
     recognition.interimResults = true
 
     recognition.onstart = () => setListeningState('listening')
-    recognition.onerror = () => {
+    recognition.onerror = (event) => {
+      if (event?.error === 'no-speech' || event?.error === 'aborted') {
+        return
+      }
       setRecognitionError('No se pudo acceder al micrófono para transcribir.')
       setListeningState('idle')
     }
     recognition.onend = () => {
-      setListeningState((prev) => (pauseRequestedRef.current ? 'paused' : 'idle'))
-      if (!pauseRequestedRef.current) {
-        recognitionRef.current = null
+      if (pauseRequestedRef.current) {
+        setListeningState('paused')
+        return
       }
+
+      if (stopRequestedRef.current) {
+        stopRequestedRef.current = false
+        setListeningState('idle')
+        recognitionRef.current = null
+        return
+      }
+
+      const restartedRecognition = createRecognition()
+      recognitionRef.current = restartedRecognition
+      restartedRecognition.start()
     }
 
     recognition.onresult = (event) => {
@@ -156,6 +171,7 @@ export default function MeetingMinutes({ canEdit }) {
 
     setRecognitionError('')
     pauseRequestedRef.current = false
+    stopRequestedRef.current = false
     const recognition = createRecognition()
     recognitionRef.current = recognition
     recognition.start()
@@ -166,6 +182,7 @@ export default function MeetingMinutes({ canEdit }) {
       return
     }
     pauseRequestedRef.current = true
+    stopRequestedRef.current = false
     setListeningState('paused')
     recognitionRef.current.stop()
   }
@@ -181,6 +198,7 @@ export default function MeetingMinutes({ canEdit }) {
 
     setRecognitionError('')
     pauseRequestedRef.current = false
+    stopRequestedRef.current = false
     const recognition = createRecognition()
     recognitionRef.current = recognition
     recognition.start()
@@ -189,12 +207,18 @@ export default function MeetingMinutes({ canEdit }) {
   function stopTranscription() {
     if (recognitionRef.current) {
       pauseRequestedRef.current = false
+      stopRequestedRef.current = true
       recognitionRef.current.stop()
       recognitionRef.current = null
     }
     setListeningState('idle')
   }
 
+
+  useEffect(() => () => {
+    stopRequestedRef.current = true
+    recognitionRef.current?.stop()
+  }, [])
   return (
     <main style={{ padding: '20px' }}>
       <h2>Actas de reuniones</h2>
@@ -236,7 +260,7 @@ export default function MeetingMinutes({ canEdit }) {
               <button type="button" onClick={pauseTranscription} disabled={!isListening}>⏸️ Pausar</button>
               <button type="button" onClick={resumeTranscription} disabled={!isPaused}>▶️ Retomar</button>
               <button type="button" onClick={stopTranscription} disabled={!isListening && !isPaused}>⏹️ Terminar</button>
-              <button type="button" onClick={handleAISummary}>✨ Generar resumen</button>
+              <button type="button" onClick={handleAISummary}>✨ Generar resumen (IA local gratis)</button>
             </div>
 
             {recognitionError ? <p style={{ color: '#b91c1c' }}>{recognitionError}</p> : null}
