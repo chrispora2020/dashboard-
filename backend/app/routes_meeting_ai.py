@@ -93,13 +93,13 @@ def _chat_ollama(messages: list[dict[str, str]]) -> str:
         raise HTTPException(status_code=502, detail=f"No se pudo conectar a Ollama: {exc}")
 
 
-def _chat_openai(messages: list[dict[str, str]]) -> str:
-    api_key = os.getenv("OPENAI_API_KEY")
+def _chat_gemini(messages: list[dict[str, str]]) -> str:
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="Falta configurar OPENAI_API_KEY en el servidor.")
+        raise HTTPException(status_code=500, detail="Falta configurar GEMINI_API_KEY en el servidor.")
 
-    base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    base_url = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai")
+    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
     try:
         resp = requests.post(
@@ -113,9 +113,9 @@ def _chat_openai(messages: list[dict[str, str]]) -> str:
         return data["choices"][0]["message"]["content"].strip()
     except requests.HTTPError as exc:
         detail = exc.response.text if exc.response is not None else str(exc)
-        raise HTTPException(status_code=502, detail=f"Error en API de OpenAI: {detail}")
+        raise HTTPException(status_code=502, detail=f"Error en API de Gemini: {detail}")
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"No se pudo conectar a OpenAI: {exc}")
+        raise HTTPException(status_code=502, detail=f"No se pudo conectar a Gemini: {exc}")
 
 
 @router.get("/ai/meetings/summary-prompt")
@@ -160,7 +160,7 @@ def summarize_text(body: SummarizeRequest):
     finally:
         db.close()
 
-    summary = _chat_openai([
+    summary = _chat_gemini([
         {"role": "system", "content": prompt},
         {"role": "user", "content": text},
     ])

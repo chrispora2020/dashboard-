@@ -13,10 +13,10 @@ services:
         sync: false          # Pegar connection string de Upstash Redis (rediss://...)
       - key: JWT_SECRET
         sync: false
-      - key: OPENAI_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
-      - key: OPENAI_MODEL
-        value: gpt-4o-mini
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
       - key: RENDER
         value: "true"
       - key: APP_ENV
@@ -35,10 +35,10 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: OPENAI_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
-      - key: OPENAI_MODEL
-        value: gpt-4o-mini
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
       - key: RENDER
         value: "true"
       - key: APP_ENV
