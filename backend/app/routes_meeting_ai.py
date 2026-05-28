@@ -93,13 +93,13 @@ def _chat_ollama(messages: list[dict[str, str]]) -> str:
         raise HTTPException(status_code=502, detail=f"No se pudo conectar a Ollama: {exc}")
 
 
-def _chat_gemini(messages: list[dict[str, str]]) -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
+def _chat_openrouter(messages: list[dict[str, str]]) -> str:
+    api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="Falta configurar GEMINI_API_KEY en el servidor.")
+        raise HTTPException(status_code=500, detail="Falta configurar OPENROUTER_API_KEY en el servidor.")
 
-    base_url = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai")
-    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3-haiku")
 
     try:
         resp = requests.post(
@@ -113,21 +113,21 @@ def _chat_gemini(messages: list[dict[str, str]]) -> str:
                 retry_msg = resp.json()
             except Exception:
                 retry_msg = resp.text
-            raise HTTPException(status_code=429, detail=f"Cuota de Gemini agotada. Intentá más tarde o habilitá billing en Google Cloud. Detalle: {retry_msg}")
+            raise HTTPException(status_code=429, detail=f"Cuota de OpenRouter agotada. Detalle: {retry_msg}")
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"].strip()
     except HTTPException:
         raise
     except requests.exceptions.ConnectionError as exc:
-        raise HTTPException(status_code=502, detail=f"Error de red al conectar con Gemini: {repr(exc)}")
+        raise HTTPException(status_code=502, detail=f"Error de red al conectar con OpenRouter: {repr(exc)}")
     except requests.exceptions.Timeout:
-        raise HTTPException(status_code=504, detail="Timeout: Gemini tardó demasiado en responder.")
+        raise HTTPException(status_code=504, detail="Timeout: OpenRouter tardó demasiado en responder.")
     except requests.HTTPError as exc:
         detail = exc.response.text if exc.response is not None else repr(exc)
-        raise HTTPException(status_code=502, detail=f"Error en API de Gemini: {detail}")
+        raise HTTPException(status_code=502, detail=f"Error en API de OpenRouter: {detail}")
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Error inesperado con Gemini ({type(exc).__name__}): {repr(exc)}")
+        raise HTTPException(status_code=502, detail=f"Error inesperado con OpenRouter ({type(exc).__name__}): {repr(exc)}")
 
 
 @router.get("/ai/meetings/summary-prompt")
@@ -172,7 +172,7 @@ def summarize_text(body: SummarizeRequest):
     finally:
         db.close()
 
-    summary = _chat_gemini([
+    summary = _chat_openrouter([
         {"role": "system", "content": prompt},
         {"role": "user", "content": text},
     ])
