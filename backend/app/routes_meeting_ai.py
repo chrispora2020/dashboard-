@@ -108,6 +108,12 @@ def _chat_gemini(messages: list[dict[str, str]]) -> str:
             json={"model": model, "messages": messages, "temperature": 0.2},
             timeout=120,
         )
+        if resp.status_code == 429:
+            try:
+                retry_msg = resp.json()
+            except Exception:
+                retry_msg = resp.text
+            raise HTTPException(status_code=429, detail=f"Cuota de Gemini agotada. Intentá más tarde o habilitá billing en Google Cloud. Detalle: {retry_msg}")
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"].strip()
