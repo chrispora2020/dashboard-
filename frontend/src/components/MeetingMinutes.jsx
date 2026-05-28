@@ -211,11 +211,6 @@ export default function MeetingMinutes({ canEdit }) {
     }
   }
 
-  function resetTranscriptState(baseTranscript = '') {
-    transcriptFinalRef.current = (baseTranscript || '').trim()
-    transcriptInterimRef.current = ''
-  }
-
   function createRecognition() {
     const recognition = new SpeechRecognition()
     recognition.lang = 'es-ES'
@@ -223,54 +218,58 @@ export default function MeetingMinutes({ canEdit }) {
     recognition.interimResults = true
 
     recognition.onstart = () => setListeningState('listening')
+
     recognition.onerror = (event) => {
-      if (event?.error === 'no-speech' || event?.error === 'aborted') {
-        return
-      }
+      if (['no-speech', 'aborted'].includes(event?.error)) return
       setRecognitionError('No se pudo acceder al micrófono para transcribir.')
+      stopRequestedRef.current = true
       setListeningState('idle')
     }
+
     recognition.onend = () => {
       if (pauseRequestedRef.current) {
+        pauseRequestedRef.current = false
         setListeningState('paused')
         return
       }
-
       if (stopRequestedRef.current) {
         stopRequestedRef.current = false
         setListeningState('idle')
         recognitionRef.current = null
         return
       }
-
+      // Guardar interim pendiente antes de reiniciar
       if (transcriptInterimRef.current.trim()) {
         transcriptFinalRef.current = `${transcriptFinalRef.current} ${transcriptInterimRef.current}`.trim()
         transcriptInterimRef.current = ''
         setForm((prev) => ({ ...prev, transcript: transcriptFinalRef.current }))
       }
-
-      const restartedRecognition = createRecognition()
-      recognitionRef.current = restartedRecognition
-      restartedRecognition.start()
+      // Pequeño delay para evitar loops rápidos en Chrome
+      setTimeout(() => {
+        if (stopRequestedRef.current || pauseRequestedRef.current) return
+        try {
+          const r = createRecognition()
+          recognitionRef.current = r
+          r.start()
+        } catch {
+          setListeningState('idle')
+        }
+      }, 250)
     }
 
     recognition.onresult = (event) => {
-      let interimTranscript = ''
-
+      let interim = ''
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         const result = event.results[i]
         const text = result[0]?.transcript || ''
-
         if (result.isFinal) {
           transcriptFinalRef.current = `${transcriptFinalRef.current} ${text}`.trim()
         } else {
-          interimTranscript += text
+          interim += text
         }
       }
-
-      transcriptInterimRef.current = interimTranscript.trim()
-      const nextTranscript = `${transcriptFinalRef.current} ${transcriptInterimRef.current}`.trim()
-      setForm((prev) => ({ ...prev, transcript: nextTranscript }))
+      transcriptInterimRef.current = interim.trim()
+      setForm((prev) => ({ ...prev, transcript: `${transcriptFinalRef.current} ${transcriptInterimRef.current}`.trim() }))
     }
 
     return recognition
@@ -281,23 +280,25 @@ export default function MeetingMinutes({ canEdit }) {
       setRecognitionError('Tu navegador no soporta transcripción automática. Usa Chrome o Edge actualizado.')
       return
     }
-
     setRecognitionError('')
-    resetTranscriptState(form.transcript)
+    transcriptFinalRef.current = (form.transcript || '').trim()
+    transcriptInterimRef.current = ''
     pauseRequestedRef.current = false
     stopRequestedRef.current = false
-    const recognition = createRecognition()
-    recognitionRef.current = recognition
-    recognition.start()
+    try {
+      const recognition = createRecognition()
+      recognitionRef.current = recognition
+      recognition.start()
+    } catch {
+      setRecognitionError('Error al iniciar la transcripción. Intentá de nuevo.')
+      setListeningState('idle')
+    }
   }
 
   function pauseTranscription() {
-    if (!recognitionRef.current || !isListening) {
-      return
-    }
+    if (!recognitionRef.current) return
     pauseRequestedRef.current = true
     stopRequestedRef.current = false
-    setListeningState('paused')
     recognitionRef.current.stop()
   }
 
@@ -306,23 +307,25 @@ export default function MeetingMinutes({ canEdit }) {
       setRecognitionError('Tu navegador no soporta transcripción automática. Usa Chrome o Edge actualizado.')
       return
     }
-    if (!isPaused) {
-      return
-    }
-
     setRecognitionError('')
-    resetTranscriptState(form.transcript)
+    transcriptFinalRef.current = (form.transcript || '').trim()
+    transcriptInterimRef.current = ''
     pauseRequestedRef.current = false
     stopRequestedRef.current = false
-    const recognition = createRecognition()
-    recognitionRef.current = recognition
-    recognition.start()
+    try {
+      const recognition = createRecognition()
+      recognitionRef.current = recognition
+      recognition.start()
+    } catch {
+      setRecognitionError('Error al reanudar la transcripción. Intentá de nuevo.')
+      setListeningState('idle')
+    }
   }
 
   function stopTranscription() {
+    stopRequestedRef.current = true
+    pauseRequestedRef.current = false
     if (recognitionRef.current) {
-      pauseRequestedRef.current = false
-      stopRequestedRef.current = true
       recognitionRef.current.stop()
       recognitionRef.current = null
     }
