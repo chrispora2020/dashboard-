@@ -378,7 +378,24 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
                   <input type="date" name="date" value={form.date} onChange={handleChange} required style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 600, color: '#374151' }}>
-                  Participantes
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>Participantes</span>
+                    {leaderNames.length > 0 ? (
+                      selectedParticipants.length === leaderNames.length ? (
+                        <button
+                          type="button"
+                          onClick={() => setForm((prev) => ({ ...prev, participants: '' }))}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#94a3b8', fontWeight: 600, padding: 0, textDecoration: 'underline' }}
+                        >Limpiar todos</button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setForm((prev) => ({ ...prev, participants: leaderNames.join(', ') }))}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#6366f1', fontWeight: 600, padding: 0, textDecoration: 'underline' }}
+                        >Seleccionar todos</button>
+                      )
+                    ) : null}
+                  </div>
                   <div style={{ position: 'relative' }}>
                     <div
                       onClick={() => participantInputRef.current?.focus()}
