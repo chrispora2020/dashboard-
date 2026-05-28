@@ -92,6 +92,7 @@ export default function MeetingMinutes({ canEdit }) {
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [promptSaving, setPromptSaving] = useState(false)
   const [aiError, setAiError] = useState('')
+  const [showConfig, setShowConfig] = useState(false)
   const recognitionRef = useRef(null)
   const transcriptFinalRef = useRef('')
   const transcriptInterimRef = useRef('')
@@ -391,34 +392,72 @@ export default function MeetingMinutes({ canEdit }) {
               />
             </label>
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button type="button" onClick={startTranscription} disabled={isListening || isPaused}>🎙️ Iniciar transcripción</button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button type="button" onClick={startTranscription} disabled={isListening || isPaused} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>🎙️ Iniciar transcripción</button>
               <button type="button" onClick={pauseTranscription} disabled={!isListening}>⏸️ Pausar</button>
               <button type="button" onClick={resumeTranscription} disabled={!isPaused}>▶️ Retomar</button>
               <button type="button" onClick={stopTranscription} disabled={!isListening && !isPaused}>⏹️ Terminar</button>
-              <button type="button" onClick={handleAISummary} disabled={summaryLoading}>{summaryLoading ? 'Generando resumen...' : '✨ Generar resumen (IA real)'}</button>
+              <button
+                type="button"
+                onClick={handleAISummary}
+                disabled={summaryLoading}
+                style={{ background: summaryLoading ? '#94a3b8' : '#6366f1', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: summaryLoading ? 'not-allowed' : 'pointer', fontWeight: 600 }}
+              >
+                {summaryLoading ? '⏳ Generando...' : '✨ Generar resumen IA'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowConfig((v) => !v)}
+                title="Configuración del resumen IA"
+                style={{ background: showConfig ? '#e0e7ff' : '#f1f5f9', border: '1px solid #c7d2fe', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                ⚙️ <span style={{ fontSize: 13, fontWeight: 500, color: '#4338ca' }}>Config. resumen</span>
+              </button>
             </div>
 
-            {recognitionError ? <p style={{ color: '#b91c1c' }}>{recognitionError}</p> : null}
-            {aiError ? <p style={{ color: '#b91c1c' }}>{aiError}</p> : null}
-            {isListening ? <p style={{ color: '#166534' }}>🟢 Grabando y transcribiendo en tiempo real…</p> : null}
-            {isPaused ? <p style={{ color: '#92400e' }}>🟡 Transcripción pausada. Puedes retomar o terminar.</p> : null}
+            {showConfig && (
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '20px 20px 16px', marginTop: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div>
+                    <span style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>⚙️ Configuración de resumen IA</span>
+                    <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
+                      Personalizá el prompt que usa la IA. Los cambios se guardan en el servidor y aplican a todos los resúmenes.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfig(false)}
+                    style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#94a3b8', lineHeight: 1 }}
+                    title="Cerrar"
+                  >✕</button>
+                </div>
 
-            <label>
-              Prompt de resumen IA (editable)
-              <textarea
-                name="summaryPrompt"
-                value={summaryPrompt}
-                onChange={(event) => setSummaryPrompt(event.target.value)}
-                rows={7}
-                placeholder="Define aquí el prompt que usará la IA para resumir"
-                style={{ width: '100%' }}
-              />
-            </label>
+                <textarea
+                  value={summaryPrompt}
+                  onChange={(event) => setSummaryPrompt(event.target.value)}
+                  rows={12}
+                  placeholder="Define aquí el prompt que usará la IA para resumir"
+                  style={{ width: '100%', fontFamily: 'monospace', fontSize: 12, borderRadius: 6, border: '1px solid #cbd5e1', padding: 10, resize: 'vertical', background: '#fff', boxSizing: 'border-box' }}
+                />
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button type="button" onClick={handleSavePrompt} disabled={promptSaving}>{promptSaving ? 'Guardando prompt...' : 'Guardar prompt IA'}</button>
-            </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={handleSavePrompt}
+                    disabled={promptSaving}
+                    style={{ background: promptSaving ? '#94a3b8' : '#0f172a', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 16px', cursor: promptSaving ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13 }}
+                  >
+                    {promptSaving ? 'Guardando...' : '💾 Guardar prompt'}
+                  </button>
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>El prompt se aplica al próximo resumen generado.</span>
+                </div>
+              </div>
+            )}
+
+            {recognitionError ? <p style={{ color: '#b91c1c', margin: '4px 0' }}>{recognitionError}</p> : null}
+            {aiError ? <p style={{ color: '#b91c1c', margin: '4px 0' }}>{aiError}</p> : null}
+            {isListening ? <p style={{ color: '#166534', margin: '4px 0' }}>🟢 Grabando y transcribiendo en tiempo real…</p> : null}
+            {isPaused ? <p style={{ color: '#92400e', margin: '4px 0' }}>🟡 Transcripción pausada. Podés retomar o terminar.</p> : null}
 
             <label>
               Resumen de la reunión
