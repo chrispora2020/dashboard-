@@ -59,6 +59,18 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
     setForm((prev) => ({ ...prev, participants: next.join(', ') }))
     setParticipantInput('')
     setShowSuggestions(false)
+    // Si no estaba en la lista de sugerencias, persistirlo en la DB y agregarlo localmente
+    if (!leaderNames.some((n) => n.toLowerCase() === trimmed.toLowerCase())) {
+      setLeaderNames((prev) => {
+        const updated = [...new Set([...prev, trimmed])].sort((a, b) => a.localeCompare(b))
+        return updated
+      })
+      fetch(`${API_BASE}/api/meetings/participants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed })
+      }).catch(() => {})
+    }
   }
 
   function removeParticipant(name) {
@@ -327,16 +339,20 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
   }, [])
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/council-assignments`)
-      .then((r) => r.json())
-      .then((data) => {
-        const names = (data?.plan?.leaders || [])
-          .map((l) => l.name)
-          .filter(Boolean)
-          .sort((a, b) => a.localeCompare(b))
-        setLeaderNames(names)
-      })
-      .catch(() => {})
+    // Cargar líderes del consejo + participantes extra guardados, fusionar
+    Promise.all([
+      fetch(`${API_BASE}/api/council-assignments`).then((r) => r.json()).catch(() => ({})),
+      fetch(`${API_BASE}/api/meetings/participants`).then((r) => r.json()).catch(() => ({ names: [] }))
+    ]).then(([councilData, extraData]) => {
+      const councilNames = (councilData?.plan?.leaders || [])
+        .map((l) => l.name)
+        .filter(Boolean)
+      const extraNames = extraData?.names || []
+      const merged = [...new Set([...councilNames, ...extraNames])]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
+      setLeaderNames(merged)
+    })
   }, [])
 
   return (

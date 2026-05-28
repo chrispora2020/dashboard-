@@ -242,6 +242,50 @@ def summarize_text(body: SummarizeRequest):
     return {"ok": True, "summary": summary, "prompt_used": prompt, "batched": batched}
 
 
+PARTICIPANTS_KEY = "meeting_participants:extra"
+
+
+@router.get("/meetings/participants")
+def get_extra_participants():
+    db = SessionLocal()
+    try:
+        names = _get_setting(db, PARTICIPANTS_KEY, [])
+        return {"ok": True, "names": names}
+    finally:
+        db.close()
+
+
+@router.post("/meetings/participants")
+def add_extra_participant(body: dict):
+    name = (body.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="El nombre no puede estar vacío.")
+    db = SessionLocal()
+    try:
+        current: list = _get_setting(db, PARTICIPANTS_KEY, [])
+        if not any(n.lower() == name.lower() for n in current):
+            current.append(name)
+            current.sort(key=lambda n: n.lower())
+            _set_setting(db, PARTICIPANTS_KEY, current)
+            db.commit()
+        return {"ok": True, "names": current}
+    finally:
+        db.close()
+
+
+@router.delete("/meetings/participants/{name}")
+def delete_extra_participant(name: str):
+    db = SessionLocal()
+    try:
+        current: list = _get_setting(db, PARTICIPANTS_KEY, [])
+        updated = [n for n in current if n.lower() != name.lower()]
+        _set_setting(db, PARTICIPANTS_KEY, updated)
+        db.commit()
+        return {"ok": True, "names": updated}
+    finally:
+        db.close()
+
+
 @router.post("/ai/meetings/analyze")
 def analyze_meeting(body: AnalyzeRequest):
     transcript = body.transcript.strip()
