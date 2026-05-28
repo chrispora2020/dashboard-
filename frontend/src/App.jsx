@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import ApiDashboard from './components/ApiDashboard'
+import CouncilAssignments from './components/CouncilAssignments'
 import Dashboard from './components/Dashboard'
 import ImportacionConversos from './components/ImportacionConversos'
 import Login from './components/Login'
-import Navbar from './components/Navbar'
-import CouncilAssignments from './components/CouncilAssignments'
-import StakeMessagesPlan from './components/StakeMessagesPlan'
-import SpeakersPlanView from './components/SpeakersPlanView'
-import Upload from './components/Upload'
 import MeetingMinutes from './components/MeetingMinutes'
+import Navbar from './components/Navbar'
+import SpeakersPlanView from './components/SpeakersPlanView'
+import StakeMessagesPlan from './components/StakeMessagesPlan'
+import Upload from './components/Upload'
 
 const LOCAL_USER_KEY = 'user'
 const SESSION_ROLE_KEY = 'dashboard_role'
@@ -145,12 +145,21 @@ export default function App() {
             element={canManageLists ? <CouncilAssignments canEdit /> : <Navigate to="/asignaciones/ver" replace />}
           />
           <Route
+            path="/actas/presidencia"
+            element={canManageLists ? <MeetingMinutes canEdit category="presidencia" /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/actas/consejo"
+            element={<MeetingMinutes canEdit={canManageLists} category="consejo" />}
+          />
+          {/* Compatibilidad rutas viejas */}
+          <Route
             path="/actas/ver"
-            element={<MeetingMinutes canEdit={false} />}
+            element={<Navigate to="/actas/consejo" replace />}
           />
           <Route
             path="/actas/editar"
-            element={canManageLists ? <MeetingMinutes canEdit /> : <Navigate to="/actas/ver" replace />}
+            element={<Navigate to={canManageLists ? '/actas/consejo' : '/actas/consejo'} replace />}
           />
           <Route path="/plan-discursos" element={<Navigate to="/mensajes/ver" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />

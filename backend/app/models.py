@@ -247,6 +247,20 @@ class CouncilAssignmentsPlan(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class MeetingMinute(Base):
+    """Actas de reuniones por categoría (presidencia o consejo)."""
+    __tablename__ = 'meeting_minutes'
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    category = Column(String, nullable=False, default='consejo')  # 'presidencia' | 'consejo'
+    date = Column(String, nullable=False)
+    participants = Column(Text, default='')
+    transcript = Column(Text, default='')
+    summary = Column(Text, default='')
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class MapeoColumna(Base):
     """Mapeo de columnas del archivo fuente a campos del modelo"""
     __tablename__ = 'mapeos_columnas'

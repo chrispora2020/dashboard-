@@ -1,33 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import API_BASE from '../config'
 
-const STORAGE_KEY = 'meeting_minutes_records'
-
-function loadMinutes() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch (error) {
-    console.error('No fue posible cargar las actas.', error)
-    return []
-  }
-}
-
-function saveMinutes(records) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
-}
-
 function summarizeText(text, participants = '') {
   const normalized = (text || '').trim().replace(/\s+/g, ' ')
   if (!normalized) return ''
-
-  const hasPunctuation = /[.!?]/.test(normalized)
-  const rawSentences = hasPunctuation
-    ? normalized.split(/(?<=[.!?])\s+/)
-    : normalized.split(/\b(?:tarea\s*\d+|adem[aá]s|tamb[ií]en|luego|despu[eé]s|por favor|pero|entonces)\b/gi)
-
-  const sentences = rawSentences
-    .map((sentence) => sentence.trim())
+  const sentences = normalized.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean)
+  const keywords = ['acord', 'tarea', 'responsable', 'fecha', 'objetivo', 'riesgo', 'decisi']
+  const top = sentences.map((s, i) => ({ s, score: keywords.reduce((a, k) => a + (s.toLowerCase().includes(k) ? 2 : 0), 0) + (i < 2 ? 1 : 0) })).sort((a, b) => b.score - a.score).slice(0, 3).map((x) => x.s)
+  const personas = participants.split(',').map((n) => n.trim()).filter(Boolean)
+  return ['Contexto:', top.join(' ') || normalized.slice(0, 200), '', 'Participantes:', personas.length ? personas.map((n) => `- ${n}`).join('\n') : '- No especificados'].join('\n')
+}
     .filter((sentence) => sentence.length > 0)
 
   const keywords = ['acord', 'tarea', 'responsable', 'fecha', 'meta', 'objetivo', 'riesgo', 'decisi', 'proximo', 'seguimiento']
@@ -82,12 +64,16 @@ function summarizeText(text, participants = '') {
   ].join('\n')
 }
 
-export default function MeetingMinutes({ canEdit }) {
-  const [records, setRecords] = useState(() => loadMinutes())
+export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
+  const [records, setRecords] = useState([])
+  const [recordsLoading, setRecordsLoading] = useState(true)
+  const [recordsError, setRecordsError] = useState('')
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ date: '', participants: '', transcript: '', summary: '' })
   const [editingId, setEditingId] = useState(null)
   const [listeningState, setListeningState] = useState('idle')
   const [recognitionError, setRecognitionError] = useState('')
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640)
   const [summaryPrompt, setSummaryPrompt] = useState('')
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [promptSaving, setPromptSaving] = useState(false)
@@ -154,28 +140,24 @@ export default function MeetingMinutes({ canEdit }) {
 
   function handleSave(event) {
     event.preventDefault()
-    if (!form.date || !form.summary.trim()) {
-      return
-    }
-
-    const payload = {
-      date: form.date,
-      participants: form.participants,
-      transcript: form.transcript,
-      summary: form.summary,
-      createdAt: new Date().toISOString()
-    }
-
-    const next = editingId
-      ? records.map((record) => (record.id === editingId ? { ...record, ...payload } : record))
-      : [{ id: Date.now(), ...payload }, ...records]
-
-    setRecords(next)
-    saveMinutes(next)
-    setForm({ date: '', participants: '', transcript: '', summary: '' })
-    setEditingId(null)
-    setShowForm(false)
+    if (!form.date || !form.summary.trim()) return
+    setSaving(true)
     setRecognitionError('')
+    const payload = { category, date: form.date, participants: form.participants, transcript: form.transcript, summary: form.summary }
+    const url = editingId ? `${API_BASE}/api/meetings/${editingId}` : `${API_BASE}/api/meetings`
+    const method = editingId ? 'PUT' : 'POST'
+    fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      .then((r) => { if (!r.ok) throw new Error('Error al guardar'); return r.json() })
+      .then((saved) => {
+        setRecords((prev) =>
+          editingId ? prev.map((r) => (r.id === saved.id ? saved : r)) : [saved, ...prev]
+        )
+        setForm({ date: '', participants: '', transcript: '', summary: '' })
+        setEditingId(null)
+        setShowForm(false)
+      })
+      .catch((err) => setAiError(err.message || 'Error al guardar.'))
+      .finally(() => setSaving(false))
   }
 
   function handleEdit(record) {
@@ -193,13 +175,18 @@ export default function MeetingMinutes({ canEdit }) {
   }
 
   function handleDelete(recordId) {
-    const next = records.filter((record) => record.id !== recordId)
-    setRecords(next)
-    saveMinutes(next)
-    if (editingId === recordId) {
-      setEditingId(null)
-      setForm({ date: '', participants: '', transcript: '', summary: '' })
-    }
+    if (!window.confirm('¿Eliminar esta acta? Esta acción no se puede deshacer.')) return
+    fetch(`${API_BASE}/api/meetings/${recordId}`, { method: 'DELETE' })
+      .then((r) => { if (!r.ok) throw new Error('Error al eliminar') })
+      .then(() => {
+        setRecords((prev) => prev.filter((r) => r.id !== recordId))
+        if (editingId === recordId) {
+          setEditingId(null)
+          setForm({ date: '', participants: '', transcript: '', summary: '' })
+          setShowForm(false)
+        }
+      })
+      .catch((err) => setAiError(err.message || 'Error al eliminar.'))
   }
 
   async function handleAISummary() {
@@ -351,6 +338,26 @@ export default function MeetingMinutes({ canEdit }) {
     recognitionRef.current?.stop()
   }, [])
 
+  // Cargar actas desde la API
+  useEffect(() => {
+    let active = true
+    setRecordsLoading(true)
+    setRecordsError('')
+    fetch(`${API_BASE}/api/meetings?category=${category}`)
+      .then((r) => { if (!r.ok) throw new Error('No se pudieron cargar las actas.'); return r.json() })
+      .then((data) => { if (active) setRecords(data) })
+      .catch((err) => { if (active) setRecordsError(err.message) })
+      .finally(() => { if (active) setRecordsLoading(false) })
+    return () => { active = false }
+  }, [category])
+
+  // Responsive listener
+  useEffect(() => {
+    function onResize() { setIsMobile(window.innerWidth < 640) }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
 
   useEffect(() => {
     let active = true
@@ -386,10 +393,12 @@ export default function MeetingMinutes({ canEdit }) {
   }, [])
 
   return (
-    <main style={{ padding: '20px', maxWidth: 1000, margin: '0 auto' }}>
+    <main style={{ padding: isMobile ? '12px' : '20px', maxWidth: 1000, margin: '0 auto' }}>
       {/* Encabezado */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0, color: '#1e293b' }}>Actas de reuniones</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 8 }}>
+        <h2 style={{ margin: 0, color: '#1e293b', fontSize: isMobile ? 17 : 22 }}>
+          {category === 'presidencia' ? '📋 Actas Presidencia' : '📋 Actas Consejo / Comité'}
+        </h2>
         {canEdit && !showForm && !editingId ? (
           <button
             type="button"
@@ -403,9 +412,9 @@ export default function MeetingMinutes({ canEdit }) {
 
       {/* Formulario nueva/editar acta */}
       {canEdit && (showForm || editingId) ? (
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '20px 24px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 16, color: '#1e293b' }}>{editingId ? '✏️ Editar acta' : '➕ Nueva acta'}</h3>
+            <h3 style={{ margin: 0, fontSize: 15, color: '#1e293b' }}>{editingId ? '✏️ Editar acta' : '➕ Nueva acta'}</h3>
             <button
               type="button"
               onClick={() => { setShowForm(false); setEditingId(null); setForm({ date: '', participants: '', transcript: '', summary: '' }); setParticipantInput(''); setShowSuggestions(false); stopTranscription() }}
@@ -416,7 +425,7 @@ export default function MeetingMinutes({ canEdit }) {
 
           <form onSubmit={handleSave}>
             <div style={{ display: 'grid', gap: 14 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '200px 1fr', gap: 14 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 600, color: '#374151' }}>
                   Fecha
                   <input type="date" name="date" value={form.date} onChange={handleChange} required style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
@@ -572,12 +581,13 @@ export default function MeetingMinutes({ canEdit }) {
               </label>
               <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
 
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button
                   type="submit"
-                  style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
+                  disabled={saving}
+                  style={{ background: saving ? '#94a3b8' : '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14 }}
                 >
-                  {editingId ? '💾 Actualizar acta' : '💾 Guardar acta'}
+                  {saving ? '⏳ Guardando…' : editingId ? '💾 Actualizar acta' : '💾 Guardar acta'}
                 </button>
                 <button
                   type="button"
@@ -593,72 +603,96 @@ export default function MeetingMinutes({ canEdit }) {
       ) : null}
 
       {/* Grilla de actas */}
-      {sortedRecords.length === 0 ? (
+      {recordsLoading ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6366f1' }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>
+          <p style={{ margin: 0, fontSize: 14 }}>Cargando actas…</p>
+        </div>
+      ) : recordsError ? (
+        <div style={{ textAlign: 'center', padding: '30px 20px', color: '#b91c1c', background: '#fff1f2', borderRadius: 12, border: '1px solid #fecdd3' }}>
+          <p style={{ margin: 0, fontSize: 13 }}>{recordsError}</p>
+        </div>
+      ) : sortedRecords.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8', background: '#fff', borderRadius: 12, border: '1px dashed #e2e8f0' }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
           <p style={{ margin: 0, fontSize: 14 }}>No hay actas registradas aún.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 6 }}>
-          {/* Cabecera de la grilla */}
-          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 140px', gap: 12, padding: '8px 16px', background: '#f1f5f9', borderRadius: 8, fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <span>Fecha</span>
-            <span>Participantes / Resumen</span>
-            <span style={{ textAlign: 'right' }}>Acciones</span>
-          </div>
+          {/* Cabecera de la grilla - ocultar en mobile */}
+          {!isMobile ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 90px', gap: 12, padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span>Fecha</span>
+              <span>Participantes / Resumen</span>
+              <span style={{ textAlign: 'right' }}>Acciones</span>
+            </div>
+          ) : null}
 
           {sortedRecords.map((record) => {
             const isExpanded = expandedId === record.id
-            const summaryPreview = (record.summary || '').replace(/\n/g, ' ').slice(0, 120)
-            const hasMore = (record.summary || '').length > 120
+            const summaryPreview = (record.summary || '').replace(/\n/g, ' ').slice(0, isMobile ? 70 : 120)
+            const hasMore = (record.summary || '').length > (isMobile ? 70 : 120)
             return (
-              <div key={record.id} style={{ background: '#fff', borderRadius: 10, border: `1px solid ${isExpanded ? '#a5b4fc' : '#e2e8f0'}`, overflow: 'hidden', boxShadow: isExpanded ? '0 2px 8px rgba(99,102,241,0.08)' : 'none', transition: 'border-color 0.15s' }}>
+              <div key={record.id} style={{ background: '#fff', borderRadius: 10, border: `1px solid ${isExpanded ? '#a5b4fc' : '#e2e8f0'}`, overflow: 'hidden', boxShadow: isExpanded ? '0 2px 8px rgba(99,102,241,0.08)' : 'none' }}>
                 {/* Fila principal */}
                 <div
                   onClick={() => setExpandedId(isExpanded ? null : record.id)}
-                  style={{ display: 'grid', gridTemplateColumns: '120px 1fr 140px', gap: 12, padding: '12px 16px', cursor: 'pointer', alignItems: 'center', background: isExpanded ? '#eef2ff' : '#fff' }}
+                  style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr auto' : '110px 1fr 90px', gap: isMobile ? 8 : 12, padding: isMobile ? '10px 12px' : '11px 14px', cursor: 'pointer', alignItems: 'center', background: isExpanded ? '#eef2ff' : '#fff' }}
                 >
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', whiteSpace: 'nowrap' }}>
-                    📅 {record.date}
-                  </span>
-
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      👥 {record.participants || 'Sin participantes'}
-                    </div>
-                    <div style={{ fontSize: 12, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {summaryPreview}{hasMore && !isExpanded ? '…' : ''}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
-                    {canEdit ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleEdit(record) }}
-                          title="Editar"
-                          style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}
-                        >✏️</button>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); if (window.confirm('¿Eliminar esta acta?')) handleDelete(record.id) }}
-                          title="Eliminar"
-                          style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}
-                        >🗑️</button>
-                      </>
-                    ) : null}
-                    <span style={{ color: '#94a3b8', fontSize: 12, marginLeft: 2 }}>{isExpanded ? '▲' : '▼'}</span>
-                  </div>
+                  {isMobile ? (
+                    /* Vista mobile: info + acciones en 2 columnas */
+                    <>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', marginBottom: 2 }}>📅 {record.date}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          👥 {record.participants || 'Sin participantes'}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
+                          {summaryPreview}{hasMore && !isExpanded ? '…' : ''}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
+                        {canEdit ? (
+                          <>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleEdit(record) }} title="Editar" style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontSize: 13 }}>✏️</button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleDelete(record.id) }} title="Eliminar" style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontSize: 13 }}>🗑️</button>
+                          </>
+                        ) : null}
+                        <span style={{ color: '#94a3b8', fontSize: 11 }}>{isExpanded ? '▲' : '▼'}</span>
+                      </div>
+                    </>
+                  ) : (
+                    /* Vista desktop: 3 columnas */
+                    <>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', whiteSpace: 'nowrap' }}>📅 {record.date}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          👥 {record.participants || 'Sin participantes'}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {summaryPreview}{hasMore && !isExpanded ? '…' : ''}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 5, alignItems: 'center', justifyContent: 'flex-end' }}>
+                        {canEdit ? (
+                          <>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleEdit(record) }} title="Editar" style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontSize: 13 }}>✏️</button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleDelete(record.id) }} title="Eliminar" style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontSize: 13 }}>🗑️</button>
+                          </>
+                        ) : null}
+                        <span style={{ color: '#94a3b8', fontSize: 11, marginLeft: 2 }}>{isExpanded ? '▲' : '▼'}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Contenido expandido */}
                 {isExpanded ? (
-                  <div style={{ borderTop: '1px solid #e0e7ff', padding: '16px 20px', background: '#fafafe' }}>
-                    <div style={{ marginBottom: 10 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📝 Resumen</span>
+                  <div style={{ borderTop: '1px solid #e0e7ff', padding: isMobile ? '12px' : '16px 20px', background: '#fafafe' }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📝 Resumen</span>
                     </div>
-                    <pre style={{ margin: 0, fontFamily: 'inherit', fontSize: 13, color: '#374151', whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{record.summary || 'Sin resumen.'}</pre>
+                    <pre style={{ margin: 0, fontFamily: 'inherit', fontSize: isMobile ? 12 : 13, color: '#374151', whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{record.summary || 'Sin resumen.'}</pre>
                   </div>
                 ) : null}
               </div>

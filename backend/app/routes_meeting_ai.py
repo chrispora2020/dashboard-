@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from .db import SessionLocal
-from .models import AppSetting
+from .models import AppSetting, MeetingMinute
 
 router = APIRouter(tags=["meeting-ai"])
 
@@ -324,5 +324,96 @@ def ask_meeting_context(body: AskRequest):
             {"role": "user", "content": f"Contexto: {json.dumps(context, ensure_ascii=False)}\n\nPregunta: {body.question}"},
         ])
         return {"ok": True, "answer": answer}
+    finally:
+        db.close()
+
+
+# ── CRUD de Actas ──────────────────────────────────────────────────────────────
+
+class MeetingMinuteIn(BaseModel):
+    category: str = "consejo"
+    date: str
+    participants: str = ""
+    transcript: str = ""
+    summary: str = ""
+
+
+def _minute_to_dict(r: MeetingMinute) -> dict:
+    return {
+        "id": r.id,
+        "category": r.category,
+        "date": r.date,
+        "participants": r.participants or "",
+        "transcript": r.transcript or "",
+        "summary": r.summary or "",
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+        "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+    }
+
+
+@router.get("/meetings")
+def list_meetings(category: str = "consejo"):
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(MeetingMinute)
+            .filter(MeetingMinute.category == category)
+            .order_by(MeetingMinute.date.desc(), MeetingMinute.created_at.desc())
+            .all()
+        )
+        return [_minute_to_dict(r) for r in rows]
+    finally:
+        db.close()
+
+
+@router.post("/meetings")
+def create_meeting(body: MeetingMinuteIn):
+    if not body.date:
+        raise HTTPException(status_code=400, detail="La fecha es requerida.")
+    db = SessionLocal()
+    try:
+        record = MeetingMinute(
+            category=body.category,
+            date=body.date,
+            participants=body.participants,
+            transcript=body.transcript,
+            summary=body.summary,
+        )
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+        return _minute_to_dict(record)
+    finally:
+        db.close()
+
+
+@router.put("/meetings/{meeting_id}")
+def update_meeting(meeting_id: str, body: MeetingMinuteIn):
+    db = SessionLocal()
+    try:
+        record = db.query(MeetingMinute).filter(MeetingMinute.id == meeting_id).first()
+        if not record:
+            raise HTTPException(status_code=404, detail="Acta no encontrada.")
+        record.date = body.date
+        record.participants = body.participants
+        record.transcript = body.transcript
+        record.summary = body.summary
+        db.commit()
+        db.refresh(record)
+        return _minute_to_dict(record)
+    finally:
+        db.close()
+
+
+@router.delete("/meetings/{meeting_id}")
+def delete_meeting(meeting_id: str):
+    db = SessionLocal()
+    try:
+        record = db.query(MeetingMinute).filter(MeetingMinute.id == meeting_id).first()
+        if not record:
+            raise HTTPException(status_code=404, detail="Acta no encontrada.")
+        db.delete(record)
+        db.commit()
+        return {"ok": True}
     finally:
         db.close()

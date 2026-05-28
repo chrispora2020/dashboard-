@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 
 export default function Navbar({ user, onLogout, canManageLists, isPresidencia }) {
   const userLabel = user?.name || user?.email || 'Usuario local'
@@ -21,6 +21,8 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
     '/asignaciones/editar': 'Editar asignaciones',
     '/upload': 'Cargar listas',
     '/dashboard-api': 'Dashboard API',
+    '/actas/presidencia': 'Actas Presidencia',
+    '/actas/consejo': 'Actas Consejo / Comité',
     '/actas/ver': 'Actas de reuniones',
     '/actas/editar': 'Registrar acta de reunión'
   }
@@ -48,8 +50,8 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
       id: 'actas',
       title: 'Actas',
       links: [
-        { to: '/actas/ver', label: 'Ver actas de reuniones' },
-        ...(isPresidencia ? [{ to: '/actas/editar', label: 'Agregar acta de reunión' }] : [])
+        ...(isPresidencia ? [{ to: '/actas/presidencia', label: '📋 Actas Presidencia' }] : []),
+        { to: '/actas/consejo', label: '📋 Actas Consejo / Comité' },
       ]
     },
     {
