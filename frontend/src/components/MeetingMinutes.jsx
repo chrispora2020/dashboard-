@@ -95,14 +95,52 @@ export default function MeetingMinutes({ canEdit }) {
   const [showConfig, setShowConfig] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
+  const [leaderNames, setLeaderNames] = useState([])
+  const [participantInput, setParticipantInput] = useState('')
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const recognitionRef = useRef(null)
   const transcriptFinalRef = useRef('')
   const transcriptInterimRef = useRef('')
   const shouldRunRef = useRef(false)
+  const participantInputRef = useRef(null)
 
   const isListening = listeningState === 'listening'
   const isPaused = listeningState === 'paused'
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+
+  const selectedParticipants = form.participants
+    ? form.participants.split(',').map((p) => p.trim()).filter(Boolean)
+    : []
+
+  const filteredSuggestions = leaderNames.filter(
+    (name) =>
+      name.toLowerCase().includes(participantInput.toLowerCase()) &&
+      !selectedParticipants.map((p) => p.toLowerCase()).includes(name.toLowerCase())
+  )
+
+  function addParticipant(name) {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    if (selectedParticipants.map((p) => p.toLowerCase()).includes(trimmed.toLowerCase())) return
+    const next = [...selectedParticipants, trimmed]
+    setForm((prev) => ({ ...prev, participants: next.join(', ') }))
+    setParticipantInput('')
+    setShowSuggestions(false)
+  }
+
+  function removeParticipant(name) {
+    const next = selectedParticipants.filter((p) => p.toLowerCase() !== name.toLowerCase())
+    setForm((prev) => ({ ...prev, participants: next.join(', ') }))
+  }
+
+  function handleParticipantKeyDown(event) {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault()
+      if (participantInput.trim()) addParticipant(participantInput)
+    } else if (event.key === 'Backspace' && !participantInput && selectedParticipants.length) {
+      removeParticipant(selectedParticipants[selectedParticipants.length - 1])
+    }
+  }
 
   const sortedRecords = useMemo(
     () => [...records].sort((a, b) => new Date(b.date) - new Date(a.date)),
@@ -334,6 +372,19 @@ export default function MeetingMinutes({ canEdit }) {
     }
   }, [])
 
+  useEffect(() => {
+    fetch(`${API_BASE}/api/council-assignments`)
+      .then((r) => r.json())
+      .then((data) => {
+        const names = (data?.plan?.leaders || [])
+          .map((l) => l.name)
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b))
+        setLeaderNames(names)
+      })
+      .catch(() => {})
+  }, [])
+
   return (
     <main style={{ padding: '20px', maxWidth: 1000, margin: '0 auto' }}>
       {/* Encabezado */}
@@ -357,7 +408,7 @@ export default function MeetingMinutes({ canEdit }) {
             <h3 style={{ margin: 0, fontSize: 16, color: '#1e293b' }}>{editingId ? '✏️ Editar acta' : '➕ Nueva acta'}</h3>
             <button
               type="button"
-              onClick={() => { setShowForm(false); setEditingId(null); setForm({ date: '', participants: '', transcript: '', summary: '' }); stopTranscription() }}
+              onClick={() => { setShowForm(false); setEditingId(null); setForm({ date: '', participants: '', transcript: '', summary: '' }); setParticipantInput(''); setShowSuggestions(false); stopTranscription() }}
               style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#94a3b8' }}
               title="Cerrar"
             >✕</button>
@@ -372,14 +423,52 @@ export default function MeetingMinutes({ canEdit }) {
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 600, color: '#374151' }}>
                   Participantes
-                  <input
-                    type="text"
-                    name="participants"
-                    value={form.participants}
-                    onChange={handleChange}
-                    placeholder="Ej: Presidencia, secretario, líderes"
-                    style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <div
+                      onClick={() => participantInputRef.current?.focus()}
+                      style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '5px 8px', borderRadius: 6, border: `1px solid ${showSuggestions ? '#a5b4fc' : '#d1d5db'}`, background: '#fff', cursor: 'text', minHeight: 36, alignItems: 'center' }}
+                    >
+                      {selectedParticipants.map((name) => (
+                        <span key={name} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, background: '#e0e7ff', color: '#3730a3', borderRadius: 4, padding: '2px 6px 2px 9px', fontSize: 12, fontWeight: 600, lineHeight: 1.5 }}>
+                          {name}
+                          <button type="button" onClick={() => removeParticipant(name)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#818cf8', fontSize: 15, lineHeight: 1, padding: '0 0 0 3px', display: 'flex', alignItems: 'center' }}>×</button>
+                        </span>
+                      ))}
+                      <input
+                        ref={participantInputRef}
+                        value={participantInput}
+                        onChange={(e) => { setParticipantInput(e.target.value); setShowSuggestions(true) }}
+                        onFocus={() => setShowSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                        onKeyDown={handleParticipantKeyDown}
+                        placeholder={selectedParticipants.length ? '' : 'Buscar o escribir nombre...'}
+                        style={{ border: 'none', outline: 'none', fontSize: 13, minWidth: 150, flex: 1, background: 'transparent', padding: '2px 4px' }}
+                      />
+                    </div>
+                    {showSuggestions && filteredSuggestions.length > 0 ? (
+                      <div style={{ position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 200, maxHeight: 200, overflowY: 'auto' }}>
+                        {filteredSuggestions.map((name) => (
+                          <div
+                            key={name}
+                            onMouseDown={() => addParticipant(name)}
+                            style={{ padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9' }}
+                          >
+                            <span style={{ fontSize: 14 }}>👤</span> {name}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                    {showSuggestions && participantInput.trim() && filteredSuggestions.length === 0 ? (
+                      <div style={{ position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 200 }}>
+                        <div
+                          onMouseDown={() => addParticipant(participantInput)}
+                          style={{ padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 8 }}
+                        >
+                          <span style={{ fontSize: 14 }}>➕</span> Agregar «{participantInput.trim()}»
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </label>
               </div>
 
@@ -492,7 +581,7 @@ export default function MeetingMinutes({ canEdit }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setShowForm(false); setEditingId(null); setForm({ date: '', participants: '', transcript: '', summary: '' }); stopTranscription() }}
+                  onClick={() => { setShowForm(false); setEditingId(null); setForm({ date: '', participants: '', transcript: '', summary: '' }); setParticipantInput(''); setShowSuggestions(false); stopTranscription() }}
                   style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
                 >
                   Cancelar
