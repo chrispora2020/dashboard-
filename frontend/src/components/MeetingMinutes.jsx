@@ -93,6 +93,8 @@ export default function MeetingMinutes({ canEdit }) {
   const [promptSaving, setPromptSaving] = useState(false)
   const [aiError, setAiError] = useState('')
   const [showConfig, setShowConfig] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [expandedId, setExpandedId] = useState(null)
   const recognitionRef = useRef(null)
   const transcriptFinalRef = useRef('')
   const transcriptInterimRef = useRef('')
@@ -134,6 +136,7 @@ export default function MeetingMinutes({ canEdit }) {
     saveMinutes(next)
     setForm({ date: '', participants: '', transcript: '', summary: '' })
     setEditingId(null)
+    setShowForm(false)
     setRecognitionError('')
   }
 
@@ -145,7 +148,10 @@ export default function MeetingMinutes({ canEdit }) {
       summary: record.summary || ''
     })
     setEditingId(record.id)
+    setShowForm(true)
+    setExpandedId(null)
     setRecognitionError('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function handleDelete(recordId) {
@@ -329,147 +335,237 @@ export default function MeetingMinutes({ canEdit }) {
   }, [])
 
   return (
-    <main style={{ padding: '20px' }}>
-      <h2>Actas de reuniones</h2>
+    <main style={{ padding: '20px', maxWidth: 1000, margin: '0 auto' }}>
+      {/* Encabezado */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h2 style={{ margin: 0, color: '#1e293b' }}>Actas de reuniones</h2>
+        {canEdit && !showForm && !editingId ? (
+          <button
+            type="button"
+            onClick={() => { setShowForm(true); setEditingId(null); setForm({ date: '', participants: '', transcript: '', summary: '' }) }}
+            style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            + Nueva acta
+          </button>
+        ) : null}
+      </div>
 
-      {canEdit ? (
-        <form onSubmit={handleSave} style={{ background: '#fff', padding: 16, borderRadius: 8, marginBottom: 20 }}>
-          <div style={{ display: 'grid', gap: 12 }}>
-            <label>
-              Fecha
-              <input type="date" name="date" value={form.date} onChange={handleChange} required style={{ width: '100%' }} />
-            </label>
-
-            <label>
-              Participantes
-              <input
-                type="text"
-                name="participants"
-                value={form.participants}
-                onChange={handleChange}
-                placeholder="Ej: Presidencia, secretario, líderes"
-                style={{ width: '100%' }}
-              />
-            </label>
-
-            <label>
-              Transcripción
-              <textarea
-                name="transcript"
-                value={form.transcript}
-                onChange={handleChange}
-                rows={5}
-                placeholder="Puedes escribir o usar transcribir por voz"
-                style={{ width: '100%' }}
-              />
-            </label>
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button type="button" onClick={startTranscription} disabled={isListening || isPaused} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>🎙️ Iniciar transcripción</button>
-              <button type="button" onClick={pauseTranscription} disabled={!isListening}>⏸️ Pausar</button>
-              <button type="button" onClick={resumeTranscription} disabled={!isPaused}>▶️ Retomar</button>
-              <button type="button" onClick={stopTranscription} disabled={!isListening && !isPaused}>⏹️ Terminar</button>
-              <button
-                type="button"
-                onClick={handleAISummary}
-                disabled={summaryLoading}
-                style={{ background: summaryLoading ? '#94a3b8' : '#6366f1', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: summaryLoading ? 'not-allowed' : 'pointer', fontWeight: 600 }}
-              >
-                {summaryLoading ? '⏳ Generando...' : '✨ Generar resumen IA'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowConfig((v) => !v)}
-                title="Configuración del resumen IA"
-                style={{ background: showConfig ? '#e0e7ff' : '#f1f5f9', border: '1px solid #c7d2fe', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', gap: 4 }}
-              >
-                ⚙️ <span style={{ fontSize: 13, fontWeight: 500, color: '#4338ca' }}>Config. resumen</span>
-              </button>
-            </div>
-
-            {showConfig && (
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '20px 20px 16px', marginTop: 4 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <div>
-                    <span style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>⚙️ Configuración de resumen IA</span>
-                    <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
-                      Personalizá el prompt que usa la IA. Los cambios se guardan en el servidor y aplican a todos los resúmenes.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowConfig(false)}
-                    style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#94a3b8', lineHeight: 1 }}
-                    title="Cerrar"
-                  >✕</button>
-                </div>
-
-                <textarea
-                  value={summaryPrompt}
-                  onChange={(event) => setSummaryPrompt(event.target.value)}
-                  rows={12}
-                  placeholder="Define aquí el prompt que usará la IA para resumir"
-                  style={{ width: '100%', fontFamily: 'monospace', fontSize: 12, borderRadius: 6, border: '1px solid #cbd5e1', padding: 10, resize: 'vertical', background: '#fff', boxSizing: 'border-box' }}
-                />
-
-                <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={handleSavePrompt}
-                    disabled={promptSaving}
-                    style={{ background: promptSaving ? '#94a3b8' : '#0f172a', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 16px', cursor: promptSaving ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13 }}
-                  >
-                    {promptSaving ? 'Guardando...' : '💾 Guardar prompt'}
-                  </button>
-                  <span style={{ fontSize: 12, color: '#94a3b8' }}>El prompt se aplica al próximo resumen generado.</span>
-                </div>
-              </div>
-            )}
-
-            {recognitionError ? <p style={{ color: '#b91c1c', margin: '4px 0' }}>{recognitionError}</p> : null}
-            {aiError ? <p style={{ color: '#b91c1c', margin: '4px 0' }}>{aiError}</p> : null}
-            {isListening ? <p style={{ color: '#166534', margin: '4px 0' }}>🟢 Grabando y transcribiendo en tiempo real…</p> : null}
-            {isPaused ? <p style={{ color: '#92400e', margin: '4px 0' }}>🟡 Transcripción pausada. Podés retomar o terminar.</p> : null}
-
-            <label>
-              Resumen de la reunión
-              <textarea
-                name="summary"
-                value={form.summary}
-                onChange={handleChange}
-                rows={10}
-                required
-                placeholder="Incluye contexto, temas, tareas/metas, citas y resumen por participante"
-                style={{ width: '100%' }}
-              />
-            </label>
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button type="submit">{editingId ? 'Actualizar acta' : 'Guardar acta'}</button>
-              {editingId ? <button type="button" onClick={() => { setEditingId(null); setForm({ date: '', participants: '', transcript: '', summary: '' }) }}>Cancelar edición</button> : null}
-            </div>
+      {/* Formulario nueva/editar acta */}
+      {canEdit && (showForm || editingId) ? (
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '20px 24px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 16, color: '#1e293b' }}>{editingId ? '✏️ Editar acta' : '➕ Nueva acta'}</h3>
+            <button
+              type="button"
+              onClick={() => { setShowForm(false); setEditingId(null); setForm({ date: '', participants: '', transcript: '', summary: '' }); stopTranscription() }}
+              style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#94a3b8' }}
+              title="Cerrar"
+            >✕</button>
           </div>
-        </form>
+
+          <form onSubmit={handleSave}>
+            <div style={{ display: 'grid', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 14 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                  Fecha
+                  <input type="date" name="date" value={form.date} onChange={handleChange} required style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                  Participantes
+                  <input
+                    type="text"
+                    name="participants"
+                    value={form.participants}
+                    onChange={handleChange}
+                    placeholder="Ej: Presidencia, secretario, líderes"
+                    style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+                  />
+                </label>
+              </div>
+
+              {/* Transcripción (sólo para generar resumen) */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🎙️ Transcripción (para generar resumen IA)</div>
+                <textarea
+                  name="transcript"
+                  value={form.transcript}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="Transcribí por voz o escribí el contenido de la reunión. Luego generá el resumen con IA."
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, resize: 'vertical', boxSizing: 'border-box', background: '#fff' }}
+                />
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+                  <button type="button" onClick={startTranscription} disabled={isListening || isPaused}
+                    style={{ background: isListening ? '#dcfce7' : '#f1f5f9', border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 12px', cursor: isListening || isPaused ? 'not-allowed' : 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}
+                  >🎙️ Iniciar</button>
+                  <button type="button" onClick={pauseTranscription} disabled={!isListening}
+                    style={{ background: '#f1f5f9', border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 12px', cursor: !isListening ? 'not-allowed' : 'pointer', fontSize: 13 }}
+                  >⏸️ Pausar</button>
+                  <button type="button" onClick={resumeTranscription} disabled={!isPaused}
+                    style={{ background: '#f1f5f9', border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 12px', cursor: !isPaused ? 'not-allowed' : 'pointer', fontSize: 13 }}
+                  >▶️ Retomar</button>
+                  <button type="button" onClick={stopTranscription} disabled={!isListening && !isPaused}
+                    style={{ background: '#f1f5f9', border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 12px', cursor: (!isListening && !isPaused) ? 'not-allowed' : 'pointer', fontSize: 13 }}
+                  >⏹️ Terminar</button>
+                  <button
+                    type="button"
+                    onClick={handleAISummary}
+                    disabled={summaryLoading}
+                    style={{ background: summaryLoading ? '#94a3b8' : '#6366f1', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 14px', cursor: summaryLoading ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13 }}
+                  >
+                    {summaryLoading ? '⏳ Generando...' : '✨ Generar resumen IA'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfig((v) => !v)}
+                    title="Configuración del resumen IA"
+                    style={{ background: showConfig ? '#e0e7ff' : '#f1f5f9', border: '1px solid #c7d2fe', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 3 }}
+                  >
+                    ⚙️ <span style={{ fontSize: 12, fontWeight: 500, color: '#4338ca' }}>Config.</span>
+                  </button>
+                </div>
+                {isListening ? <p style={{ color: '#166534', margin: '6px 0 0', fontSize: 12 }}>🟢 Grabando…</p> : null}
+                {isPaused ? <p style={{ color: '#92400e', margin: '6px 0 0', fontSize: 12 }}>🟡 Pausado</p> : null}
+                {recognitionError ? <p style={{ color: '#b91c1c', margin: '6px 0 0', fontSize: 12 }}>{recognitionError}</p> : null}
+              </div>
+
+              {/* Panel config IA */}
+              {showConfig ? (
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '16px 18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>⚙️ Prompt de resumen IA</span>
+                    <button type="button" onClick={() => setShowConfig(false)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#94a3b8' }}>✕</button>
+                  </div>
+                  <textarea
+                    value={summaryPrompt}
+                    onChange={(event) => setSummaryPrompt(event.target.value)}
+                    rows={10}
+                    placeholder="Define el prompt para la IA"
+                    style={{ width: '100%', fontFamily: 'monospace', fontSize: 12, borderRadius: 6, border: '1px solid #cbd5e1', padding: 10, resize: 'vertical', background: '#fff', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={handleSavePrompt}
+                      disabled={promptSaving}
+                      style={{ background: promptSaving ? '#94a3b8' : '#0f172a', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: promptSaving ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13 }}
+                    >
+                      {promptSaving ? 'Guardando...' : '💾 Guardar prompt'}
+                    </button>
+                    <span style={{ fontSize: 12, color: '#94a3b8' }}>Se aplica al próximo resumen.</span>
+                  </div>
+                </div>
+              ) : null}
+
+              {aiError ? <p style={{ color: '#b91c1c', margin: 0, fontSize: 13 }}>{aiError}</p> : null}
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                Resumen de la reunión
+                <textarea
+                  name="summary"
+                  value={form.summary}
+                  onChange={handleChange}
+                  rows={10}
+                  required
+                  placeholder="Resumen generado por IA o escrito manualmente"
+                  style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, resize: 'vertical' }}
+                />
+              </label>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="submit"
+                  style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
+                >
+                  {editingId ? '💾 Actualizar acta' : '💾 Guardar acta'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowForm(false); setEditingId(null); setForm({ date: '', participants: '', transcript: '', summary: '' }); stopTranscription() }}
+                  style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
       ) : null}
 
-      <section style={{ display: 'grid', gap: 12 }}>
-        {sortedRecords.length === 0 ? <p>No hay actas registradas.</p> : null}
+      {/* Grilla de actas */}
+      {sortedRecords.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8', background: '#fff', borderRadius: 12, border: '1px dashed #e2e8f0' }}>
+          <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
+          <p style={{ margin: 0, fontSize: 14 }}>No hay actas registradas aún.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 6 }}>
+          {/* Cabecera de la grilla */}
+          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 140px', gap: 12, padding: '8px 16px', background: '#f1f5f9', borderRadius: 8, fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span>Fecha</span>
+            <span>Participantes / Resumen</span>
+            <span style={{ textAlign: 'right' }}>Acciones</span>
+          </div>
 
-        {sortedRecords.map((record) => (
-          <article key={record.id} style={{ background: '#fff', padding: 16, borderRadius: 8 }}>
-            <h3>{record.date}</h3>
-            <p><strong>Participantes:</strong> {record.participants || 'No especificados'}</p>
-            <p style={{ whiteSpace: 'pre-wrap' }}><strong>Resumen:</strong> {record.summary}</p>
-            {record.transcript ? <p><strong>Transcripción:</strong> {record.transcript}</p> : null}
-            {canEdit ? (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-                <button type="button" onClick={() => handleEdit(record)}>Editar</button>
-                <button type="button" onClick={() => handleDelete(record.id)}>Eliminar</button>
+          {sortedRecords.map((record) => {
+            const isExpanded = expandedId === record.id
+            const summaryPreview = (record.summary || '').replace(/\n/g, ' ').slice(0, 120)
+            const hasMore = (record.summary || '').length > 120
+            return (
+              <div key={record.id} style={{ background: '#fff', borderRadius: 10, border: `1px solid ${isExpanded ? '#a5b4fc' : '#e2e8f0'}`, overflow: 'hidden', boxShadow: isExpanded ? '0 2px 8px rgba(99,102,241,0.08)' : 'none', transition: 'border-color 0.15s' }}>
+                {/* Fila principal */}
+                <div
+                  onClick={() => setExpandedId(isExpanded ? null : record.id)}
+                  style={{ display: 'grid', gridTemplateColumns: '120px 1fr 140px', gap: 12, padding: '12px 16px', cursor: 'pointer', alignItems: 'center', background: isExpanded ? '#eef2ff' : '#fff' }}
+                >
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', whiteSpace: 'nowrap' }}>
+                    📅 {record.date}
+                  </span>
+
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      👥 {record.participants || 'Sin participantes'}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {summaryPreview}{hasMore && !isExpanded ? '…' : ''}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
+                    {canEdit ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleEdit(record) }}
+                          title="Editar"
+                          style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}
+                        >✏️</button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); if (window.confirm('¿Eliminar esta acta?')) handleDelete(record.id) }}
+                          title="Eliminar"
+                          style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}
+                        >🗑️</button>
+                      </>
+                    ) : null}
+                    <span style={{ color: '#94a3b8', fontSize: 12, marginLeft: 2 }}>{isExpanded ? '▲' : '▼'}</span>
+                  </div>
+                </div>
+
+                {/* Contenido expandido */}
+                {isExpanded ? (
+                  <div style={{ borderTop: '1px solid #e0e7ff', padding: '16px 20px', background: '#fafafe' }}>
+                    <div style={{ marginBottom: 10 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📝 Resumen</span>
+                    </div>
+                    <pre style={{ margin: 0, fontFamily: 'inherit', fontSize: 13, color: '#374151', whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{record.summary || 'Sin resumen.'}</pre>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </article>
-        ))}
-      </section>
+            )
+          })}
+        </div>
+      )}
     </main>
   )
 }
