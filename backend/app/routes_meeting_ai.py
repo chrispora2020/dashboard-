@@ -48,99 +48,30 @@ class SummarizeRequest(BaseModel):
     prompt: str | None = None
 
 
-DEFAULT_SUMMARY_PROMPT = """Actúa como un asistente profesional de análisis y documentación de reuniones.
-
-Voy a darte una transcripción, notas o audio convertido a texto de una reunión.
-Tu tarea será generar un resumen ejecutivo COMPLETO, claro y ordenado.
-
-Quiero que el resultado incluya SIEMPRE estas secciones:
+DEFAULT_SUMMARY_PROMPT = """Eres un asistente profesional de análisis de reuniones. Genera un resumen ejecutivo claro y ordenado con las siguientes secciones:
 
 ## 1. Resumen General
-* Explica en pocos párrafos de qué trató la reunión.
-* Objetivo principal.
-* Contexto importante.
-* Conclusiones generales.
+Qué se trató, objetivo principal y conclusiones.
 
 ## 2. Temas Tratados
-Haz una lista estructurada de todos los temas importantes discutidos.
-Para cada tema incluye:
-* Qué se habló.
-* Problemas detectados.
-* Propuestas realizadas.
-* Opiniones relevantes.
-* Riesgos o preocupaciones mencionadas.
+Lista los temas discutidos con problemas, propuestas y decisiones por tema.
 
 ## 3. Decisiones Tomadas
-Lista clara de decisiones concretas tomadas durante la reunión.
-Formato:
-* Decisión.
-* Responsable.
-* Fecha límite (si existe).
-* Impacto esperado.
+Lista: decisión | responsable | fecha límite.
 
 ## 4. Tareas y Próximas Acciones
-Genera una tabla con:
-* Tarea.
-* Responsable.
-* Prioridad (Alta / Media / Baja).
-* Fecha compromiso.
-* Estado inicial.
+Lista: tarea | responsable | prioridad (Alta/Media/Baja) | fecha compromiso.
 
 ## 5. Participantes
-Identifica:
-* Quiénes participaron.
-* Rol de cada uno si se puede inferir.
-* Nivel de participación o influencia.
+Nombres y rol inferido.
 
-## 6. Problemas o Bloqueos Detectados
-Resume:
-* Obstáculos.
-* Riesgos.
-* Dependencias.
-* Temas pendientes.
+## 6. Problemas o Bloqueos
+Obstáculos, riesgos y dependencias detectadas.
 
-## 7. Ideas Importantes o Estratégicas
-Extrae:
-* Ideas innovadoras.
-* Oportunidades.
-* Mejoras sugeridas.
-* Comentarios estratégicos relevantes.
+## 7. Próximos Pasos
+Acciones urgentes para las próximas 48 hs y pendientes críticos.
 
-## 8. Resumen Ejecutivo para Dirección
-Crea un resumen corto, profesional y ejecutivo de máximo 10 líneas pensado para enviar a gerencia o liderazgo.
-
-## 9. Sentimiento General de la Reunión
-Indica:
-* Ambiente general.
-* Nivel de acuerdo.
-* Tensiones o preocupaciones.
-* Motivación del equipo.
-
-## 10. Datos Clave
-Extrae automáticamente:
-* Fechas.
-* Nombres.
-* Empresas.
-* Herramientas.
-* Presupuestos.
-* Métricas.
-* Números importantes.
-
----
-**Reglas importantes:**
-* NO inventes información.
-* Si algo no queda claro, indícalo como "No especificado".
-* Organiza todo con títulos y subtítulos claros.
-* Usa lenguaje profesional.
-* Corrige errores gramaticales del texto original.
-* Mantén el significado real de lo dicho.
-* Si detectas contradicciones, señálalas.
-* Si hay tareas implícitas, infiérelas y aclara que fueron inferidas.
-
-**Al final agrega:**
-* "Pendientes críticos"
-* "Riesgos prioritarios"
-* "Acciones urgentes próximas 48 hs"
+Reglas: NO inventes información. Si algo no está claro, indica "No especificado". Corrige errores gramaticales. Si hay tareas implícitas, infierelas y márcalas como inferidas.
 """
 
 
@@ -245,6 +176,18 @@ def summarize_text(body: SummarizeRequest):
     if len(text) < 20:
         raise HTTPException(status_code=400, detail="El texto es demasiado corto para resumir.")
 
+    # Truncar para no superar el límite de tokens del modelo (~8000 chars ≈ 2000 tokens)
+    MAX_CHARS = 8000
+    truncated = False
+    if len(text) > MAX_CHARS:
+        text = text[:MAX_CHARS]
+        # Cortar en el último punto para no partir una oración
+        last_period = max(text.rfind('. '), text.rfind('.\n'))
+        if last_period > MAX_CHARS * 0.7:
+            text = text[:last_period + 1]
+        text += "\n\n[Nota: la transcripción fue truncada por longitud.]"
+        truncated = True
+
     db = SessionLocal()
     try:
         key = f"meeting_ai:{body.org_id}:summary_prompt"
@@ -257,7 +200,7 @@ def summarize_text(body: SummarizeRequest):
         {"role": "system", "content": prompt},
         {"role": "user", "content": text},
     ])
-    return {"ok": True, "summary": summary, "prompt_used": prompt}
+    return {"ok": True, "summary": summary, "prompt_used": prompt, "truncated": truncated}
 
 
 @router.post("/ai/meetings/analyze")
