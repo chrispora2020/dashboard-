@@ -10,59 +10,6 @@ function summarizeText(text, participants = '') {
   const personas = participants.split(',').map((n) => n.trim()).filter(Boolean)
   return ['Contexto:', top.join(' ') || normalized.slice(0, 200), '', 'Participantes:', personas.length ? personas.map((n) => `- ${n}`).join('\n') : '- No especificados'].join('\n')
 }
-    .filter((sentence) => sentence.length > 0)
-
-  const keywords = ['acord', 'tarea', 'responsable', 'fecha', 'meta', 'objetivo', 'riesgo', 'decisi', 'proximo', 'seguimiento']
-  const scored = sentences.map((sentence, index) => {
-    const lower = sentence.toLowerCase()
-    const keywordScore = keywords.reduce((acc, key) => acc + (lower.includes(key) ? 2 : 0), 0)
-    const lengthScore = Math.min(Math.floor(sentence.length / 40), 2)
-    const positionScore = index < 2 ? 1 : 0
-    return { sentence, score: keywordScore + lengthScore + positionScore }
-  })
-
-  const topContext = scored
-    .slice()
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5)
-    .map((item) => item.sentence)
-
-  const actionSentences = sentences.filter((sentence) => /\b(haremos|acordamos|asignad[oa]|responsable|fecha|meta|objetivo|tarea|pr[oó]ximo|seguimiento|resumir|corregir|revisar)\b/i.test(sentence))
-  const quoteSource = topContext.find((sentence) => sentence.length >= 40) || sentences[0]
-
-  const personas = participants.split(',').map((name) => name.trim()).filter(Boolean)
-  const participantsLine = personas.length
-    ? personas.map((name) => `- ${name}: revisar pendientes y acuerdos en próxima reunión.`).join('\n')
-    : '- No se especificaron participantes.'
-
-  const contexto = topContext.slice(0, 2).join(' ') || normalized.slice(0, 220)
-  const detectedTasks = [...normalized.matchAll(/tarea\s*(\d+)/gi)].map((match) => `Tarea ${match[1]}`)
-  const temas = [...new Set(topContext.flatMap((sentence) => sentence.split(/[,;:]/)).map((part) => part.trim()).filter((part) => part.length > 12))]
-  const temasTexto = temas.length ? temas.slice(0, 5).map((topic) => `- ${topic}`).join('\n') : '- No se detectaron temas claros.'
-  const tareasDetectadas = [
-    ...detectedTasks.map((task) => `- ${task}: definir responsable y fecha compromiso.`),
-    ...actionSentences.slice(0, 4).map((item) => `- ${item}`)
-  ]
-  const tareas = tareasDetectadas.length ? tareasDetectadas.slice(0, 6).join('\n') : '- No se detectaron tareas explícitas. Definir responsables y fechas.'
-  const citas = quoteSource ? `- “${quoteSource}”` : '- Sin cita destacada.'
-
-  return [
-    'Contexto general:',
-    contexto,
-    '',
-    'Temas tratados:',
-    temasTexto,
-    '',
-    'Tareas y metas:',
-    tareas,
-    '',
-    'Citas importantes:',
-    citas,
-    '',
-    'Resumen por participante:',
-    participantsLine
-  ].join('\n')
-}
 
 export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
   const [records, setRecords] = useState([])
