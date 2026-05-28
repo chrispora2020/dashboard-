@@ -461,16 +461,27 @@ export default function MeetingMinutes({ canEdit }) {
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 600, color: '#374151' }}>
                 Resumen de la reunión
-                <textarea
-                  name="summary"
-                  value={form.summary}
-                  onChange={handleChange}
-                  rows={10}
-                  required
-                  placeholder="Resumen generado por IA o escrito manualmente"
-                  style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, resize: 'vertical' }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <textarea
+                    name="summary"
+                    value={form.summary}
+                    onChange={handleChange}
+                    rows={10}
+                    required
+                    disabled={summaryLoading}
+                    placeholder="Resumen generado por IA o escrito manualmente"
+                    style={{ padding: '8px 10px', borderRadius: 6, border: `1px solid ${summaryLoading ? '#a5b4fc' : '#d1d5db'}`, fontSize: 13, resize: 'vertical', width: '100%', boxSizing: 'border-box', opacity: summaryLoading ? 0.4 : 1, transition: 'opacity 0.2s' }}
+                  />
+                  {summaryLoading ? (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 6, background: 'rgba(238,242,255,0.85)', pointerEvents: 'none' }}>
+                      <div style={{ width: 36, height: 36, border: '4px solid #e0e7ff', borderTop: '4px solid #6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#4338ca' }}>La IA está pensando…</span>
+                      <span style={{ fontSize: 11, color: '#6366f1' }}>Esto puede tardar unos segundos</span>
+                    </div>
+                  ) : null}
+                </div>
               </label>
+              <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
 
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
