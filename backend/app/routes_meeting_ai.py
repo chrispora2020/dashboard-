@@ -117,11 +117,17 @@ def _chat_gemini(messages: list[dict[str, str]]) -> str:
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"].strip()
+    except HTTPException:
+        raise
+    except requests.exceptions.ConnectionError as exc:
+        raise HTTPException(status_code=502, detail=f"Error de red al conectar con Gemini: {repr(exc)}")
+    except requests.exceptions.Timeout:
+        raise HTTPException(status_code=504, detail="Timeout: Gemini tardó demasiado en responder.")
     except requests.HTTPError as exc:
-        detail = exc.response.text if exc.response is not None else str(exc)
+        detail = exc.response.text if exc.response is not None else repr(exc)
         raise HTTPException(status_code=502, detail=f"Error en API de Gemini: {detail}")
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"No se pudo conectar a Gemini: {exc}")
+        raise HTTPException(status_code=502, detail=f"Error inesperado con Gemini ({type(exc).__name__}): {repr(exc)}")
 
 
 @router.get("/ai/meetings/summary-prompt")
