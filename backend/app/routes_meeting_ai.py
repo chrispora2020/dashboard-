@@ -170,23 +170,65 @@ def save_summary_prompt(body: dict[str, str]):
         db.close()
 
 
+CHUNK_SIZE = 6000   # chars por lote (~1500 tokens)
+CHUNK_PROMPT = "Eres un asistente de reuniones. A continuación te doy una parte ({part} de {total}) de una transcripción larga. Extrae los puntos clave: temas, decisiones, tareas y participantes mencionados. Sé conciso."
+CONSOLIDATE_PROMPT = "Eres un asistente de reuniones. A continuación tienes los resúmenes parciales de cada segmento de una transcripción larga. Consolídalos en un único resumen ejecutivo completo usando el formato indicado. No repitas información ni inventes datos."
+
+
+def _split_text(text: str, size: int) -> list[str]:
+    """Divide el texto en lotes cortando en límites de oración."""
+    chunks = []
+    while len(text) > size:
+        cut = size
+        # intentar cortar en punto/salto de línea cercano
+        for sep in ('. ', '.\n', '\n'):
+            pos = text.rfind(sep, int(size * 0.7), size)
+            if pos != -1:
+                cut = pos + len(sep)
+                break
+        chunks.append(text[:cut].strip())
+        text = text[cut:]
+    if text.strip():
+        chunks.append(text.strip())
+    return chunks
+
+
+def _summarize_in_batches(text: str, final_prompt: str) -> tuple[str, bool]:
+    """
+    Si el texto entra en un solo lote lo resume directamente.
+    Si no, resume cada lote por separado y luego consolida.
+    Retorna (summary, batched).
+    """
+    if len(text) <= CHUNK_SIZE:
+        summary = _chat_openrouter([
+            {"role": "system", "content": final_prompt},
+            {"role": "user", "content": text},
+        ])
+        return summary, False
+
+    chunks = _split_text(text, CHUNK_SIZE)
+    partial = []
+    for i, chunk in enumerate(chunks, 1):
+        sys = CHUNK_PROMPT.format(part=i, total=len(chunks))
+        part_summary = _chat_openrouter([
+            {"role": "system", "content": sys},
+            {"role": "user", "content": chunk},
+        ])
+        partial.append(f"--- Segmento {i}/{len(chunks)} ---\n{part_summary}")
+
+    combined = "\n\n".join(partial)
+    final = _chat_openrouter([
+        {"role": "system", "content": CONSOLIDATE_PROMPT + "\n\n" + final_prompt},
+        {"role": "user", "content": combined},
+    ])
+    return final, True
+
+
 @router.post("/ai/meetings/summarize")
 def summarize_text(body: SummarizeRequest):
     text = (body.text or "").strip()
     if len(text) < 20:
         raise HTTPException(status_code=400, detail="El texto es demasiado corto para resumir.")
-
-    # Truncar para no superar el límite de tokens del modelo (~8000 chars ≈ 2000 tokens)
-    MAX_CHARS = 8000
-    truncated = False
-    if len(text) > MAX_CHARS:
-        text = text[:MAX_CHARS]
-        # Cortar en el último punto para no partir una oración
-        last_period = max(text.rfind('. '), text.rfind('.\n'))
-        if last_period > MAX_CHARS * 0.7:
-            text = text[:last_period + 1]
-        text += "\n\n[Nota: la transcripción fue truncada por longitud.]"
-        truncated = True
 
     db = SessionLocal()
     try:
@@ -196,11 +238,8 @@ def summarize_text(body: SummarizeRequest):
     finally:
         db.close()
 
-    summary = _chat_openrouter([
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": text},
-    ])
-    return {"ok": True, "summary": summary, "prompt_used": prompt, "truncated": truncated}
+    summary, batched = _summarize_in_batches(text, prompt)
+    return {"ok": True, "summary": summary, "prompt_used": prompt, "batched": batched}
 
 
 @router.post("/ai/meetings/analyze")

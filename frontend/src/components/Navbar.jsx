@@ -232,8 +232,9 @@ const styles = {
     padding: '0 12px',
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    minHeight: '56px'
+    flexWrap: 'wrap',
+    gap: '0',
+    minHeight: '48px'
   },
   brandWrap: {
     display: 'flex',
@@ -243,7 +244,7 @@ const styles = {
     flexGrow: 1
   },
   brandTitle: {
-    fontSize: '1.05rem',
+    fontSize: 'clamp(0.78rem, 3vw, 1.05rem)',
     color: '#1f2937',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
@@ -258,8 +259,9 @@ const styles = {
     whiteSpace: 'nowrap'
   },
   userSectionTopMobile: {
-    maxWidth: '55%',
-    overflow: 'hidden'
+    maxWidth: '50%',
+    overflow: 'hidden',
+    gap: '4px'
   },
   userName: {
     color: '#334155',
@@ -296,7 +298,8 @@ const styles = {
     color: '#111827',
     fontSize: '1.55rem',
     lineHeight: 1,
-    marginRight: '8px'
+    marginRight: '4px',
+    flexShrink: 0
   },
   toggler: {
     marginLeft: 'auto',
@@ -312,7 +315,8 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    flexShrink: 0
   },
   togglerDesktop: {
     display: 'none'
@@ -327,7 +331,8 @@ const styles = {
   },
   collapseMobile: {
     width: '100%',
-    marginTop: '8px'
+    order: 10,
+    paddingBottom: '6px'
   },
   navbarNav: {
     listStyle: 'none',
@@ -358,7 +363,9 @@ const styles = {
   },
   navLinkMobile: {
     display: 'block',
-    width: '100%'
+    width: '100%',
+    fontSize: '0.95rem',
+    padding: '10px 12px'
   },
   navLinkActive: {
     background: '#f1f5f9'
@@ -382,7 +389,9 @@ const styles = {
     width: '100%',
     textAlign: 'left',
     display: 'flex',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    fontSize: '0.95rem',
+    padding: '10px 12px'
   },
   dropdownMenu: {
     position: 'absolute',
@@ -391,7 +400,7 @@ const styles = {
     marginTop: '2px',
     listStyle: 'none',
     padding: '6px',
-    minWidth: '230px',
+    minWidth: '220px',
     background: '#fff',
     border: '1px solid #d9d9d9',
     borderRadius: '6px',
@@ -402,8 +411,9 @@ const styles = {
     position: 'static',
     boxShadow: 'none',
     marginTop: 0,
-    paddingLeft: '8px',
-    border: 'none'
+    paddingLeft: '12px',
+    border: 'none',
+    borderLeft: '2px solid #e5e7eb'
   },
   dropdownItem: {
     textDecoration: 'none',
