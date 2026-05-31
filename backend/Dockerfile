@@ -8,12 +8,13 @@ RUN apt-get update \
 	 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY backend/requirements.txt /app/requirements.txt
+# Build context: carpeta backend/ (funciona en Koyeb y local con docker build ./backend)
+COPY requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip \
 	&& pip install --no-cache-dir \
 	   --trusted-host pypi.org --trusted-host files.pythonhosted.org --trusted-host pypi.python.org \
 	   -r /app/requirements.txt
-COPY backend /app
+COPY . /app
 ENV PYTHONUNBUFFERED=1
 ENV PORT=10000
 EXPOSE 10000
