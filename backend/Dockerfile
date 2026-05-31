@@ -5,17 +5,20 @@ RUN apt-get update \
 	 && apt-get install -y --no-install-recommends \
 		 gcc \
 		 libpq-dev \
+		 supervisor \
 	 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-# Build context: carpeta backend/ (funciona en Koyeb y local con docker build ./backend)
+# Build context: carpeta backend/
 COPY requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip \
 	&& pip install --no-cache-dir \
 	   --trusted-host pypi.org --trusted-host files.pythonhosted.org --trusted-host pypi.python.org \
 	   -r /app/requirements.txt
 COPY . /app
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 ENV PYTHONUNBUFFERED=1
-ENV PORT=10000
-EXPOSE 10000
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
+ENV PORT=7860
+EXPOSE 7860
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
