@@ -9,14 +9,14 @@ RUN apt-get update \
 	 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-# Build context: carpeta backend/
-COPY requirements.txt /app/requirements.txt
+# Build context: raíz del repositorio (necesario para Render cuando usa backend/Dockerfile).
+COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip \
 	&& pip install --no-cache-dir \
 	   --trusted-host pypi.org --trusted-host files.pythonhosted.org --trusted-host pypi.python.org \
 	   -r /app/requirements.txt
-COPY . /app
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY backend/ /app/
+COPY backend/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 ENV PYTHONUNBUFFERED=1
 ENV PORT=7860
