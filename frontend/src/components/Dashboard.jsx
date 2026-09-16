@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import API_BASE from '../config'
 import KPICard from './KPICard'
+import DetalleConversos from './DetalleConversos'
 import { getMinisteringSummary, MINISTERING_API_PATH, MINISTERING_STORAGE_KEY, parseMinisteringText } from '../utils/ministering'
 
 const KPI_RESUMEN_STORAGE_KEY = 'dashboard_kpis_resumen_cache'
@@ -329,32 +330,7 @@ export default function Dashboard() {
               />
               {detalleOpen === kpi.id && detalleKPI && (
                 <div style={{background:'#f9fafb',border:'1px solid #ddd',borderRadius:8,padding:16,marginTop:8}}>
-                  {/* Bautismos: mostrar lista completa de conversos */}
-                  {detalleKPI.personas?.length > 0 ? (
-                    <>
-                      <strong>Lista completa ({detalleKPI.personas.length}):</strong>
-                      <ul style={{margin:'8px 0'}}>
-                        {detalleKPI.personas.map((p,i) => (
-                          <li key={i}>{p.nombre} <span style={{color:'#666',fontSize:12}}>{p.unidad ? `(${p.unidad})` : ''}</span></li>
-                        ))}
-                      </ul>
-                    </>
-                  ) : (
-                    <>
-                      <strong>Potenciales ({detalleKPI.potenciales?.length || 0}):</strong>
-                      <ul style={{margin:'8px 0 16px 0'}}>
-                        {detalleKPI.potenciales?.length > 0 ? detalleKPI.potenciales.map((p,i) => (
-                          <li key={i}>{p.nombre} <span style={{color:'#666',fontSize:12}}>{p.unidad ? `(${p.unidad})` : ''}</span></li>
-                        )) : <li style={{color:'#999'}}>Sin potenciales</li>}
-                      </ul>
-                      <strong>Reales ({detalleKPI.reales?.length || 0}):</strong>
-                      <ul style={{margin:'8px 0'}}>
-                        {detalleKPI.reales?.length > 0 ? detalleKPI.reales.map((p,i) => (
-                          <li key={i}>{p.nombre} <span style={{color:'#666',fontSize:12}}>{p.unidad ? `(${p.unidad})` : ''}</span></li>
-                        )) : <li style={{color:'#999'}}>Sin reales</li>}
-                      </ul>
-                    </>
-                  )}
+                  <DetalleConversos detalle={detalleKPI} />
                   <button onClick={()=>setDetalleOpen(null)} style={{marginTop:8,padding:'4px 12px',borderRadius:6,border:'1px solid #ddd',background:'#fff',cursor:'pointer'}}>Cerrar</button>
                 </div>
               )}

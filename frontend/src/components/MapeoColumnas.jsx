@@ -8,6 +8,7 @@ const CAMPOS_DISPONIBLES = [
   { value: 'estado_recomendacion_raw', label: 'Estado de Recomendación', required: false },
   { value: 'llamamientos', label: 'Llamamientos', required: false },
   { value: 'fecha_nacimiento', label: 'Fecha de Nacimiento', required: false, important: true },
+  { value: 'edad_al_confirmar', label: 'Edad', required: false, important: true },
   { value: 'sexo', label: 'Sexo', required: false, important: true },
 ]
 
@@ -32,7 +33,8 @@ export default function MapeoColumnas({ uploadData, onMapeoComplete, onBack }) {
       estado_recomendacion_raw: ['estado recomendacion', 'estado_recomendacion', 'estado_recomendacion_raw', 'recomendacion', 'estado de la recomendación'],
       llamamientos: ['llamamientos'],
       fecha_nacimiento: ['fecha nacimiento', 'fecha_nacimiento'],
-      sexo: ['sexo', 'edad']
+      edad_al_confirmar: ['edad'],
+      sexo: ['sexo']
     }
     const sugerido = {}
     
@@ -50,7 +52,7 @@ export default function MapeoColumnas({ uploadData, onMapeoComplete, onBack }) {
     // Paso 2: Mapeo para columnas genéricas (col_X) que no se mapearon
     const mapeoGenerico = {
       'col_1': 'nombre_preferencia',
-      'col_2': 'sexo',
+      'col_2': 'edad_al_confirmar',
       'col_3': 'sacerdocio',
       'col_4': 'estado_recomendacion_raw',
       'col_5': 'llamamientos',

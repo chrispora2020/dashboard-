@@ -55,7 +55,7 @@ SEXO_NORMALIZADO = {
     "M": [
         "M", "Masculino", "masculino", "MASCULINO",
         "Hombre", "hombre", "HOMBRE",
-        "H", "Varón", "varon", "VARON",
+        "H", "V", "v", "Varón", "varon", "VARON",
         "male", "Male", "MALE"
     ],
     "F": [
@@ -75,22 +75,8 @@ def normalizar_estado_recomendacion(valor_raw: Optional[str]) -> Tuple[Optional[
     Returns:
         (valor_normalizado: bool|None, categoria: str)
     """
-    if valor_raw is None or str(valor_raw).strip() == "":
-        return (None, "desconocido")
-    
-    valor_str = ' '.join(str(valor_raw).split()).strip()  # normaliza saltos de línea y espacios
-    
-    for categoria, valores in ESTADOS_RECOMENDACION.items():
-        if valor_str in valores:
-            if categoria == "activo":
-                return (True, "activo")
-            elif categoria == "inactivo":
-                return (False, "inactivo")
-            else:
-                return (None, "desconocido")
-    
-    # Si no encuentra coincidencia, marcar como desconocido
-    return (None, "desconocido")
+    activo = str(valor_raw or "").strip().casefold() == "activa"
+    return (activo, "activo" if activo else "inactivo")
 
 
 def normalizar_sacerdocio(valor_raw: Optional[str]) -> Tuple[Optional[str], Optional[bool]]:
@@ -106,14 +92,14 @@ def normalizar_sacerdocio(valor_raw: Optional[str]) -> Tuple[Optional[str], Opti
     valor_str = ' '.join(str(valor_raw).split()).strip()  # normaliza saltos de línea y espacios múltiples
     
     for categoria, valores in SACERDOCIO_NORMALIZADO.items():
-        if valor_str in valores:
+        if valor_str.casefold() in [v.casefold() for v in valores if isinstance(v, str)]:
             if categoria in ["aaronico", "melquisedec"]:
                 return (categoria, True)
             else:
                 return ("no_ordenado", False)
     
-    # Si no encuentra coincidencia, asumir no ordenado
-    return ("no_ordenado", False)
+    # Un valor desconocido no permite inferir el sexo ni una ordenación.
+    return (None, False)
 
 
 def normalizar_sexo(valor_raw: Optional[str]) -> Optional[str]:
@@ -129,7 +115,7 @@ def normalizar_sexo(valor_raw: Optional[str]) -> Optional[str]:
     valor_str = str(valor_raw).strip()
     
     for categoria, valores in SEXO_NORMALIZADO.items():
-        if valor_str in valores:
+        if valor_str.casefold() in [v.casefold() for v in valores if isinstance(v, str)]:
             return categoria
     
     return None
@@ -164,14 +150,14 @@ def calcular_edad(fecha_nacimiento: Optional[date], fecha_referencia: Optional[d
 
 def es_elegible_recomendacion(edad: Optional[int]) -> Optional[bool]:
     """
-    Determina si es elegible para recomendación (mayor de 8 años)
+    Determina si es elegible para recomendación (mayor de 11 años)
     
     Returns:
         True si es elegible, False si no, None si no se puede determinar
     """
     if edad is None:
         return None
-    return edad > 8
+    return edad > 11
 
 
 def es_elegible_ordenacion(sexo: Optional[str]) -> Optional[bool]:

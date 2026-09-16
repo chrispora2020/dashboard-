@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 from datetime import date
 
 from .models import PersonaConverso, PeriodoKPI, IndicadorKPI
-from .normalizacion import es_elegible_ordenacion
+from .normalizacion import normalizar_sexo, normalizar_sacerdocio, normalizar_estado_recomendacion
 
 
 # === DEFINICIÓN DE INDICADORES ===
@@ -147,11 +147,7 @@ class CalculadorIndicadores:
 
             if es_elegible:
                 elegibles[persona.id] = persona
-                estado_raw = (persona.estado_recomendacion_raw or "").strip().lower()
-                tiene_estado = estado_raw not in ("", "nan", "none")
-                # REAL solo cuando el estado existe y es activo.
-                # Si no hay estado explícito, se considera sin recomendación.
-                if persona.tiene_recomendacion is True and tiene_estado:
+                if normalizar_estado_recomendacion(persona.estado_recomendacion_raw)[0]:
                     con_recomendacion[persona.id] = persona
                 else:
                     sin_recomendacion[persona.id] = persona
@@ -250,15 +246,14 @@ class CalculadorIndicadores:
         no_elegibles = []
         sin_clasificar = []
         for persona in todas_personas:
-            # Es varón si sexo = 'M' explícito
-            es_varon = (persona.sexo is not None and persona.sexo.upper() == 'M')
-            # Si no hay sexo, mirar sacerdocio_normalizado (solo valores explícitos son indicador de varón)
-            # 'no_ordenado' solo aparece cuando el archivo dice "No ha sido ordenado" (nunca para null/vacío)
-            if not es_varon and persona.sacerdocio_normalizado in ['aaronico', 'melquisedec', 'no_ordenado']:
+            sexo = normalizar_sexo(persona.sexo)
+            sacerdocio, esta_ordenado = normalizar_sacerdocio(persona.sacerdocio)
+            es_varon = sexo == 'M'
+            if sexo is None and sacerdocio in ['aaronico', 'melquisedec', 'no_ordenado']:
                 es_varon = True
             if es_varon:
                 elegibles[persona.id] = persona
-                if persona.esta_ordenado is True:
+                if esta_ordenado:
                     ordenados[persona.id] = persona
                 else:
                     sin_ordenar[persona.id] = persona

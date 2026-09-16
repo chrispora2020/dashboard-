@@ -428,12 +428,13 @@ async def confirmar_importacion(
         variantes_mapeo = {
             'nombre_preferencia': ['nombre preferencia', 'nombre_preferencia'],
             'sacerdocio': ['sacerdocio'],
-            'estado_recomendacion_raw': ['estado recomendacion', 'estado_recomendacion', 'estado_recomendacion_raw'],
+            'estado_recomendacion_raw': ['estado recomendacion', 'estado_recomendacion', 'estado_recomendacion_raw', 'estado de recomendación para el templo', 'estado de recomendacion para el templo', 'estado de la recomendación para el templo', 'estado de la recomendacion para el templo', 'estado de recomendación', 'estado de recomendacion', 'estado de la recomendación', 'estado de la recomendacion'],
             'llamamientos': ['llamamientos'],
             'unidad': ['unidad'],
             'fecha_confirmacion': ['fecha confirmacion', 'fecha_confirmación', 'fecha de la confirmacion'],
             'fecha_nacimiento': ['fecha nacimiento', 'fecha_nacimiento'],
-            'sexo': ['sexo', 'edad']
+            'edad_al_confirmar': ['edad', 'edad_al_confirmar'],
+            'sexo': ['sexo']
         }
         for col in df.columns:
             if col not in mapeo_dict:  # Solo si no se mapeó por posición
@@ -577,12 +578,6 @@ async def confirmar_importacion(
             tiene_recomendacion, estado_recomendacion_cat = normalizar_estado_recomendacion(
                 datos.get('estado_recomendacion_raw')
             )
-            raw_rec = str(datos.get('estado_recomendacion_raw') or '').lower()
-            if tiene_recomendacion is None:
-                if 'activa' in raw_rec or 'vigente' in raw_rec or 'valida' in raw_rec or 'válida' in raw_rec:
-                    tiene_recomendacion = True
-                elif raw_rec and raw_rec not in ['', 'nan', 'none']:
-                    tiene_recomendacion = False
             # Si no hay fecha de confirmación, intentar extraer de nombre o poner hoy
             if not datos.get('fecha_confirmacion'):
                 try:
@@ -733,12 +728,13 @@ async def import_conversos_directo(
         variantes_mapeo = {
             'nombre_preferencia': ['nombre preferencia', 'nombre_preferencia'],
             'sacerdocio': ['sacerdocio'],
-            'estado_recomendacion_raw': ['estado recomendacion', 'estado_recomendacion', 'estado_recomendacion_raw'],
+            'estado_recomendacion_raw': ['estado recomendacion', 'estado_recomendacion', 'estado_recomendacion_raw', 'estado de recomendación para el templo', 'estado de recomendacion para el templo', 'estado de la recomendación para el templo', 'estado de la recomendacion para el templo', 'estado de recomendación', 'estado de recomendacion', 'estado de la recomendación', 'estado de la recomendacion'],
             'llamamientos': ['llamamientos'],
             'unidad': ['unidad'],
             'fecha_confirmacion': ['fecha confirmacion', 'fecha_confirmación', 'fecha de la confirmacion'],
             'fecha_nacimiento': ['fecha nacimiento', 'fecha_nacimiento'],
-            'sexo': ['sexo', 'edad']
+            'edad_al_confirmar': ['edad', 'edad_al_confirmar'],
+            'sexo': ['sexo']
         }
         for col in df.columns:
             if col not in mapeo_dict:
@@ -854,12 +850,6 @@ async def import_conversos_directo(
                 tiene_recomendacion, estado_recomendacion_cat = normalizar_estado_recomendacion(
                     datos.get('estado_recomendacion_raw')
                 )
-                raw_rec = str(datos.get('estado_recomendacion_raw') or '').lower()
-                if tiene_recomendacion is None:
-                    if 'activa' in raw_rec or 'vigente' in raw_rec or 'valida' in raw_rec or 'válida' in raw_rec:
-                        tiene_recomendacion = True
-                    elif raw_rec and raw_rec not in ['', 'nan', 'none']:
-                        tiene_recomendacion = False
 
                 # Edad
                 edad_cruda = datos.get('edad_al_confirmar')
