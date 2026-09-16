@@ -24,6 +24,29 @@ from .normalizacion import (
 router = APIRouter(prefix='/conversos', tags=['conversos'])
 
 
+def _guardar_lista(db_session, archivo, cantidad, errores):
+    """Confirma el reemplazo completo o conserva la lista anterior ante un error."""
+    try:
+        if errores or cantidad == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="No se reemplazó la lista anterior. " + (
+                    "; ".join(errores[:5]) if errores else "El archivo no contiene conversos válidos."
+                ),
+            )
+        db_session.flush()
+        guardados = db_session.query(PersonaConverso).filter(
+            PersonaConverso.archivo_fuente_id == archivo.id
+        ).count()
+        if guardados != cantidad:
+            raise HTTPException(status_code=500, detail="No se pudo verificar la lista guardada.")
+        archivo.status = 'processed'
+        db_session.commit()
+    except Exception:
+        db_session.rollback()
+        raise
+
+
 def _merge_pdf_continuation_rows(raw_rows: list, num_cols: int) -> list:
     """
     pdfplumber collapses multiline rows: all cell data lands in col_0, rest empty.
@@ -345,7 +368,7 @@ async def confirmar_importacion(
         PdfFileModel.id != file_id,
         ~PdfFileModel.id.in_(ids_en_uso)
     ).delete(synchronize_session='fetch')
-    db_session.commit()
+    # El reemplazo se confirma junto con los registros nuevos.
 
     # Leer archivo original y procesar filas
     import os
@@ -390,8 +413,7 @@ async def confirmar_importacion(
             raise Exception('Archivo original no disponible en disco')
     except Exception as e:
         errores.append(f'Error leyendo archivo original: {str(e)}')
-        archivo.status = 'error'
-        db_session.commit()
+        db_session.rollback()
         return ImportacionConfirmada(
             success=False,
             file_id=file_id,
@@ -618,8 +640,7 @@ async def confirmar_importacion(
             print(f"[DEBUG] Error en fila {idx+1}: {str(e)}")
     
     print(f"[DEBUG] Total personas importadas: {personas_importadas}")
-    archivo.status = 'processed'
-    db_session.commit()
+    _guardar_lista(db_session, archivo, personas_importadas, errores)
     print(f"[DEBUG] Commit realizado")
     return ImportacionConfirmada(
         success=True,
@@ -685,8 +706,7 @@ async def import_conversos_directo(
             file_metadata={'total_filas': len(df), 'columnas': list(df.columns)}
         )
         db_session.add(pdf_file)
-        db_session.commit()
-        db_session.refresh(pdf_file)
+        db_session.flush()
         file_id = pdf_file.id
 
         # --- Limpiar datos previos ---
@@ -708,7 +728,6 @@ async def import_conversos_directo(
             PdfFileModel.id != file_id,
             ~PdfFileModel.id.in_(ids_en_uso)
         ).delete(synchronize_session='fetch')
-        db_session.commit()
 
         # --- Auto-mapeo ---
         mapeo_dict = {}
@@ -894,8 +913,7 @@ async def import_conversos_directo(
                 errores.append(f'Fila {idx+1}: {str(e)}')
                 print(f"[IMPORT] Error fila {idx+1}: {str(e)}")
 
-        pdf_file.status = 'processed'
-        db_session.commit()
+        _guardar_lista(db_session, pdf_file, personas_importadas, errores)
         print(f"[IMPORT] Total personas importadas: {personas_importadas}")
 
         return {
@@ -906,8 +924,10 @@ async def import_conversos_directo(
         }
 
     except HTTPException:
+        db_session.rollback()
         raise
     except Exception as e:
+        db_session.rollback()
         raise HTTPException(status_code=500, detail=f"Error procesando archivo: {str(e)}")
 
 

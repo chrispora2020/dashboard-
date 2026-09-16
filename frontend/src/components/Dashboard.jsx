@@ -6,7 +6,6 @@ import KPICard from './KPICard'
 import DetalleConversos from './DetalleConversos'
 import { getMinisteringSummary, MINISTERING_API_PATH, MINISTERING_STORAGE_KEY, parseMinisteringText } from '../utils/ministering'
 
-const KPI_RESUMEN_STORAGE_KEY = 'dashboard_kpis_resumen_cache'
 const KPI_JOVENES_STORAGE_KEY = 'dashboard_kpi_jovenes_cache'
 const KPI_ADULTOS_STORAGE_KEY = 'dashboard_kpi_adultos_cache'
 const KPI_MISIONEROS_STORAGE_KEY = 'dashboard_kpi_misioneros_cache'
@@ -32,8 +31,10 @@ function writeCachedJSON(key, value) {
 
 export default function Dashboard() {
 
-  const [kpis, setKpis] = useState(() => readCachedJSON(KPI_RESUMEN_STORAGE_KEY, []))
-  const [loading, setLoading] = useState(() => readCachedJSON(KPI_RESUMEN_STORAGE_KEY, []).length === 0)
+  const [kpis, setKpis] = useState([])
+  const [loading, setLoading] = useState(true)
+  const kpiRequest = useRef(0)
+  const [listaConversos, setListaConversos] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
   const [periodoActual, setPeriodoActual] = useState('2026')
@@ -96,11 +97,24 @@ export default function Dashboard() {
   console.log('Dashboard component rendering')
 
   useEffect(() => {
-    fetchKPIs()
     fetchJovenesKPI()
     fetchAdultosKPI()
     fetchMisionerosKPI()
     fetchAsistenciaKPI()
+  }, [periodoActual])
+
+  useEffect(() => {
+    const refresh = () => fetchKPIs()
+    refresh()
+    window.addEventListener('focus', refresh)
+    window.addEventListener('conversos-importados', refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      kpiRequest.current += 1
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('conversos-importados', refresh)
+      window.removeEventListener('storage', refresh)
+    }
   }, [periodoActual])
 
   useEffect(() => {
@@ -188,21 +202,25 @@ export default function Dashboard() {
   }
 
   async function fetchKPIs() {
-    const hasVisibleData = kpis.length > 0
-    if (hasVisibleData) {
-      setRefreshing(true)
-    } else {
-      setLoading(true)
-    }
+    const request = ++kpiRequest.current
+    setLoading(true)
+    setRefreshing(true)
+    setKpis([])
+    setListaConversos(null)
+    setDetalleOpen(null)
+    setDetalleKPI(null)
+    setTrendData([])
     setError(null)
 
     try {
       // Fetch resumen de KPIs
       const { data } = await axios.get(`${API_BASE}/api/kpis/resumen?periodo=${periodoActual}`, {
-        timeout: 45000
+        timeout: 45000,
+        params: { _refresh: Date.now() }
       })
       
-      console.log('KPIs data received:', data)
+      if (request !== kpiRequest.current) return
+      setListaConversos(data.lista_conversos || null)
       
       // Mapear los datos del backend al formato del frontend
       const mappedKPIs = data.indicadores.map(ind => ({
@@ -218,7 +236,6 @@ export default function Dashboard() {
       }))
 
       setKpis(mappedKPIs)
-      writeCachedJSON(KPI_RESUMEN_STORAGE_KEY, mappedKPIs)
 
       // Fetch tendencia para el primer indicador
       if (data.indicadores.length > 0) {
@@ -227,23 +244,14 @@ export default function Dashboard() {
       }
 
     } catch (err) {
-      console.error('Error fetching KPIs:', err)
-      setError(err.response?.data?.detail || 'Error al cargar KPIs')
-
-      const cached = readCachedJSON(KPI_RESUMEN_STORAGE_KEY, null)
-      if (Array.isArray(cached) && cached.length > 0) {
-        setKpis(cached)
-      } else {
-        // Fallback a datos de ejemplo si no hay caché
-        setKpis([
-          { id: 1, title: 'Bautismos de Conversos', meta: 168, actual: 0, porcentaje: 0, unit: '', color: '#ef4444' },
-          { id: 2, title: 'Conversos con Recomendación', meta: 100, actual: 0, porcentaje: 0, unit: '%', color: '#ef4444' },
-          { id: 3, title: 'Conversos Ordenados', meta: 100, actual: 0, porcentaje: 0, unit: '%', color: '#ef4444' }
-        ])
-      }
+      if (request !== kpiRequest.current) return
+      setError(err.response?.data?.detail || 'No se pudieron consultar los indicadores actualizados.')
+      setKpis([])
     } finally {
-      setLoading(false)
-      setRefreshing(false)
+      if (request === kpiRequest.current) {
+        setLoading(false)
+        setRefreshing(false)
+      }
     }
   }
 
@@ -302,13 +310,20 @@ export default function Dashboard() {
         {error && (
         <div style={styles.error}>
           <strong>⚠️ Error:</strong> {error}
+          <button onClick={fetchKPIs} style={{ marginLeft: 12 }}>Reintentar</button>
           <p style={{ marginTop: '10px', fontSize: '14px' }}>
-            Mostrando datos en cero. Asegúrate de que el backend esté ejecutándose y que hayas importado datos de conversos.
+            No se muestran cifras anteriores. Vuelve a consultar para obtener los datos guardados.
           </p>
         </div>
         )}
 
         <h2 style={styles.sectionTitle}>Nuevos Conversos</h2>
+        {listaConversos && (
+          <p>Lista guardada: <strong>{listaConversos.total}</strong> conversos.
+            {' '}En {periodoActual}: <strong>{listaConversos.en_periodo}</strong>.
+            {listaConversos.fuera_periodo > 0 && ` Fuera del período o sin fecha: ${listaConversos.fuera_periodo}.`}
+          </p>
+        )}
         <div style={styles.grid}>
         {kpis.length === 0 ? (
           <div style={styles.emptyState}>

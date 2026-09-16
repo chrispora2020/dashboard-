@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from . import db
 from .calculador_indicadores import CalculadorIndicadores, INDICADORES_CONFIG
-from .models import PeriodoKPI
+from .models import PeriodoKPI, PersonaConverso
 from .schemas import BreakdownUnidad, IndicadorTendencia, PeriodoCreate, PeriodoOut
 
 router = APIRouter(prefix='/kpis', tags=['kpis'])
@@ -162,9 +162,19 @@ async def obtener_resumen_kpis(
             "comentario": ind["resumen"].get("comentario", "")
         })
 
+    query = db_session.query(PersonaConverso)
+    if unidad:
+        query = query.filter(PersonaConverso.unidad == unidad)
+    total = query.count()
+    en_periodo = indicadores[0]['resumen']['real']
     return {
         "periodo": periodo,
-        "indicadores": resumen
+        "indicadores": resumen,
+        "lista_conversos": {
+            "total": total,
+            "en_periodo": en_periodo,
+            "fuera_periodo": total - en_periodo,
+        },
     }
 
 

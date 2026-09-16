@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useEffect, useState } from 'react'
 import API_BASE from '../config'
+import { notificarImportacionConversos } from '../utils/conversos'
 import MapeoColumnas from './MapeoColumnas'
 import { getMinisteringSummary, MINISTERING_API_PATH, MINISTERING_STORAGE_KEY, parseMinisteringText } from '../utils/ministering'
 
@@ -91,11 +92,11 @@ export default function ImportacionConversos() {
         `${API_BASE}/api/conversos/confirmar/${data.file_id}`
       )
 
-      console.log('Importación completada automáticamente:', result.data)
+      notificarImportacionConversos(result.data)
       
       // Redirigir al dashboard inmediatamente
       setTimeout(() => {
-        window.location.href = '/'
+        window.location.hash = '/'
       }, 1000)
 
     } catch (err) {
@@ -120,7 +121,7 @@ export default function ImportacionConversos() {
         `${API_BASE}/api/conversos/confirmar/${uploadData.file_id}`
       )
 
-      console.log('Importación confirmada:', data)
+      notificarImportacionConversos(data)
       setImportResult(data)
       setStep('completado')
 
@@ -153,6 +154,7 @@ export default function ImportacionConversos() {
       console.log('[CONVERSOS] Subiendo e importando:', file.name)
       const { data } = await axios.post(`${API_BASE}/api/conversos/import`, fd)
       console.log('[CONVERSOS] Importación completada:', data)
+      notificarImportacionConversos(data)
       setConversoResult(data)
       setConversoFile(null)
     } catch (err) {
@@ -244,6 +246,7 @@ export default function ImportacionConversos() {
 
         if (tipo === 'conversos') {
           const { data } = await axios.post(`${API_BASE}/api/conversos/import`, fd)
+          notificarImportacionConversos(data)
           setConversoResult(data)
           setConversoError('')
         } else if (tipo === 'jovenes') {
@@ -366,7 +369,7 @@ export default function ImportacionConversos() {
               </ul>
             )}
             <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-              <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#be185d', color:'#fff', borderColor:'#be185d'}}>
+              <button onClick={() => { window.location.hash = '/' }} style={{...cardStyles.resetBtn, background:'#be185d', color:'#fff', borderColor:'#be185d'}}>
                 Ver indicadores
               </button>
               <button onClick={() => { setAsResult(null); setAsFile(null) }} style={cardStyles.resetBtn}>
@@ -459,7 +462,7 @@ export default function ImportacionConversos() {
                   </div>
                 ))}
                 <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#334155', color:'#fff', borderColor:'#334155'}}>Ver indicadores</button>
+                  <button onClick={() => { window.location.hash = '/' }} style={{...cardStyles.resetBtn, background:'#334155', color:'#fff', borderColor:'#334155'}}>Ver indicadores</button>
                   <button onClick={() => { setLoteFiles([]); setLoteResults([]) }} style={cardStyles.resetBtn}>Limpiar</button>
                 </div>
               </div>
@@ -481,7 +484,7 @@ export default function ImportacionConversos() {
                   <p style={{margin:'4px 0 0 0',fontSize:12,color:'#92400e'}}>⚠ {conversoResult.advertencias.length} advertencia(s) — los datos fueron importados igualmente</p>
                 )}
                 <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#7c3aed', color:'#fff', borderColor:'#7c3aed'}}>Ver indicadores</button>
+                  <button onClick={() => { window.location.hash = '/' }} style={{...cardStyles.resetBtn, background:'#7c3aed', color:'#fff', borderColor:'#7c3aed'}}>Ver indicadores</button>
                   <button onClick={() => { setConversoResult(null); setConversoFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
                 </div>
               </div>
@@ -526,7 +529,7 @@ export default function ImportacionConversos() {
                 <strong>✓ Importados: {adultoResult.importados} adultos</strong>
                 <p style={{margin:'4px 0 0 0',fontSize:13}}>(reemplaza todos los datos anteriores)</p>
                 <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#d97706', color:'#fff', borderColor:'#d97706'}}>Ver indicadores</button>
+                  <button onClick={() => { window.location.hash = '/' }} style={{...cardStyles.resetBtn, background:'#d97706', color:'#fff', borderColor:'#d97706'}}>Ver indicadores</button>
                   <button onClick={() => { setAdultoResult(null); setAdultoFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
                 </div>
               </div>
@@ -573,7 +576,7 @@ export default function ImportacionConversos() {
                   <p style={{margin:'4px 0 0 0',fontSize:13}}>Misión de servicio a la Iglesia: <strong>{misioneroResult.mision_servicio}</strong></p>
                 )}
                 <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#1d4ed8', color:'#fff', borderColor:'#1d4ed8'}}>Ver indicadores</button>
+                  <button onClick={() => { window.location.hash = '/' }} style={{...cardStyles.resetBtn, background:'#1d4ed8', color:'#fff', borderColor:'#1d4ed8'}}>Ver indicadores</button>
                   <button onClick={() => { setMisioneroResult(null); setMisioneroFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
                 </div>
               </div>
@@ -645,7 +648,7 @@ export default function ImportacionConversos() {
               Resumen actual: <strong>{ministeringSummary.overallPercent}%</strong> · Hombres {ministeringSummary.brothersRatio} · Mujeres {ministeringSummary.sistersRatio}
             </p>
             <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-              <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#0369a1', color:'#fff', borderColor:'#0369a1'}}>Ver indicadores</button>
+              <button onClick={() => { window.location.hash = '/' }} style={{...cardStyles.resetBtn, background:'#0369a1', color:'#fff', borderColor:'#0369a1'}}>Ver indicadores</button>
               <button onClick={() => { setMinisteringText(''); localStorage.removeItem(MINISTERING_STORAGE_KEY) }} style={cardStyles.resetBtn}>Limpiar</button>
             </div>
             {ministeringError && <p style={cardStyles.errorText}>⚠ {ministeringError}</p>}
@@ -663,7 +666,7 @@ export default function ImportacionConversos() {
                 <strong>✓ Importados: {jovenResult.importados} jóvenes</strong>
                 <p style={{margin:'4px 0 0 0',fontSize:13}}>(reemplaza todos los datos anteriores)</p>
                 <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
-                  <button onClick={() => { window.location.href = '/' }} style={{...cardStyles.resetBtn, background:'#16a34a', color:'#fff', borderColor:'#16a34a'}}>Ver indicadores</button>
+                  <button onClick={() => { window.location.hash = '/' }} style={{...cardStyles.resetBtn, background:'#16a34a', color:'#fff', borderColor:'#16a34a'}}>Ver indicadores</button>
                   <button onClick={() => { setJovenResult(null); setJovenFile(null) }} style={cardStyles.resetBtn}>Cargar otro archivo</button>
                 </div>
               </div>
@@ -846,7 +849,7 @@ export default function ImportacionConversos() {
               Importar otro archivo
             </button>
             <button
-              onClick={() => window.location.href = '/'}
+              onClick={() => window.location.hash = '/'}
               style={styles.buttonPrimary}
             >
               Ir a Ver indicadores →
