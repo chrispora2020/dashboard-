@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContai
 import API_BASE from '../config'
 import KPICard from './KPICard'
 import DetalleConversos from './DetalleConversos'
+import DetallePanel from './DetallePanel'
 import { getMinisteringSummary, MINISTERING_API_PATH, MINISTERING_STORAGE_KEY, parseMinisteringText } from '../utils/ministering'
 
 const KPI_JOVENES_STORAGE_KEY = 'dashboard_kpi_jovenes_cache'
@@ -40,6 +41,8 @@ export default function Dashboard() {
   const [periodoActual, setPeriodoActual] = useState('2026')
   const [trendData, setTrendData] = useState([])
   const [detalleKPI, setDetalleKPI] = useState(null)
+  const [detalleError, setDetalleError] = useState(null)
+  const [detalleIntento, setDetalleIntento] = useState(0)
   const [detalleOpen, setDetalleOpen] = useState(null)
   const [kpiJovenes, setKpiJovenes] = useState(null)
   const [detalleJovenesOpen, setDetalleJovenesOpen] = useState(false)
@@ -79,21 +82,27 @@ export default function Dashboard() {
     ...(kpiAsistencia ? [{ nombre: 'Asistencia Sacramental', actual: kpiAsistencia.real ?? 0, meta: 550 }] : [])
   ].filter((indicador) => indicador.meta > 0)
 
-  async function handleDetalleClick(kpi) {
-    if (detalleOpen === kpi.id) {
-      setDetalleOpen(null)
-      return
-    }
-    setDetalleOpen(kpi.id)
+  function handleDetalleClick(kpi) {
     setDetalleKPI(null)
-    try {
-      const { data } = await axios.get(`${API_BASE}/api/kpis/${kpi.id}?periodo=${periodoActual}`)
-      setDetalleKPI(data)
-    } catch (err) {
-      setDetalleKPI({potenciales:[],reales:[]})
-    }
+    setDetalleError(null)
+    setDetalleOpen(kpi.id)
   }
-  
+
+  useEffect(() => {
+    if (!detalleOpen) return
+    const controller = new AbortController()
+    setDetalleKPI(null)
+    setDetalleError(null)
+    axios.get(`${API_BASE}/api/kpis/${detalleOpen}`, {
+      params: { periodo: periodoActual }, signal: controller.signal, timeout: 30000
+    }).then(({ data }) => {
+      if (!controller.signal.aborted) setDetalleKPI(data)
+    }).catch(() => {
+      if (!controller.signal.aborted) setDetalleError('No pudimos cargar el detalle. Intenta nuevamente.')
+    })
+    return () => controller.abort()
+  }, [detalleOpen, periodoActual, detalleIntento])
+
   console.log('Dashboard component rendering')
 
   useEffect(() => {
@@ -104,7 +113,9 @@ export default function Dashboard() {
   }, [periodoActual])
 
   useEffect(() => {
-    const refresh = () => fetchKPIs()
+    const refresh = () => {
+      if (!document.querySelector('dialog[open]')) fetchKPIs()
+    }
     refresh()
     window.addEventListener('focus', refresh)
     window.addEventListener('conversos-importados', refresh)
@@ -343,11 +354,17 @@ export default function Dashboard() {
                 color={kpi.color}
                 onDetalleClick={() => handleDetalleClick(kpi)}
               />
-              {detalleOpen === kpi.id && detalleKPI && (
-                <div style={{background:'#f9fafb',border:'1px solid #ddd',borderRadius:8,padding:16,marginTop:8}}>
-                  <DetalleConversos detalle={detalleKPI} />
-                  <button onClick={()=>setDetalleOpen(null)} style={{marginTop:8,padding:'4px 12px',borderRadius:6,border:'1px solid #ddd',background:'#fff',cursor:'pointer'}}>Cerrar</button>
-                </div>
+              {detalleOpen === kpi.id && (
+                <DetallePanel title={kpi.title} subtitle={`Nuevos conversos · ${periodoActual}`} onClose={() => setDetalleOpen(null)}>
+                  {detalleError ? (
+                    <div className="detalle-empty" role="alert">
+                      <p>{detalleError}</p>
+                      <button type="button" className="detalle-back" onClick={() => setDetalleIntento(n => n + 1)}>Reintentar</button>
+                    </div>
+                  ) : detalleKPI ? <DetalleConversos detalle={detalleKPI} /> : (
+                    <div className="detalle-loading" role="status">Cargando detalle…</div>
+                  )}
+                </DetallePanel>
               )}
             </div>
           ))
@@ -376,7 +393,7 @@ export default function Dashboard() {
               onDetalleClick={() => setDetalleJovenesOpen(v => !v)}
             />
             {detalleJovenesOpen && (
-              <div style={{background:'#f9fafb',border:'1px solid #ddd',borderRadius:8,padding:16,marginTop:8}}>
+              <DetallePanel title="Jóvenes con Recomendación" onClose={() => setDetalleJovenesOpen(false)}>
                 <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:16}}>
                   {[
                     { label:'Activas',        key:'activa',       bg:'#dcfce7', color:'#166534' },
@@ -412,8 +429,7 @@ export default function Dashboard() {
                     ))}
                   </ul>
                 </>)}
-                <button onClick={() => setDetalleJovenesOpen(false)} style={{marginTop:8,padding:'4px 12px',borderRadius:6,border:'1px solid #ddd',background:'#fff',cursor:'pointer'}}>Cerrar</button>
-              </div>
+              </DetallePanel>
             )}
           </div>
           )}
@@ -435,7 +451,7 @@ export default function Dashboard() {
               onDetalleClick={() => setDetalleAdultosOpen(v => !v)}
             />
             {detalleAdultosOpen && (
-              <div style={{background:'#f9fafb',border:'1px solid #ddd',borderRadius:8,padding:16,marginTop:8}}>
+              <DetallePanel title="Adultos con Recomendación" onClose={() => setDetalleAdultosOpen(false)}>
                 <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:16}}>
                   {[
                     { label:'Activas',       key:'activa',       bg:'#dcfce7', color:'#166534' },
@@ -470,8 +486,7 @@ export default function Dashboard() {
                     ))}
                   </ul>
                 </>)}
-                <button onClick={() => setDetalleAdultosOpen(false)} style={{marginTop:8,padding:'4px 12px',borderRadius:6,border:'1px solid #ddd',background:'#fff',cursor:'pointer'}}>Cerrar</button>
-              </div>
+              </DetallePanel>
             )}
           </div>
           )}
@@ -495,7 +510,7 @@ export default function Dashboard() {
               onDetalleClick={kpiMisioneros?.real > 0 || kpiMisioneros?.sub_servicio > 0 ? () => setDetalleMisionerosOpen(v => !v) : undefined}
             />
             {detalleMisionerosOpen && (
-              <div style={{background:'#f9fafb',border:'1px solid #ddd',borderRadius:8,padding:16,marginTop:8}}>
+              <DetallePanel title="Misioneros en el Campo" onClose={() => setDetalleMisionerosOpen(false)}>
                 {/* Misioneros en el Campo */}
                 {(kpiMisioneros.personas?.length > 0) && (
                   <>
@@ -550,8 +565,7 @@ export default function Dashboard() {
                     </table>
                   </>
                 )}
-                <button onClick={() => setDetalleMisionerosOpen(false)} style={{marginTop:12,padding:'4px 12px',borderRadius:6,border:'1px solid #ddd',background:'#fff',cursor:'pointer'}}>Cerrar</button>
-              </div>
+              </DetallePanel>
             )}
           </div>
 
@@ -569,12 +583,12 @@ export default function Dashboard() {
               }
               onDetalleClick={kpiAsistencia?.real > 0 ? () => setDetalleAsistenciaOpen(v => !v) : undefined}
             />
-            {detalleAsistenciaOpen && kpiAsistencia?.desglose && Object.keys(kpiAsistencia.desglose).length > 0 && (
-              <div style={{background:'#f9fafb',border:'1px solid #e5e7eb',borderRadius:8,padding:12,marginTop:8}}>
+            {detalleAsistenciaOpen && (
+              <DetallePanel title="Asistencia Sacramental" onClose={() => setDetalleAsistenciaOpen(false)}>
                 <strong style={{fontSize:13,color:'#374151'}}>Desglose por barrio:</strong>
                 <table style={{width:'100%',borderCollapse:'collapse',marginTop:6,fontSize:13}}>
                   <tbody>
-                    {Object.entries(kpiAsistencia.desglose).map(([barrio, valor]) => (
+                    {Object.entries(kpiAsistencia?.desglose || {}).map(([barrio, valor]) => (
                       <tr key={barrio} style={{borderBottom:'1px solid #e5e7eb'}}>
                         <td style={{padding:'4px 0',color:'#555'}}>{barrio}</td>
                         <td style={{padding:'4px 0',textAlign:'right',fontWeight:600,color:'#1e40af'}}>{valor}</td>
@@ -582,12 +596,12 @@ export default function Dashboard() {
                     ))}
                     <tr style={{borderTop:'2px solid #cbd5e1'}}>
                       <td style={{padding:'5px 0',fontWeight:700}}>Total</td>
-                      <td style={{padding:'5px 0',textAlign:'right',fontWeight:700,color:'#1e40af'}}>{kpiAsistencia.real}</td>
+                      <td style={{padding:'5px 0',textAlign:'right',fontWeight:700,color:'#1e40af'}}>{kpiAsistencia?.real ?? 0}</td>
                     </tr>
                   </tbody>
                 </table>
-                <button onClick={() => setDetalleAsistenciaOpen(false)} style={{marginTop:8,padding:'4px 12px',borderRadius:6,border:'1px solid #ddd',background:'#fff',cursor:'pointer'}}>Cerrar</button>
-              </div>
+                {Object.keys(kpiAsistencia?.desglose || {}).length === 0 && <p className="detalle-empty">No hay desglose por barrio disponible.</p>}
+              </DetallePanel>
             )}
             {(!kpiAsistencia || kpiAsistencia.real === 0) && (
               <p style={{fontSize:12,color:'#999',marginTop:8}}>
@@ -628,7 +642,7 @@ export default function Dashboard() {
               onDetalleClick={ministeringRawText ? () => setDetalleMinisteringOpen(v => !v) : undefined}
             />
             {detalleMinisteringOpen && ministeringRawText && (
-              <div style={{background:'#f9fafb',border:'1px solid #ddd',borderRadius:8,padding:16,marginTop:8}}>
+              <DetallePanel title="Entrevistas de ministración" onClose={() => setDetalleMinisteringOpen(false)}>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',gap:16}}>
                   {[
                     { key: 'brothers', title: 'Hombres', color: '#0f6b82' },
@@ -665,8 +679,7 @@ export default function Dashboard() {
                     )
                   })}
                 </div>
-                <button onClick={() => setDetalleMinisteringOpen(false)} style={{marginTop:10,padding:'4px 12px',borderRadius:6,border:'1px solid #ddd',background:'#fff',cursor:'pointer'}}>Cerrar</button>
-              </div>
+              </DetallePanel>
             )}
             {!ministeringRawText && (
               <p style={{fontSize:12,color:'#999',marginTop:8}}>
@@ -763,7 +776,7 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
     gap: '20px',
     marginBottom: '40px'
   },

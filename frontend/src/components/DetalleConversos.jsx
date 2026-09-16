@@ -1,3 +1,5 @@
+import { useId, useState } from 'react'
+
 function agruparPorUnidad(personas) {
   const grupos = new Map()
   personas.forEach(persona => {
@@ -9,44 +11,57 @@ function agruparPorUnidad(personas) {
 }
 
 export default function DetalleConversos({ detalle }) {
+  const [busqueda, setBusqueda] = useState('')
+  const searchId = useId()
   const bautismos = detalle.indicador === 'bautismos_conversos'
   const recomendacion = detalle.indicador === 'conversos_recomendacion'
   const personas = (bautismos ? detalle.personas : detalle.reales) || []
   const faltantes = detalle.faltantes || []
+  const grupos = agruparPorUnidad(personas)
   const titulo = bautismos ? 'Bautismos por unidad' : recomendacion ? 'Con recomendación activa por unidad' : 'Ordenados por unidad'
+  const normalizar = value => (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es')
+  const consulta = normalizar(busqueda.trim())
+  const pendientes = faltantes.filter(p => normalizar(`${p.nombre} ${p.unidad || 'Sin unidad registrada'}`).includes(consulta))
 
   return (
     <>
-      <strong>{titulo} ({personas.length})</strong>
-      {personas.length > 0 ? (
-        <table style={{ width: '100%', borderCollapse: 'collapse', margin: '12px 0' }}>
-          <thead><tr><th scope="col" style={{ textAlign: 'left' }}>Unidad</th><th scope="col" style={{ textAlign: 'right' }}>Cantidad</th></tr></thead>
-          <tbody>
-            {agruparPorUnidad(personas).map(([unidad, miembros]) => (
-              <tr key={unidad} style={{ borderTop: '1px solid #e5e7eb' }}>
-                <td style={{ padding: '8px 0' }}>{unidad}</td>
-                <td style={{ textAlign: 'right', fontWeight: 600 }}>{miembros.length}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot><tr><th scope="row" style={{ textAlign: 'left' }}>Total</th><td style={{ textAlign: 'right', fontWeight: 700 }}>{personas.length}</td></tr></tfoot>
-        </table>
-      ) : <p>No hay registros en este período.</p>}
+      <div className="detalle-stats">
+        <div className="detalle-stat"><strong>{personas.length}</strong><span>{bautismos ? 'Bautismos registrados' : recomendacion ? 'Con recomendación activa' : 'Conversos ordenados'}</span></div>
+        <div className="detalle-stat"><strong>{grupos.length}</strong><span>Unidades con registros</span></div>
+        {!bautismos && <div className="detalle-stat detalle-stat--pending"><strong>{faltantes.length}</strong><span>Pendientes de seguimiento</span></div>}
+      </div>
+      <section className="detalle-section">
+        <h3>{titulo}</h3>
+        {personas.length > 0 ? (
+          <table className="detalle-units">
+            <thead><tr><th scope="col">Unidad</th><th scope="col">Cantidad</th></tr></thead>
+            <tbody>{grupos.map(([unidad, miembros]) => (
+              <tr key={unidad}><td>{unidad}</td><td><span className="detalle-count">{miembros.length}</span></td></tr>
+            ))}</tbody>
+            <tfoot><tr><th scope="row">Total</th><td><strong>{personas.length}</strong></td></tr></tfoot>
+          </table>
+        ) : <p className="detalle-empty">No hay registros en este período.</p>}
+      </section>
       {!bautismos && (
-        <section style={{ marginTop: 20, borderTop: '2px solid #f59e0b', paddingTop: 12 }}>
-          <strong>{recomendacion ? 'Pendientes de recomendación activa' : 'Pendientes de ordenación'} ({faltantes.length})</strong>
-          {recomendacion && <p style={{ fontSize: 13, color: '#4b5563' }}>Conversos mayores de 11 años sin estado de recomendación «Activa».</p>}
-          {faltantes.length === 0 ? <p>No hay pendientes en este período.</p> : (
-            agruparPorUnidad(faltantes).map(([unidad, miembros]) => (
-              <div key={unidad} style={{ marginTop: 12 }}>
-                <strong>{unidad} ({miembros.length})</strong>
-                <ul style={{ margin: '6px 0', paddingLeft: 20 }}>
-                  {[...miembros].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((persona, i) => (
+        <section className="detalle-section">
+          <span className="detalle-eyebrow">Seguimiento por unidad</span>
+          <h3>{recomendacion ? 'Pendientes de recomendación activa' : 'Pendientes de ordenación'} ({faltantes.length})</h3>
+          {recomendacion && <p>Conversos mayores de 11 años sin estado de recomendación «Activa».</p>}
+          {faltantes.length === 0 ? <p className="detalle-empty">No hay pendientes en este período.</p> : (
+            <>
+              <label htmlFor={searchId} style={{ fontSize: 12, color: '#64748b' }}>Buscar por nombre o unidad</label>
+              <input id={searchId} className="detalle-search" type="search" placeholder="Escribe un nombre o una unidad…" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+              {consulta && <p role="status">{pendientes.length} de {faltantes.length} pendientes</p>}
+              {pendientes.length === 0 && <p className="detalle-empty">No encontramos coincidencias para esa búsqueda.</p>}
+              {agruparPorUnidad(pendientes).map(([unidad, miembros]) => (
+                <div key={unidad} className="detalle-pending-group">
+                  <h4>{unidad}<span className="detalle-count">{miembros.length}</span></h4>
+                  <ul>{[...miembros].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((persona, i) => (
                     <li key={persona.id || i}>{persona.nombre}</li>
-                  ))}
-                </ul>
-              </div>
-            ))
+                  ))}</ul>
+                </div>
+              ))}
+            </>
           )}
         </section>
       )}

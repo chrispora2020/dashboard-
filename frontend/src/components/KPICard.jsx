@@ -1,3 +1,5 @@
+import './detalle.css'
+
 export default function KPICard({ title, meta, actual, potencial, comentario, unit = '', color = '#667eea', onDetalleClick, breakdown = [] }) {
   const esPorcentaje = unit === '%' && potencial != null
   const esBautismos = !esPorcentaje
@@ -111,10 +113,15 @@ export default function KPICard({ title, meta, actual, potencial, comentario, un
         <span style={{ ...styles.status, color: statusColors[status], fontWeight: 600 }}>
           {status === 'green' ? '✓ En Meta' : status === 'orange' ? '⚠ Alerta' : '✗ Bajo'}
         </span>
-        {onDetalleClick && (
-          <button onClick={onDetalleClick} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, border: `1px solid ${color}44`, background: '#fff', cursor: 'pointer', color }}>Ver detalle</button>
-        )}
+
       </div>
+
+      {onDetalleClick && (
+        <button type="button" onClick={onDetalleClick} className="kpi-detail-button" aria-haspopup="dialog" aria-label={title ? `Ver detalle de ${title}` : 'Ver detalle'}>
+          <span>Ver detalle</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" /></svg>
+        </button>
+      )}
 
       {comentario && comentario.length > 0 && (
         <div style={styles.comentario}>
