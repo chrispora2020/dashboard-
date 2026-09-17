@@ -340,11 +340,11 @@ export default function StakeMessagesPlan({ canEdit = true }) {
   }
 
   if (loading || !activeQuarter) {
-    return <div style={styles.page}>Cargando plan trimestral...</div>
+    return <div className="workspace-page" style={styles.page}>Cargando plan trimestral...</div>
   }
 
   return (
-    <div style={styles.page}>
+    <div className="workspace-page" style={styles.page}>
       {autoWhatsappReminder ? (
         <div style={styles.topReminderWrap}>
           <div style={styles.quickReminderCard}>
@@ -359,7 +359,7 @@ export default function StakeMessagesPlan({ canEdit = true }) {
           </div>
         </div>
       ) : null}
-      <div style={styles.card}>
+      <div className="workspace-surface" style={styles.card}>
         <div style={styles.headerRow}>
           <div>
             <h2 style={styles.title}>Mensajes de Estaca Maroñas</h2>
@@ -634,7 +634,7 @@ const styles = {
     background: '#15803d',
     color: '#fff',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '10px 12px',
     cursor: 'pointer',
     fontWeight: 700
@@ -666,7 +666,7 @@ const styles = {
   input: {
     width: '100%',
     boxSizing: 'border-box',
-    borderRadius: '8px',
+    borderRadius: '14px',
     border: '1px solid #d1d5db',
     padding: '10px 12px',
     marginBottom: '10px',
@@ -677,7 +677,7 @@ const styles = {
     width: '100%',
     minHeight: '84px',
     boxSizing: 'border-box',
-    borderRadius: '8px',
+    borderRadius: '14px',
     border: '1px solid #d1d5db',
     padding: '10px 12px',
     marginBottom: '10px',
@@ -710,7 +710,7 @@ const styles = {
     background: '#2563eb',
     color: '#fff',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '10px 14px',
     cursor: 'pointer',
     fontWeight: 'bold',
@@ -720,7 +720,7 @@ const styles = {
     background: '#e2e8f0',
     color: '#0f172a',
     border: '1px solid #cbd5e1',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '10px 12px',
     cursor: 'pointer',
     minHeight: '42px'
@@ -729,7 +729,7 @@ const styles = {
     background: '#f8fafc',
     color: '#0f172a',
     border: '1px solid #cbd5e1',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '10px 12px',
     cursor: 'pointer',
     minHeight: '42px',
@@ -763,7 +763,7 @@ const styles = {
     background: '#0369a1',
     color: '#fff',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '10px 12px',
     cursor: 'pointer'
   },
@@ -771,7 +771,7 @@ const styles = {
     background: '#16a34a',
     color: '#fff',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '10px 12px',
     cursor: 'pointer'
   },
@@ -779,7 +779,7 @@ const styles = {
     background: '#15803d',
     color: '#fff',
     border: '2px solid #14532d',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '10px 12px',
     cursor: 'pointer',
     fontWeight: 700
@@ -804,7 +804,7 @@ const styles = {
     width: '72px',
     height: '72px',
     objectFit: 'cover',
-    borderRadius: '8px',
+    borderRadius: '14px',
     border: '1px solid #cbd5e1'
   },
   previewDescription: {

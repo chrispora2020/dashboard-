@@ -285,7 +285,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div style={styles.container}>
+      <div className="dashboard-page" style={styles.container}>
         <div style={styles.loading}>
           <div style={styles.spinner}>⏳</div>
           <p>Cargando indicadores...</p>
@@ -295,10 +295,11 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <div style={styles.filters}>
-          <select 
+    <div className="dashboard-page" style={styles.container}>
+      <div className="dashboard-heading">
+        <div><span className="page-eyebrow">VISIÓN GENERAL</span><h1>Unidos en el progreso</h1><p>Una mirada clara a nuestras metas y a quienes necesitan seguimiento.</p></div>
+        <div className="dashboard-period"><label htmlFor="dashboard-period">Período de seguimiento</label><div style={styles.filters}>
+          <select id="dashboard-period"
             style={styles.select}
             value={periodoActual}
             onChange={(e) => setPeriodoActual(e.target.value)}
@@ -309,7 +310,7 @@ export default function Dashboard() {
             <option value="Q3 2026">2026 - Q3</option>
             <option value="Q4 2026">2026 - Q4</option>
           </select>
-        </div>
+        </div></div>
       </div>
 
       <div ref={indicadoresRef}>
@@ -330,12 +331,12 @@ export default function Dashboard() {
 
         <h2 style={styles.sectionTitle}>Nuevos Conversos</h2>
         {listaConversos && (
-          <p>Lista guardada: <strong>{listaConversos.total}</strong> conversos.
+          <p className="dashboard-list-status">Lista guardada: <strong>{listaConversos.total}</strong> conversos.
             {' '}En {periodoActual}: <strong>{listaConversos.en_periodo}</strong>.
             {listaConversos.fuera_periodo > 0 && ` Fuera del período o sin fecha: ${listaConversos.fuera_periodo}.`}
           </p>
         )}
-        <div style={styles.grid}>
+        <div className="kpi-grid" style={styles.grid}>
         {kpis.length === 0 ? (
           <div style={styles.emptyState}>
             <p>No hay indicadores disponibles.</p>
@@ -348,14 +349,14 @@ export default function Dashboard() {
                 title={kpi.title}
                 meta={kpi.meta}
                 actual={kpi.actual}
-                potencial={kpi.potencial}
+                potencial={kpi.unit === '%' ? kpi.potencial : undefined}
                 comentario={kpi.comentario}
                 unit={kpi.unit}
                 color={kpi.color}
                 onDetalleClick={() => handleDetalleClick(kpi)}
               />
               {detalleOpen === kpi.id && (
-                <DetallePanel title={kpi.title} subtitle={`Nuevos conversos · ${periodoActual}`} onClose={() => setDetalleOpen(null)}>
+                <DetallePanel title={kpi.title} metrics={{ actual: detalleKPI?.resumen?.real ?? kpi.actual, potencial: kpi.unit === '%' ? (detalleKPI?.resumen?.potencial ?? kpi.potencial) : undefined, meta: detalleKPI?.resumen?.meta ?? kpi.meta, unit: kpi.unit, pendientes: kpi.unit === '%' ? (detalleKPI?.faltantes?.length ?? Math.max(0, kpi.potencial - kpi.actual)) : undefined }} subtitle={`Nuevos conversos · ${periodoActual}`} onClose={() => setDetalleOpen(null)}>
                   {detalleError ? (
                     <div className="detalle-empty" role="alert">
                       <p>{detalleError}</p>
@@ -374,7 +375,7 @@ export default function Dashboard() {
 
       {/* ── Indicadores: Jóvenes · Adultos · Misioneros · Asistencia ── */}
       <div style={{marginTop: 32}}>
-        <div style={styles.grid}>
+        <div className="kpi-grid" style={styles.grid}>
 
           {/* Jóvenes con Recomendación */}
           {kpiJovenes && (
@@ -383,7 +384,8 @@ export default function Dashboard() {
             <KPICard
               meta={100}
               actual={kpiJovenes.real}
-              potencial={kpiJovenes.real}
+              potencial={kpiJovenes.potencial}
+              unit="%"
               comentario={`Activa: ${kpiJovenes.desglose?.activa ?? 0} · Vence pronto: ${kpiJovenes.desglose?.vence_pronto ?? 0}`}
               color={
                 kpiJovenes.real >= 80 ? '#10b981'
@@ -393,7 +395,7 @@ export default function Dashboard() {
               onDetalleClick={() => setDetalleJovenesOpen(v => !v)}
             />
             {detalleJovenesOpen && (
-              <DetallePanel title="Jóvenes con Recomendación" onClose={() => setDetalleJovenesOpen(false)}>
+              <DetallePanel title="Jóvenes con Recomendación" metrics={{ actual: kpiJovenes.real, potencial: kpiJovenes.potencial, meta: 100, unit: '%', pendientes: Math.max(0, kpiJovenes.potencial - kpiJovenes.real) }} onClose={() => setDetalleJovenesOpen(false)}>
                 <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:16}}>
                   {[
                     { label:'Activas',        key:'activa',       bg:'#dcfce7', color:'#166534' },
@@ -441,7 +443,7 @@ export default function Dashboard() {
             <KPICard
               meta={390}
               actual={kpiAdultos.real}
-              potencial={kpiAdultos.real}
+              potencial={kpiAdultos.potencial}
               comentario={`Activa: ${kpiAdultos.desglose?.activa ?? 0} · Vence pronto: ${kpiAdultos.desglose?.vence_pronto ?? 0}`}
               color={
                 kpiAdultos.real >= 312 ? '#10b981'
@@ -451,7 +453,7 @@ export default function Dashboard() {
               onDetalleClick={() => setDetalleAdultosOpen(v => !v)}
             />
             {detalleAdultosOpen && (
-              <DetallePanel title="Adultos con Recomendación" onClose={() => setDetalleAdultosOpen(false)}>
+              <DetallePanel title="Adultos con Recomendación" metrics={{ actual: kpiAdultos.real, potencial: kpiAdultos.potencial, meta: 390, pendientes: Math.max(0, kpiAdultos.potencial - kpiAdultos.real) }} onClose={() => setDetalleAdultosOpen(false)}>
                 <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:16}}>
                   {[
                     { label:'Activas',       key:'activa',       bg:'#dcfce7', color:'#166534' },
@@ -497,7 +499,6 @@ export default function Dashboard() {
             <KPICard
               meta={19}
               actual={kpiMisioneros?.real ?? 0}
-              potencial={kpiMisioneros?.real ?? 0}
               color={
                 (kpiMisioneros?.real ?? 0) >= 17 ? '#10b981'
                 : (kpiMisioneros?.real ?? 0) >= 10 ? '#f59e0b'
@@ -510,7 +511,7 @@ export default function Dashboard() {
               onDetalleClick={kpiMisioneros?.real > 0 || kpiMisioneros?.sub_servicio > 0 ? () => setDetalleMisionerosOpen(v => !v) : undefined}
             />
             {detalleMisionerosOpen && (
-              <DetallePanel title="Misioneros en el Campo" onClose={() => setDetalleMisionerosOpen(false)}>
+              <DetallePanel title="Misioneros en el Campo" metrics={{ actual: kpiMisioneros?.real ?? 0, meta: 19 }} onClose={() => setDetalleMisionerosOpen(false)}>
                 {/* Misioneros en el Campo */}
                 {(kpiMisioneros.personas?.length > 0) && (
                   <>
@@ -575,7 +576,6 @@ export default function Dashboard() {
             <KPICard
               meta={550}
               actual={kpiAsistencia?.real ?? 0}
-              potencial={kpiAsistencia?.real ?? 0}
               color={
                 (kpiAsistencia?.real ?? 0) >= 495 ? '#10b981'
                 : (kpiAsistencia?.real ?? 0) >= 330 ? '#f59e0b'
@@ -584,7 +584,7 @@ export default function Dashboard() {
               onDetalleClick={kpiAsistencia?.real > 0 ? () => setDetalleAsistenciaOpen(v => !v) : undefined}
             />
             {detalleAsistenciaOpen && (
-              <DetallePanel title="Asistencia Sacramental" onClose={() => setDetalleAsistenciaOpen(false)}>
+              <DetallePanel title="Asistencia Sacramental" metrics={{ actual: kpiAsistencia?.real ?? 0, meta: 550 }} onClose={() => setDetalleAsistenciaOpen(false)}>
                 <strong style={{fontSize:13,color:'#374151'}}>Desglose por barrio:</strong>
                 <table style={{width:'100%',borderCollapse:'collapse',marginTop:6,fontSize:13}}>
                   <tbody>
@@ -615,7 +615,6 @@ export default function Dashboard() {
             <KPICard
               meta={100}
               actual={ministeringSummary.overallPercent}
-              potencial={100}
               unit={'%'}
               comentario={`Hombres: ${ministeringSummary.brothersPercent}% (${ministeringSummary.brothersRatio}) · Mujeres: ${ministeringSummary.sistersPercent}% (${ministeringSummary.sistersRatio})`}
               breakdown={[
@@ -642,7 +641,7 @@ export default function Dashboard() {
               onDetalleClick={ministeringRawText ? () => setDetalleMinisteringOpen(v => !v) : undefined}
             />
             {detalleMinisteringOpen && ministeringRawText && (
-              <DetallePanel title="Entrevistas de ministración" onClose={() => setDetalleMinisteringOpen(false)}>
+              <DetallePanel title="Entrevistas de ministración" metrics={{ actual: ministeringSummary.overallPercent, meta: 100, unit: '%' }} onClose={() => setDetalleMinisteringOpen(false)}>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',gap:16}}>
                   {[
                     { key: 'brothers', title: 'Hombres', color: '#0f6b82' },
@@ -746,10 +745,10 @@ export default function Dashboard() {
 
 const styles = {
   container: {
-    padding: '30px',
+    padding: '32px 24px',
     maxWidth: '1400px',
     margin: '0 auto',
-    fontFamily: 'Arial, sans-serif'
+    fontFamily: 'var(--font-ui)'
   },
   header: {
     display: 'flex',
@@ -782,9 +781,9 @@ const styles = {
   },
   chartSection: {
     background: 'white',
-    borderRadius: '8px',
+    borderRadius: '20px',
     padding: '25px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    boxShadow: 'var(--shadow-card)',
     marginBottom: '30px'
   },
   chartTitle: {
@@ -793,9 +792,9 @@ const styles = {
     color: '#333'
   },
   info: {
-    background: '#eff6ff',
-    border: '1px solid #bfdbfe',
-    borderRadius: '8px',
+    background: '#fff',
+    border: '1px solid #e2e8f0',
+    borderRadius: '20px',
     padding: '15px 20px'
   },
   summaryChartTitle: {
@@ -840,7 +839,7 @@ const styles = {
   error: {
     background: '#fee2e2',
     border: '1px solid #ef4444',
-    borderRadius: '8px',
+    borderRadius: '20px',
     padding: '20px',
     marginBottom: '20px',
     color: '#991b1b',
@@ -850,8 +849,8 @@ const styles = {
     textAlign: 'center',
     padding: '60px 20px',
     background: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    borderRadius: '20px',
+    boxShadow: 'var(--shadow-card)',
   },
   link: {
     color: '#667eea',

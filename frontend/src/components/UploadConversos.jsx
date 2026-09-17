@@ -94,7 +94,7 @@ export default function UploadConversos({ onUploadComplete }) {
   }
 
   return (
-    <div style={styles.container}>
+    <div className="workspace-page" style={styles.container}>
       <h2 style={styles.title}>📁 Subir Lista de Nuevos Conversos</h2>
 
       <div
@@ -182,7 +182,7 @@ const styles = {
     maxWidth: '800px',
     margin: '0 auto',
     padding: '30px',
-    fontFamily: 'Arial, sans-serif'
+    fontFamily: 'var(--font-ui)'
   },
   title: {
     fontSize: '24px',
@@ -200,7 +200,7 @@ const styles = {
     marginBottom: '20px'
   },
   dropZoneActive: {
-    borderColor: '#667eea',
+    borderColor: 'var(--brand)',
     background: '#f0f4ff'
   },
   fileInput: {
@@ -232,7 +232,7 @@ const styles = {
   error: {
     background: '#fee',
     border: '1px solid #fcc',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '15px',
     color: '#c33',
     marginBottom: '20px'
@@ -248,7 +248,7 @@ const styles = {
     color: 'white',
     border: 'none',
     padding: '12px 30px',
-    borderRadius: '8px',
+    borderRadius: '14px',
     fontSize: '16px',
     fontWeight: 'bold',
     cursor: 'pointer',
@@ -262,14 +262,14 @@ const styles = {
     color: '#666',
     border: '2px solid #ddd',
     padding: '12px 30px',
-    borderRadius: '8px',
+    borderRadius: '14px',
     fontSize: '16px',
     cursor: 'pointer'
   },
   info: {
     background: '#e3f2fd',
     border: '1px solid #90caf9',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '20px'
   },
   infoTitle: {

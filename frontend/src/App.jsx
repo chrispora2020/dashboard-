@@ -90,7 +90,7 @@ export default function App() {
 
   return (
     <HashRouter>
-      <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
+      <div className="app-shell">
         <Navbar
           user={user}
           onLogout={handleLogout}
@@ -98,6 +98,7 @@ export default function App() {
           isPresidencia={canManageLists}
         />
 
+        <main className="app-content">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route
@@ -164,6 +165,7 @@ export default function App() {
           <Route path="/plan-discursos" element={<Navigate to="/mensajes/ver" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </main>
       </div>
     </HashRouter>
   )

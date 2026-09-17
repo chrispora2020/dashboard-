@@ -339,7 +339,7 @@ export default function ImportacionConversos() {
     }
 
     return (
-      <div style={cardStyles.card}>
+      <div className="workspace-surface" style={cardStyles.card}>
         <div style={cardStyles.cardHeader}>
           <span style={{...cardStyles.badge, background:'#fce7f3', color:'#9d174d'}}>Asistencia</span>
           <h3 style={cardStyles.cardTitle}>Asistencia Sacramental</h3>
@@ -410,7 +410,7 @@ export default function ImportacionConversos() {
 
   if (step === 'upload') {
     return (
-      <div style={cardStyles.page}>
+      <div className="workspace-page" style={cardStyles.page}>
         <h2 style={cardStyles.pageTitle}>Cargar Listas</h2>
         <p style={cardStyles.pageSubtitle}>Cada lista es independiente. Cargá el archivo correspondiente en la sección que corresponde.</p>
 
@@ -470,7 +470,7 @@ export default function ImportacionConversos() {
           </div>
 
           {/* ── Conversos ── */}
-          <div style={cardStyles.card}>
+          <div className="workspace-surface" style={cardStyles.card}>
             <div style={cardStyles.cardHeader}>
               <span style={{...cardStyles.badge, background:'#ede9fe', color:'#5b21b6'}}>Conversos</span>
               <h3 style={cardStyles.cardTitle}>Lista de Nuevos Conversos</h3>
@@ -518,7 +518,7 @@ export default function ImportacionConversos() {
           </div>
 
           {/* ── Adultos Investidos ── */}
-          <div style={cardStyles.card}>
+          <div className="workspace-surface" style={cardStyles.card}>
             <div style={cardStyles.cardHeader}>
               <span style={{...cardStyles.badge, background:'#fef3c7', color:'#92400e'}}>Adultos</span>
               <h3 style={cardStyles.cardTitle}>Lista de Adultos Investidos con Recomendación</h3>
@@ -563,7 +563,7 @@ export default function ImportacionConversos() {
           </div>
 
           {/* ── Misioneros ── */}
-          <div style={cardStyles.card}>
+          <div className="workspace-surface" style={cardStyles.card}>
             <div style={cardStyles.cardHeader}>
               <span style={{...cardStyles.badge, background:'#dbeafe', color:'#1e40af'}}>Misioneros</span>
               <h3 style={cardStyles.cardTitle}>Lista de Misioneros en el Campo</h3>
@@ -613,7 +613,7 @@ export default function ImportacionConversos() {
           <AsistenciaCard />
 
           {/* ── Entrevistas de Ministración ── */}
-          <div style={cardStyles.card}>
+          <div className="workspace-surface" style={cardStyles.card}>
             <div style={cardStyles.cardHeader}>
               <span style={{...cardStyles.badge, background:'#e0f2fe', color:'#0c4a6e'}}>Ministración</span>
               <h3 style={cardStyles.cardTitle}>Entrevistas de ministración (Hombres / Mujeres)</h3>
@@ -655,7 +655,7 @@ export default function ImportacionConversos() {
           </div>
 
           {/* ── Jóvenes ── */}
-          <div style={cardStyles.card}>
+          <div className="workspace-surface" style={cardStyles.card}>
             <div style={cardStyles.cardHeader}>
               <span style={{...cardStyles.badge, background:'#dcfce7', color:'#166534'}}>Jóvenes</span>
               <h3 style={cardStyles.cardTitle}>Lista de Jóvenes con Recomendación</h3>
@@ -706,8 +706,8 @@ export default function ImportacionConversos() {
 
   if (step === 'procesando') {
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
+      <div className="workspace-page" style={styles.container}>
+        <div className="workspace-surface" style={styles.card}>
           <div style={{textAlign: 'center', padding: '60px 20px'}}>
             <div style={{fontSize: '48px', marginBottom: '20px'}}>⚡</div>
             <h2 style={{fontSize: '24px', color: '#333', marginBottom: '10px'}}>Procesando datos...</h2>
@@ -733,8 +733,8 @@ export default function ImportacionConversos() {
     // Mostrar mapeo automático de columnas de forma simple
     const mapeos = mapeoData?.mapeos || [];
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
+      <div className="workspace-page" style={styles.container}>
+        <div className="workspace-surface" style={styles.card}>
           <div style={styles.header}>
             <div style={styles.stepIndicator}>
               <div style={styles.step} data-active="false">1. Upload</div>
@@ -817,8 +817,8 @@ export default function ImportacionConversos() {
 
   if (step === 'completado') {
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
+      <div className="workspace-page" style={styles.container}>
+        <div className="workspace-surface" style={styles.card}>
           <h2 style={styles.title}>🎉 Importación Completada</h2>
 
           <div style={styles.success}>
@@ -868,13 +868,13 @@ const styles = {
     padding: '30px',
     maxWidth: '900px',
     margin: '0 auto',
-    fontFamily: 'Arial, sans-serif',
+    fontFamily: 'var(--font-ui)',
   },
   card: {
     background: 'white',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '40px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    boxShadow: 'var(--shadow-card)',
   },
   header: {
     marginBottom: '30px',
@@ -905,7 +905,7 @@ const styles = {
   },
   summary: {
     background: '#f9fafb',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '20px',
     marginBottom: '30px',
   },
@@ -922,7 +922,7 @@ const styles = {
     background: '#d1fae5',
     borderLeft: '4px solid #10b981',
     padding: '20px',
-    borderRadius: '8px',
+    borderRadius: '14px',
     marginBottom: '30px',
   },
   successIcon: {
@@ -939,7 +939,7 @@ const styles = {
   },
   nextSteps: {
     background: '#f3f4f6',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '20px',
     marginBottom: '30px',
   },
@@ -953,7 +953,7 @@ const styles = {
     paddingLeft: '20px',
   },
   link: {
-    color: '#667eea',
+    color: 'var(--brand)',
     textDecoration: 'none',
     fontWeight: '600',
   },
@@ -968,9 +968,9 @@ const styles = {
     fontSize: '16px',
     fontWeight: '600',
     color: 'white',
-    background: '#667eea',
+    background: 'var(--brand)',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '14px',
     cursor: 'pointer',
     transition: 'background 0.2s',
   },
@@ -978,10 +978,10 @@ const styles = {
     padding: '12px 30px',
     fontSize: '16px',
     fontWeight: '600',
-    color: '#667eea',
+    color: 'var(--brand)',
     background: 'white',
     border: '2px solid #667eea',
-    borderRadius: '8px',
+    borderRadius: '14px',
     cursor: 'pointer',
     transition: 'all 0.2s',
   },
@@ -992,7 +992,7 @@ const cardStyles = {
     maxWidth: 900,
     margin: '0 auto',
     padding: '40px 20px',
-    fontFamily: 'Arial, sans-serif',
+    fontFamily: 'var(--font-ui)',
   },
   pageTitle: {
     margin: '0 0 6px 0',
@@ -1006,13 +1006,13 @@ const cardStyles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
     gap: 24,
   },
   card: {
     background: '#fff',
-    borderRadius: 12,
-    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+    borderRadius: 18,
+    boxShadow: 'var(--shadow-card)',
     padding: '24px 28px',
     display: 'flex',
     flexDirection: 'column',

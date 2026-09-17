@@ -205,15 +205,15 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
   }
 
   if (loading) {
-    return <div style={styles.page}>Cargando asignaciones...</div>
+    return <div className="workspace-page" style={styles.page}>Cargando asignaciones...</div>
   }
 
   const showHighCouncilSection = canEdit || viewSection === 'all' || viewSection === 'high-council'
   const showCommitteesSection = canEdit || viewSection === 'all' || viewSection === 'committees'
 
   return (
-    <div style={styles.page}>
-      <div style={styles.headerCard}>
+    <div className="workspace-page" style={styles.page}>
+      <div className="workspace-surface" style={styles.headerCard}>
         <h2 style={styles.title}>Asignación de Sumo Consejo y comités</h2>
         <p style={styles.subtitle}>
           {canEdit
@@ -516,16 +516,16 @@ const styles = {
   committeeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px', flexWrap: 'wrap' },
   leaderInfoInputs: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', flex: '1 1 420px' },
   inputLabel: { display: 'grid', gap: '4px', color: '#334155', fontSize: '13px' },
-  textInput: { border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 10px', fontSize: '14px' },
-  selectInput: { border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 10px', fontSize: '14px', background: '#fff' },
+  textInput: { border: '1px solid #cbd5e1', borderRadius: '14px', padding: '8px 10px', fontSize: '14px' },
+  selectInput: { border: '1px solid #cbd5e1', borderRadius: '14px', padding: '8px 10px', fontSize: '14px', background: '#fff' },
   committeeLeaderName: { color: '#0f172a', fontWeight: 600 },
   committeeChecks: { display: 'flex', gap: '12px', flexWrap: 'wrap' },
   checkLabel: { display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#334155', fontSize: '14px' },
   actionsRow: { marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' },
-  addBtn: { border: '1px solid #0b7ea8', borderRadius: '8px', background: '#ecfeff', color: '#0b7ea8', padding: '8px 12px', cursor: 'pointer', marginTop: '12px' },
+  addBtn: { border: '1px solid #0b7ea8', borderRadius: '14px', background: '#ecfeff', color: '#0b7ea8', padding: '8px 12px', cursor: 'pointer', marginTop: '12px' },
   saveBtn: {
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '14px',
     background: '#0b7ea8',
     color: '#fff',
     padding: '10px 16px',
@@ -533,7 +533,7 @@ const styles = {
   },
   restoreBtn: {
     border: '1px solid #b45309',
-    borderRadius: '8px',
+    borderRadius: '14px',
     background: '#fffbeb',
     color: '#b45309',
     padding: '10px 16px',

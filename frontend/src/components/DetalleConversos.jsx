@@ -24,14 +24,9 @@ export default function DetalleConversos({ detalle }) {
   const pendientes = faltantes.filter(p => normalizar(`${p.nombre} ${p.unidad || 'Sin unidad registrada'}`).includes(consulta))
 
   return (
-    <>
-      <div className="detalle-stats">
-        <div className="detalle-stat"><strong>{personas.length}</strong><span>{bautismos ? 'Bautismos registrados' : recomendacion ? 'Con recomendación activa' : 'Conversos ordenados'}</span></div>
-        <div className="detalle-stat"><strong>{grupos.length}</strong><span>Unidades con registros</span></div>
-        {!bautismos && <div className="detalle-stat detalle-stat--pending"><strong>{faltantes.length}</strong><span>Pendientes de seguimiento</span></div>}
-      </div>
+    <div className="conversos-detail">
       <section className="detalle-section">
-        <h3>{titulo}</h3>
+        <h3>{titulo}</h3><p>{grupos.length} unidades con registros</p>
         {personas.length > 0 ? (
           <table className="detalle-units">
             <thead><tr><th scope="col">Unidad</th><th scope="col">Cantidad</th></tr></thead>
@@ -65,6 +60,6 @@ export default function DetalleConversos({ detalle }) {
           )}
         </section>
       )}
-    </>
+    </div>
   )
 }

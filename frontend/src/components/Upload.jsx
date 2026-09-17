@@ -48,7 +48,7 @@ export default function Upload() {
   }
 
   return (
-    <div style={styles.container}>
+    <div className="workspace-page" style={styles.container}>
       <div style={styles.header}>
         <h2 style={styles.pageTitle}>Cargar PDFs</h2>
       </div>
@@ -134,7 +134,7 @@ const styles = {
     padding: '30px',
     maxWidth: '1200px',
     margin: '0 auto',
-    fontFamily: 'Arial, sans-serif'
+    fontFamily: 'var(--font-ui)'
   },
   header: {
     marginBottom: '30px'
@@ -146,14 +146,14 @@ const styles = {
   },
   uploadCard: {
     background: 'white',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '40px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    boxShadow: 'var(--shadow-card)',
     marginBottom: '30px'
   },
   dropZone: {
     border: '2px dashed #ddd',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '60px 40px',
     textAlign: 'center',
     transition: 'border-color 0.3s'
@@ -194,9 +194,9 @@ const styles = {
   },
   historyCard: {
     background: 'white',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '25px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+    boxShadow: 'var(--shadow-card)'
   },
   historyTitle: {
     margin: '0 0 20px 0',

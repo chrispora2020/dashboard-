@@ -356,7 +356,7 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
   }, [])
 
   return (
-    <main style={{ padding: isMobile ? '12px' : '20px', maxWidth: 1000, margin: '0 auto' }}>
+    <main className="workspace-page" style={{ padding: isMobile ? '12px' : '20px', maxWidth: 1000, margin: '0 auto' }}>
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0, color: '#1e293b', fontSize: isMobile ? 17 : 22 }}>
@@ -366,7 +366,7 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
           <button
             type="button"
             onClick={() => { setShowForm(true); setEditingId(null); setForm({ date: '', participants: '', transcript: '', summary: '' }) }}
-            style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}
+            style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}
           >
             + Nueva acta
           </button>
@@ -375,7 +375,7 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
 
       {/* Formulario nueva/editar acta */}
       {canEdit && (showForm || editingId) ? (
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 18, padding: isMobile ? '14px' : '20px 24px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ margin: 0, fontSize: 15, color: '#1e293b' }}>{editingId ? '✏️ Editar acta' : '➕ Nueva acta'}</h3>
             <button
@@ -407,7 +407,7 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
                         <button
                           type="button"
                           onClick={() => setForm((prev) => ({ ...prev, participants: leaderNames.join(', ') }))}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#6366f1', fontWeight: 600, padding: 0, textDecoration: 'underline' }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--brand)', fontWeight: 600, padding: 0, textDecoration: 'underline' }}
                         >Seleccionar todos</button>
                       )
                     ) : null}
@@ -489,7 +489,7 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
                     type="button"
                     onClick={handleAISummary}
                     disabled={summaryLoading}
-                    style={{ background: summaryLoading ? '#94a3b8' : '#6366f1', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 14px', cursor: summaryLoading ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13 }}
+                    style={{ background: summaryLoading ? '#94a3b8' : 'var(--brand)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 14px', cursor: summaryLoading ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13 }}
                   >
                     {summaryLoading ? '⏳ Generando...' : '✨ Generar resumen IA'}
                   </button>
@@ -554,7 +554,7 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 6, background: 'rgba(238,242,255,0.85)', pointerEvents: 'none' }}>
                       <div style={{ width: 36, height: 36, border: '4px solid #e0e7ff', borderTop: '4px solid #6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                       <span style={{ fontSize: 13, fontWeight: 600, color: '#4338ca' }}>La IA está pensando…</span>
-                      <span style={{ fontSize: 11, color: '#6366f1' }}>Esto puede tardar unos segundos</span>
+                      <span style={{ fontSize: 11, color: 'var(--brand)' }}>Esto puede tardar unos segundos</span>
                     </div>
                   ) : null}
                 </div>
@@ -565,7 +565,7 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
                 <button
                   type="submit"
                   disabled={saving}
-                  style={{ background: saving ? '#94a3b8' : '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14 }}
+                  style={{ background: saving ? '#94a3b8' : 'var(--brand)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14 }}
                 >
                   {saving ? '⏳ Guardando…' : editingId ? '💾 Actualizar acta' : '💾 Guardar acta'}
                 </button>
@@ -584,16 +584,16 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
 
       {/* Grilla de actas */}
       {recordsLoading ? (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6366f1' }}>
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--brand)' }}>
           <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>
           <p style={{ margin: 0, fontSize: 14 }}>Cargando actas…</p>
         </div>
       ) : recordsError ? (
-        <div style={{ textAlign: 'center', padding: '30px 20px', color: '#b91c1c', background: '#fff1f2', borderRadius: 12, border: '1px solid #fecdd3' }}>
+        <div style={{ textAlign: 'center', padding: '30px 20px', color: '#b91c1c', background: '#fff1f2', borderRadius: 18, border: '1px solid #fecdd3' }}>
           <p style={{ margin: 0, fontSize: 13 }}>{recordsError}</p>
         </div>
       ) : sortedRecords.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8', background: '#fff', borderRadius: 12, border: '1px dashed #e2e8f0' }}>
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8', background: '#fff', borderRadius: 18, border: '1px dashed #e2e8f0' }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
           <p style={{ margin: 0, fontSize: 14 }}>No hay actas registradas aún.</p>
         </div>
@@ -623,7 +623,7 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
                     /* Vista mobile: info + acciones en 2 columnas */
                     <>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', marginBottom: 2 }}>📅 {record.date}</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand)', marginBottom: 2 }}>📅 {record.date}</div>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           👥 {record.participants || 'Sin participantes'}
                         </div>
@@ -670,7 +670,7 @@ export default function MeetingMinutes({ canEdit, category = 'consejo' }) {
                 {isExpanded ? (
                   <div style={{ borderTop: '1px solid #e0e7ff', padding: isMobile ? '12px' : '16px 20px', background: '#fafafe' }}>
                     <div style={{ marginBottom: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📝 Resumen</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📝 Resumen</span>
                     </div>
                     <pre style={{ margin: 0, fontFamily: 'inherit', fontSize: isMobile ? 12 : 13, color: '#374151', whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{record.summary || 'Sin resumen.'}</pre>
                   </div>

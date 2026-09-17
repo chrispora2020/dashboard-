@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 export default function Navbar({ user, onLogout, canManageLists, isPresidencia }) {
   const userLabel = user?.name || user?.email || 'Usuario local'
   const location = useLocation()
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 991)
+  const navRef = useRef(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState('')
 
@@ -66,363 +66,41 @@ export default function Navbar({ user, onLogout, canManageLists, isPresidencia }
   ]
 
   useEffect(() => {
-    function onResize() {
-      const mobile = window.innerWidth <= 991
-      setIsMobile(mobile)
-      if (!mobile) {
-        setMenuOpen(false)
-      }
-    }
-
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-
-  useEffect(() => {
     setMenuOpen(false)
     setOpenDropdown('')
   }, [location.pathname])
-
-  function isRouteActive(group) {
-    return group.links.some((link) => link.to === location.pathname)
-  }
-
+  useEffect(() => {
+    const dismiss = event => { if (!navRef.current?.contains(event.target)) setOpenDropdown('') }
+    const escape = event => { if (event.key === 'Escape') { setOpenDropdown(''); setMenuOpen(false) } }
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', escape)
+    return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', escape) }
+  }, [])
   return (
-    <header style={styles.wrapper}>
-      <div style={styles.brandBar}>
-        <div style={styles.containerFluid}>
-          <div style={styles.brandWrap}>
-            <span style={styles.brandTitle}>{pageTitle}</span>
-          </div>
-
-          <div
-            style={{
-              ...styles.userSectionTop,
-              ...(isMobile ? styles.userSectionTopMobile : {})
-            }}
-          >
-            {isPresidencia ? (
-              <Link
-                to="/mensajes/editar"
-                style={{
-                  ...styles.reminderShortcut,
-                  ...(location.pathname === '/mensajes/editar' ? styles.reminderShortcutActive : {})
-                }}
-              >
-                🔔 Recordatorio activo
-              </Link>
-            ) : null}
-            <span style={styles.userName}>{userLabel}</span>
-            <button onClick={onLogout} style={styles.logoutBtn}>Salir</button>
-          </div>
-        </div>
+    <header className="app-nav" ref={navRef}>
+      <div className="app-nav__main">
+        <Link to="/" className="app-brand" aria-label="Estaca Maroñas, inicio">
+          <span className="app-brand__icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 19V9l8-5 8 5v10M8 19v-5h8v5M12 4V1M2 21h20" /></svg></span>
+          <span><strong>Estaca Maroñas</strong><small>Seguimiento y organización</small></span>
+        </Link>
+        <div className="app-nav__account"><span className="app-avatar" aria-hidden="true">{userLabel.slice(0, 1)}</span><span className="app-nav__user">{userLabel}<small>{isPresidencia ? 'Presidencia' : 'Consejo'}</small></span><button type="button" className="app-logout" onClick={onLogout}>Salir</button></div>
+        <button type="button" className="app-menu-toggle" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} aria-controls="app-navigation" onClick={() => setMenuOpen(v => !v)}>{menuOpen ? '✕' : '☰'}</button>
       </div>
-
-      <nav style={styles.menuBar}>
-        <div style={styles.containerFluid}>
-          <Link to="/" style={styles.homeLink} aria-label="Inicio">⌂</Link>
-
-          <button
-            type="button"
-            style={{ ...styles.toggler, ...(!isMobile ? styles.togglerDesktop : {}) }}
-            onClick={() => setMenuOpen((prev) => !prev)}
-            aria-controls="navbarSupportedContent"
-            aria-expanded={menuOpen}
-            aria-label="Toggle navigation"
-          >
-            ☰
-          </button>
-
-          <div
-            id="navbarSupportedContent"
-            style={{
-              ...styles.collapse,
-              ...(menuOpen || !isMobile ? styles.collapseOpen : {}),
-              ...(isMobile ? styles.collapseMobile : {})
-            }}
-          >
-            <ul style={{ ...styles.navbarNav, ...(isMobile ? styles.navbarNavMobile : {}) }}>
-              {menuGroups.map((group) => {
-                const groupActive = isRouteActive(group)
-                if (group.links.length === 1) {
-                  const onlyLink = group.links[0]
-                  return (
-                    <li key={group.id} style={styles.navItem}>
-                      <Link
-                        to={onlyLink.to}
-                        style={{
-                          ...styles.navLink,
-                          ...(isMobile ? styles.navLinkMobile : {}),
-                          ...(onlyLink.to === location.pathname ? styles.navLinkActive : {})
-                        }}
-                      >
-                        {onlyLink.label}
-                      </Link>
-                    </li>
-                  )
-                }
-
-                const isOpen = openDropdown === group.id
-                return (
-                  <li
-                    key={group.id}
-                    style={{ ...styles.dropdownWrapper, ...(isMobile ? styles.dropdownWrapperMobile : {}) }}
-                  >
-                    <button
-                      type="button"
-                      style={{
-                        ...styles.dropdownToggle,
-                        ...(isMobile ? styles.dropdownToggleMobile : {}),
-                        ...(groupActive ? styles.navLinkActive : {})
-                      }}
-                      onClick={() => setOpenDropdown((prev) => (prev === group.id ? '' : group.id))}
-                      aria-expanded={isOpen}
-                    >
-                      {group.title} ▾
-                    </button>
-
-                    {isOpen ? (
-                      <ul style={{ ...styles.dropdownMenu, ...(isMobile ? styles.dropdownMenuMobile : {}) }}>
-                        {group.links.map((link) => (
-                          <li key={link.to}>
-                            <Link
-                              to={link.to}
-                              style={{
-                                ...styles.dropdownItem,
-                                ...(link.to === location.pathname ? styles.dropdownItemActive : {})
-                              }}
-                            >
-                              {link.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
+      <nav id="app-navigation" className={`app-nav__links ${menuOpen ? 'is-open' : ''}`} aria-label="Navegación principal">
+        <div className="app-nav__groups">
+          {menuGroups.map((group, index) => {
+            const active = group.links.some(link => link.to === location.pathname)
+            const expanded = openDropdown === group.id
+            return <div className="app-nav__group" key={group.id}>
+              {group.links.length === 1 ? <Link to={group.links[0].to} className={`app-nav__item ${active ? 'is-active' : ''}`} aria-current={active ? 'page' : undefined}><span className="app-nav__number">0{index + 1}</span>{group.title}</Link> : <>
+                <button type="button" className={`app-nav__item ${active ? 'is-active' : ''}`} aria-expanded={expanded} aria-controls={`nav-${group.id}`} onClick={() => setOpenDropdown(expanded ? '' : group.id)}><span className="app-nav__number">0{index + 1}</span>{group.title}<span aria-hidden="true">⌄</span></button>
+                {expanded && <div id={`nav-${group.id}`} className="app-nav__dropdown">{group.links.map(link => <Link key={link.to} to={link.to} aria-current={location.pathname === link.to ? 'page' : undefined}>{link.label.replace('📋 ', '')}</Link>)}</div>}
+              </>}
+            </div>
+          })}
         </div>
+        <span className="app-nav__current">{pageTitle}</span>
       </nav>
     </header>
   )
-}
-
-const styles = {
-  wrapper: {
-    position: 'sticky',
-    top: 0,
-    zIndex: 20,
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
-  },
-  brandBar: {
-    background: '#ececec',
-    borderBottom: '1px solid #d4d4d4'
-  },
-  menuBar: {
-    background: '#ffffff',
-    borderBottom: '1px solid #d1d1d1'
-  },
-  containerFluid: {
-    width: '100%',
-    boxSizing: 'border-box',
-    maxWidth: '1280px',
-    margin: '0 auto',
-    padding: '0 12px',
-    display: 'flex',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '0',
-    minHeight: '48px'
-  },
-  brandWrap: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    minWidth: 0,
-    flexGrow: 1
-  },
-  brandTitle: {
-    fontSize: 'clamp(0.78rem, 3vw, 1.05rem)',
-    color: '#1f2937',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-  },
-  userSectionTop: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginLeft: 'auto',
-    flexShrink: 0,
-    whiteSpace: 'nowrap'
-  },
-  userSectionTopMobile: {
-    maxWidth: '50%',
-    overflow: 'hidden',
-    gap: '4px'
-  },
-  userName: {
-    color: '#334155',
-    fontSize: '0.86rem',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-  },
-  reminderShortcut: {
-    textDecoration: 'none',
-    background: '#dcfce7',
-    color: '#166534',
-    border: '1px solid #86efac',
-    borderRadius: '999px',
-    padding: '5px 10px',
-    fontSize: '0.78rem',
-    fontWeight: 700,
-    whiteSpace: 'nowrap'
-  },
-  reminderShortcutActive: {
-    background: '#bbf7d0',
-    borderColor: '#4ade80'
-  },
-  logoutBtn: {
-    border: '1px solid #c8c8c8',
-    background: '#fff',
-    color: '#111827',
-    borderRadius: '6px',
-    padding: '6px 10px',
-    cursor: 'pointer',
-    fontSize: '0.85rem'
-  },
-  homeLink: {
-    textDecoration: 'none',
-    color: '#111827',
-    fontSize: '1.55rem',
-    lineHeight: 1,
-    marginRight: '4px',
-    flexShrink: 0
-  },
-  toggler: {
-    marginLeft: 'auto',
-    border: '1px solid #d1d5db',
-    borderRadius: '6px',
-    background: '#fff',
-    color: '#111827',
-    width: '38px',
-    height: '38px',
-    padding: 0,
-    fontSize: '22px',
-    lineHeight: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    flexShrink: 0
-  },
-  togglerDesktop: {
-    display: 'none'
-  },
-  collapse: {
-    display: 'none',
-    alignItems: 'center',
-    width: '100%'
-  },
-  collapseOpen: {
-    display: 'flex'
-  },
-  collapseMobile: {
-    width: '100%',
-    order: 10,
-    paddingBottom: '6px'
-  },
-  navbarNav: {
-    listStyle: 'none',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '2px',
-    margin: 0,
-    padding: 0,
-    width: '100%'
-  },
-  navbarNavMobile: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    padding: '6px'
-  },
-  navItem: {
-    position: 'relative'
-  },
-  navLink: {
-    textDecoration: 'none',
-    color: '#111827',
-    fontSize: '1.05rem',
-    padding: '12px 16px',
-    borderRadius: '4px',
-    display: 'inline-block'
-  },
-  navLinkMobile: {
-    display: 'block',
-    width: '100%',
-    fontSize: '0.95rem',
-    padding: '10px 12px'
-  },
-  navLinkActive: {
-    background: '#f1f5f9'
-  },
-  dropdownWrapper: {
-    position: 'relative'
-  },
-  dropdownWrapperMobile: {
-    width: '100%'
-  },
-  dropdownToggle: {
-    border: 'none',
-    background: 'transparent',
-    color: '#111827',
-    padding: '12px 16px',
-    borderRadius: '4px',
-    fontSize: '1.05rem',
-    cursor: 'pointer'
-  },
-  dropdownToggleMobile: {
-    width: '100%',
-    textAlign: 'left',
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '0.95rem',
-    padding: '10px 12px'
-  },
-  dropdownMenu: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    marginTop: '2px',
-    listStyle: 'none',
-    padding: '6px',
-    minWidth: '220px',
-    background: '#fff',
-    border: '1px solid #d9d9d9',
-    borderRadius: '6px',
-    boxShadow: '0 10px 24px rgba(0, 0, 0, 0.1)',
-    zIndex: 30
-  },
-  dropdownMenuMobile: {
-    position: 'static',
-    boxShadow: 'none',
-    marginTop: 0,
-    paddingLeft: '12px',
-    border: 'none',
-    borderLeft: '2px solid #e5e7eb'
-  },
-  dropdownItem: {
-    textDecoration: 'none',
-    color: '#111827',
-    padding: '8px 10px',
-    borderRadius: '4px',
-    display: 'block'
-  },
-  dropdownItemActive: {
-    background: '#f1f5f9'
-  }
 }

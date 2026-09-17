@@ -26,9 +26,9 @@ export default function MapeoColumnas({ uploadData, onMapeoComplete, onBack }) {
   // Mapeo automático al cargar y salto automático si todo está mapeado
   useEffect(() => {
     const variantes = {
-      nombre_preferencia: ['nombre', 'nombre_preferencia', 'nombre preferencia', 'lista nuevos conversos'],
+      nombre_preferencia: ['nombre', 'nombre_preferencia', 'nombre preferencia', 'nombre de preferencia', 'lista nuevos conversos'],
       fecha_confirmacion: ['fecha confirmacion', 'fecha_confirmación', 'fecha de la confirmacion', 'fecha de la confirmación'],
-      unidad: ['unidad'],
+      unidad: ['unidad', 'nombre de la unidad', 'unidad actual', 'barrio', 'barrio o rama'],
       sacerdocio: ['sacerdocio'],
       estado_recomendacion_raw: ['estado recomendacion', 'estado_recomendacion', 'estado_recomendacion_raw', 'recomendacion', 'estado de la recomendación'],
       llamamientos: ['llamamientos'],
@@ -40,28 +40,13 @@ export default function MapeoColumnas({ uploadData, onMapeoComplete, onBack }) {
     
     // Paso 1: Mapeo por nombre
     columnas_detectadas.forEach(col => {
-      const colNorm = String(col).toLowerCase().replace(/\s+/g, ' ').trim()
+      const normalizar = text => String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
+      const colNorm = normalizar(col)
       for (const [campo, aliasArr] of Object.entries(variantes)) {
-        if (aliasArr.some(alias => colNorm.includes(alias))) {
+        if (aliasArr.some(alias => colNorm === normalizar(alias))) {
           sugerido[col] = campo
           break
         }
-      }
-    })
-    
-    // Paso 2: Mapeo para columnas genéricas (col_X) que no se mapearon
-    const mapeoGenerico = {
-      'col_1': 'nombre_preferencia',
-      'col_2': 'edad_al_confirmar',
-      'col_3': 'sacerdocio',
-      'col_4': 'estado_recomendacion_raw',
-      'col_5': 'llamamientos',
-      'col_6': 'unidad',
-      'col_7': 'fecha_confirmacion'
-    }
-    columnas_detectadas.forEach(col => {
-      if (!sugerido[col] && mapeoGenerico[col]) {
-        sugerido[col] = mapeoGenerico[col]
       }
     })
     
@@ -103,8 +88,8 @@ export default function MapeoColumnas({ uploadData, onMapeoComplete, onBack }) {
 
   // Mostrar loading mientras se hace el mapeo automático
   return (
-    <div style={{maxWidth: '900px', margin: '0 auto', padding: '30px', fontFamily: 'Arial, sans-serif'}}>
-      <div style={{textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)'}}>
+    <div style={{maxWidth: '900px', margin: '0 auto', padding: '30px', fontFamily: 'var(--font-ui)'}}>
+      <div style={{textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '14px', boxShadow: 'var(--shadow-card)'}}>
         <div style={{fontSize: '48px', marginBottom: '20px'}}>🔗</div>
         <h2 style={{fontSize: '24px', color: '#333', marginBottom: '10px'}}>Mapeando columnas automáticamente...</h2>
         <p style={{color: '#666', fontSize: '16px'}}>Por favor espera un momento</p>

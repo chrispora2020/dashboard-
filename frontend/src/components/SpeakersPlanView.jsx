@@ -81,9 +81,9 @@ export default function SpeakersPlanView() {
   }, [])
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <section style={styles.hero}>
+    <div className="workspace-page" style={styles.page}>
+      <div className="workspace-page" style={styles.container}>
+        <section className="workspace-surface" style={styles.hero}>
           <h2 style={styles.title}>Plan de discursos y temas</h2>
           <p style={styles.subtitle}>
             Espacio para que cada discursante revise su tema con tiempo y pueda prepararse con oración.
@@ -213,7 +213,7 @@ const styles = {
   quarterSelect: {
     minWidth: '250px',
     border: '1px solid #cbd5e1',
-    borderRadius: '8px',
+    borderRadius: '14px',
     padding: '8px 10px'
   },
   planLabel: {
@@ -268,7 +268,7 @@ const styles = {
   previewImage: {
     width: '64px',
     height: '64px',
-    borderRadius: '8px',
+    borderRadius: '14px',
     objectFit: 'cover',
     border: '1px solid #bfdbfe'
   },
@@ -332,6 +332,6 @@ const styles = {
     background: '#fee2e2',
     border: '1px solid #fecaca',
     padding: '10px 12px',
-    borderRadius: '8px'
+    borderRadius: '14px'
   }
 }

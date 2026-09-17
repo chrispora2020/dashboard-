@@ -10,6 +10,7 @@ import pdfplumber
 from datetime import datetime, date
 
 from . import db
+from .columnas_listas import mapear_conversos, encabezado_pdf
 from .models import PdfFile, PersonaConverso, MapeoColumna, PeriodoKPI
 from .schemas import (
     PersonaConversoCreate, PersonaConversoOut, PersonaConversoEnriquecer,
@@ -47,133 +48,37 @@ def _guardar_lista(db_session, archivo, cantidad, errores):
         raise
 
 
-def _merge_pdf_continuation_rows(raw_rows: list, num_cols: int) -> list:
-    """
-    pdfplumber collapses multiline rows: all cell data lands in col_0, rest empty.
-    Pattern of a collapsed row:
-      col_0 = "Apellido, Nombre Edad? Sacerdocio? Recomendacion? Unidad Fecha"
-      col_1..n = all empty
-
-    Strategy:
-    1. If a row has data in multiple columns → already correctly parsed, keep as-is.
-    2. If a row has data ONLY in col_0 AND col_0 looks like person data (has comma) →
-       try to parse it by matching known patterns for each field.
-    3. If col_0 is a continuation-only line (Barrio X, or 'ordenado', no comma) →
-       merge into previous row's col_0 for re-parsing.
-    """
-    import re
-
-    MESES = r'(?:ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)'
-    DATE_RE = re.compile(rf'\d{{1,2}}\s+{MESES}\s+\d{{4}}', re.IGNORECASE)
-    UNIDAD_RE = re.compile(r'((?:Barrio|Rama|Distrito|Estaca)\s+[\w\s]+?)(?=\s+\d{{1,2}}\s+{MESES}|\s*$)'.format(MESES=MESES), re.IGNORECASE)
-    SACER_WORDS = ['Aarónico', 'Aaronico', 'Melquisedec', 'Elder', 'Diácono', 'Diacono',
-                   'Maestro', 'Presbítero', 'Presbitero', 'Sumo Sacerdote',
-                   'No ha sido ordenado', 'No ordenado', 'Sin ordenar']
-    REC_WORDS = ['Activa', 'Vigente', 'Valida', 'Válida', 'Vencida', 'Pendiente',
-                 'Sin recomendación', 'Sin recomendacion']
-
-    def cell(val):
-        if val is None:
-            return ''
-        s = ' '.join(str(val).split()).strip()
-        return '' if s.lower() in ('none', 'nan') else s
-
-    def all_other_empty(row):
-        return all(not cell(row[i]) for i in range(1, len(row)))
-
-    def parse_collapsed(text):
-        """
-        Parse a collapsed single-cell row into [nombre, edad, sacerdocio, recomendacion, llamamientos, unidad, fecha].
-        """
-        result = [''] * 7
-        remaining = text.strip()
-
-        # 1. Extract fecha (dd mes yyyy)
-        date_m = DATE_RE.search(remaining)
-        if date_m:
-            result[6] = date_m.group(0)
-            remaining = remaining[:date_m.start()].strip() + ' ' + remaining[date_m.end():].strip()
-            remaining = remaining.strip()
-
-        # 2. Extract sacerdocio (longest match first so "No ha sido ordenado" beats "ordenado")
-        for s in sorted(SACER_WORDS, key=len, reverse=True):
-            if re.search(re.escape(s), remaining, re.IGNORECASE):
-                result[2] = s
-                remaining = re.sub(re.escape(s), '', remaining, flags=re.IGNORECASE).strip()
-                break
-
-        # 3. Extract recomendacion
-        for r in sorted(REC_WORDS, key=len, reverse=True):
-            if re.search(re.escape(r), remaining, re.IGNORECASE):
-                result[3] = r
-                remaining = re.sub(re.escape(r), '', remaining, flags=re.IGNORECASE).strip()
-                break
-
-        # 4. Extract unidad (Barrio/Rama followed by name words)
-        unidad_m = re.search(r'(Barrio|Rama|Distrito|Estaca)\s+[\w\s]+', remaining, re.IGNORECASE)
-        if unidad_m:
-            result[5] = unidad_m.group(0).strip()
-            remaining = remaining[:unidad_m.start()].strip() + ' ' + remaining[unidad_m.end():].strip()
-            remaining = remaining.strip()
-
-        # 5. Extract edad (standalone 1-2 digit number)
-        edad_m = re.search(r'(?<!\d)(\d{1,2})(?!\d)', remaining)
-        if edad_m:
-            result[1] = edad_m.group(1)
-            remaining = remaining[:edad_m.start()].strip() + ' ' + remaining[edad_m.end():].strip()
-            remaining = remaining.strip()
-
-        # 6. Whatever remains is the name
-        result[0] = ' '.join(remaining.split())
-        return result
-
-    def is_continuation_only(row):
-        """Row that has only location/overflow text in col_0, no name data."""
-        col0 = cell(row[0])
-        if not col0:
-            return True
-        col0_lower = col0.lower()
-        if col0_lower == 'ordenado':
-            return True
-        # Pure location line with no comma: Barrio X / Rama X, all other cols empty
-        if not ',' in col0 and all_other_empty(row):
-            if any(col0_lower.startswith(p) for p in ('barrio ', 'rama ', 'distrito ', 'estaca ')):
-                return True
-        return False
-
-    if not raw_rows:
-        return []
-
-    padded = [(list(r) + [None] * num_cols)[:num_cols] for r in raw_rows]
-    result = []
-
-    for row in padded:
-        col0 = cell(row[0])
-
-        # Skip empty rows
-        if not col0 and all_other_empty(row):
-            continue
-
-        if is_continuation_only(row):
-            # Append col0 text to previous row's col0 for re-parsing
-            if result:
-                prev_col0 = cell(result[-1][0])
-                result[-1][0] = (prev_col0 + ' ' + col0).strip()
-            continue
-
-        # Check if this is a fully-collapsed row (all data in col0, rest empty)
-        if all_other_empty(row) and col0 and ',' in col0:
-            parsed = parse_collapsed(col0)
-            result.append(parsed)
-            continue
-
-        # Normal row: keep as-is
-        result.append(list(row))
-
-    print(f"[DEBUG] PDF merge: {len(padded)} raw rows → {len(result)} merged rows")
-    for i, r in enumerate(result):
-        print(f"[DEBUG]   row {i+1}: {[cell(c) for c in r]}")
-    return result
+def _leer_pdf_conversos(pdf):
+    """Lee cada celda por sus límites físicos, incluso si el PDF fusiona filas."""
+    columnas = None
+    limites = None
+    registros = []
+    for page in pdf.pages:
+        for table in page.find_tables():
+            raw = table.extract()
+            try:
+                header_index, current_columns = encabezado_pdf(raw)
+            except ValueError:
+                if columnas is None:
+                    continue
+                header_index = -1
+                current_columns = columnas
+            else:
+                cells = table.rows[header_index].cells
+                if any(cell is None for cell in cells):
+                    raise ValueError('No se pudieron separar las columnas del PDF. Importe la lista en CSV o Excel.')
+                limites = [(cell[0], cell[2]) for cell in cells]
+                if columnas is not None and current_columns != columnas:
+                    raise ValueError('Las columnas del PDF cambian entre páginas. Importe la lista en CSV o Excel.')
+                columnas = current_columns
+            for row in table.rows[header_index + 1:]:
+                registros.append([
+                    page.crop((left, row.bbox[1], right, row.bbox[3])).extract_text() or ''
+                    for left, right in limites
+                ])
+    if columnas is None:
+        raise ValueError('No se encontró la tabla con los encabezados Nombre y Unidad.')
+    return pd.DataFrame(registros, columns=columnas)
 
 
 # === UPLOAD Y DETECCIÓN DE COLUMNAS ===
@@ -212,22 +117,7 @@ async def upload_archivo(
             df = pd.read_csv(io.BytesIO(contents))
         elif file.filename.endswith('.pdf'):
             with pdfplumber.open(io.BytesIO(contents)) as pdf:
-                all_tables = []
-                for page in pdf.pages:
-                    tables = page.extract_tables()
-                    if tables:
-                        for table in tables:
-                            all_tables.extend(table)
-                if not all_tables:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="No se encontraron tablas en el PDF"
-                    )
-                headers = all_tables[0]
-                clean_headers = [h if h is not None else f"col_{i+1}" for i, h in enumerate(headers)]
-                raw_rows = all_tables[1:]
-                merged_rows = _merge_pdf_continuation_rows(raw_rows, len(clean_headers))
-                df = pd.DataFrame(merged_rows, columns=clean_headers)
+                df = _leer_pdf_conversos(pdf)
         else:
             df = pd.read_excel(io.BytesIO(contents))
 
@@ -392,22 +282,7 @@ async def confirmar_importacion(
         elif archivo.filename.endswith('.pdf') and os.path.exists(file_path):
             import pdfplumber
             with pdfplumber.open(file_path) as pdf:
-                all_tables = []
-                for page in pdf.pages:
-                    tables = page.extract_tables()
-                    if tables:
-                        for table in tables:
-                            all_tables.extend(table)
-                if not all_tables:
-                    raise Exception('No se encontraron tablas en el PDF')
-                headers = all_tables[0]
-                clean_headers = [h if h is not None else f"col_{i+1}" for i, h in enumerate(headers)]
-                raw_rows = all_tables[1:]
-                print(f"[DEBUG RAW] {len(raw_rows)} raw rows before merge:")
-                for ri, rr in enumerate(raw_rows):
-                    print(f"[DEBUG RAW]   {ri+1}: {[' '.join(str(c).split()) if c else '' for c in rr]}")
-                merged_rows = _merge_pdf_continuation_rows(raw_rows, len(clean_headers))
-                df = pd.DataFrame(merged_rows, columns=clean_headers)
+                df = _leer_pdf_conversos(pdf)
         else:
             # Si no existe el archivo físico, intentar reconstruir desde metadata (no ideal)
             raise Exception('Archivo original no disponible en disco')
@@ -425,56 +300,11 @@ async def confirmar_importacion(
     # Aplicar mapeo y crear registros
     # Mapeo automático si no hay mapeos explícitos
     if not mapeos:
-        print(f"[DEBUG] No hay mapeos explícitos, usando mapeo automático")
-        print(f"[DEBUG] Columnas del df: {list(df.columns)}")
-        
-        mapeo_dict = {}
-        
-        # PRIMERO: Mapeo por posición para columnas genéricas (col_X) - tiene prioridad
-        # En los PDF detectados: col_1=nombre, col_2=edad (no sexo), col_3=sacerdocio, col_4=recomendación
-        mapeo_generico = {
-            'col_1': 'nombre_preferencia',
-            'col_2': 'edad_al_confirmar',
-            'col_3': 'sacerdocio',
-            'col_4': 'estado_recomendacion_raw',
-            'col_5': 'llamamientos',
-            'col_6': 'unidad',
-            'col_7': 'fecha_confirmacion'
-        }
-        for col in df.columns:
-            if col in mapeo_generico:
-                mapeo_dict[col] = mapeo_generico[col]
-                print(f"[DEBUG] Mapeado por posición: {col} -> {mapeo_generico[col]}")
-        
-        # SEGUNDO: Para columnas NO genéricas, intentar mapeo por nombre/variantes
-        variantes_mapeo = {
-            'nombre_preferencia': ['nombre preferencia', 'nombre_preferencia'],
-            'sacerdocio': ['sacerdocio'],
-            'estado_recomendacion_raw': ['estado recomendacion', 'estado_recomendacion', 'estado_recomendacion_raw', 'estado de recomendación para el templo', 'estado de recomendacion para el templo', 'estado de la recomendación para el templo', 'estado de la recomendacion para el templo', 'estado de recomendación', 'estado de recomendacion', 'estado de la recomendación', 'estado de la recomendacion'],
-            'llamamientos': ['llamamientos'],
-            'unidad': ['unidad'],
-            'fecha_confirmacion': ['fecha confirmacion', 'fecha_confirmación', 'fecha de la confirmacion'],
-            'fecha_nacimiento': ['fecha nacimiento', 'fecha_nacimiento'],
-            'edad_al_confirmar': ['edad', 'edad_al_confirmar'],
-            'sexo': ['sexo']
-        }
-        for col in df.columns:
-            if col not in mapeo_dict:  # Solo si no se mapeó por posición
-                col_norm = str(col).strip().lower()
-                for campo, variantes_lista in variantes_mapeo.items():
-                    if any(col_norm == v for v in variantes_lista):  # Coincidencia exacta, no "in"
-                        mapeo_dict[col] = campo
-                        print(f"[DEBUG] Mapeado por nombre: {col} -> {campo}")
-                        break
-        
-        # TERCERO: Si la primera columna aún no está mapeada, asumirla como nombre
-        primera_col = df.columns[0] if len(df.columns) > 0 else None
-        if primera_col and primera_col not in mapeo_dict:
-            mapeo_dict[primera_col] = 'nombre_preferencia'
-            print(f"[DEBUG] Primera columna mapeada por defecto: {primera_col} -> nombre_preferencia")
-        
-        print(f"[DEBUG] Mapeo final: {mapeo_dict}")
-        print(f"[DEBUG] Total filas en df: {len(df)}")
+        mapeo_dict = mapear_conversos(list(df.columns))
+    else:
+        unidad_fuente = next(col for col, campo in mapear_conversos(list(df.columns)).items() if campo == 'unidad')
+        mapeo_dict = {col: campo for col, campo in mapeo_dict.items() if campo != 'unidad'}
+        mapeo_dict[unidad_fuente] = 'unidad'
 
     from dateutil import parser as dateparser
     for idx, row in df.iterrows():
@@ -681,19 +511,7 @@ async def import_conversos_directo(
             df = pd.read_csv(io.BytesIO(contents))
         elif fname_lower.endswith('.pdf'):
             with pdfplumber.open(io.BytesIO(contents)) as pdf:
-                all_tables = []
-                for page in pdf.pages:
-                    tables = page.extract_tables()
-                    if tables:
-                        for table in tables:
-                            all_tables.extend(table)
-                if not all_tables:
-                    raise HTTPException(status_code=400, detail="No se encontraron tablas en el PDF")
-                headers = all_tables[0]
-                clean_headers = [h if h is not None else f"col_{i+1}" for i, h in enumerate(headers)]
-                raw_rows = all_tables[1:]
-                merged_rows = _merge_pdf_continuation_rows(raw_rows, len(clean_headers))
-                df = pd.DataFrame(merged_rows, columns=clean_headers)
+                df = _leer_pdf_conversos(pdf)
         else:
             df = pd.read_excel(io.BytesIO(contents))
 
@@ -729,47 +547,7 @@ async def import_conversos_directo(
             ~PdfFileModel.id.in_(ids_en_uso)
         ).delete(synchronize_session='fetch')
 
-        # --- Auto-mapeo ---
-        mapeo_dict = {}
-        mapeo_generico = {
-            'col_1': 'nombre_preferencia',
-            'col_2': 'edad_al_confirmar',
-            'col_3': 'sacerdocio',
-            'col_4': 'estado_recomendacion_raw',
-            'col_5': 'llamamientos',
-            'col_6': 'unidad',
-            'col_7': 'fecha_confirmacion'
-        }
-        for col in df.columns:
-            if col in mapeo_generico:
-                mapeo_dict[col] = mapeo_generico[col]
-
-        variantes_mapeo = {
-            'nombre_preferencia': ['nombre preferencia', 'nombre_preferencia'],
-            'sacerdocio': ['sacerdocio'],
-            'estado_recomendacion_raw': ['estado recomendacion', 'estado_recomendacion', 'estado_recomendacion_raw', 'estado de recomendación para el templo', 'estado de recomendacion para el templo', 'estado de la recomendación para el templo', 'estado de la recomendacion para el templo', 'estado de recomendación', 'estado de recomendacion', 'estado de la recomendación', 'estado de la recomendacion'],
-            'llamamientos': ['llamamientos'],
-            'unidad': ['unidad'],
-            'fecha_confirmacion': ['fecha confirmacion', 'fecha_confirmación', 'fecha de la confirmacion'],
-            'fecha_nacimiento': ['fecha nacimiento', 'fecha_nacimiento'],
-            'edad_al_confirmar': ['edad', 'edad_al_confirmar'],
-            'sexo': ['sexo']
-        }
-        for col in df.columns:
-            if col not in mapeo_dict:
-                col_norm = str(col).strip().lower()
-                for campo, variantes_lista in variantes_mapeo.items():
-                    if any(col_norm == v for v in variantes_lista):
-                        mapeo_dict[col] = campo
-                        break
-
-        primera_col = df.columns[0] if len(df.columns) > 0 else None
-        if primera_col and primera_col not in mapeo_dict:
-            mapeo_dict[primera_col] = 'nombre_preferencia'
-
-        print(f"[IMPORT] Columnas: {list(df.columns)}")
-        print(f"[IMPORT] Mapeo final: {mapeo_dict}")
-        print(f"[IMPORT] Total filas en df: {len(df)}")
+        mapeo_dict = mapear_conversos(list(df.columns))
 
         # --- Procesar filas ---
         errores = []
@@ -926,6 +704,9 @@ async def import_conversos_directo(
     except HTTPException:
         db_session.rollback()
         raise
+    except ValueError as e:
+        db_session.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         db_session.rollback()
         raise HTTPException(status_code=500, detail=f"Error procesando archivo: {str(e)}")

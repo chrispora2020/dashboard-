@@ -1,3 +1,4 @@
+from .columnas_listas import mapear_recomendaciones
 """
 Rutas para gestión de Jóvenes con Recomendación: upload e importación
 """
@@ -371,10 +372,10 @@ async def upload_jovenes(
             df = _parse_jovenes_pdf(contents)
         elif file.filename.endswith('.csv'):
             df = pd.read_csv(io.BytesIO(contents))
-            df.columns = ['nombre', 'sexo', 'edad', 'estado_raw', 'vencimiento_raw', 'unidad'][:len(df.columns)]
+            df = mapear_recomendaciones(df)
         else:
             df = pd.read_excel(io.BytesIO(contents))
-            df.columns = ['nombre', 'sexo', 'edad', 'estado_raw', 'vencimiento_raw', 'unidad'][:len(df.columns)]
+            df = mapear_recomendaciones(df)
     except Exception as e:
         db_session.rollback()
         raise HTTPException(status_code=400, detail=f"Error leyendo archivo: {str(e)}")

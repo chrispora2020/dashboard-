@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import './detalle.css'
+import KPIProgress from './KPIProgress'
 
-export default function DetallePanel({ title, subtitle = 'Detalle del indicador', onClose, children }) {
+export default function DetallePanel({ title, subtitle = 'Detalle del indicador', onClose, children, metrics }) {
   const dialogRef = useRef(null)
   const titleId = useId()
 
@@ -20,6 +21,12 @@ export default function DetallePanel({ title, subtitle = 'Detalle del indicador'
   }, [])
 
   function mantenerFoco(event) {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      onClose()
+      return
+    }
     if (event.key !== 'Tab') return
     const elements = [...dialogRef.current.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]')]
       .filter(element => element.getClientRects().length > 0)
@@ -46,6 +53,7 @@ export default function DetallePanel({ title, subtitle = 'Detalle del indicador'
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg>
           </button>
         </header>
+        {metrics && <div className="detalle-panel__metrics"><KPIProgress {...metrics} /></div>}
         <div className="detalle-panel__body">{children}</div>
         <footer className="detalle-panel__footer"><span>Tu lugar en el dashboard se conserva</span><button type="button" className="detalle-back" onClick={onClose}>Volver al dashboard</button></footer>
       </div>

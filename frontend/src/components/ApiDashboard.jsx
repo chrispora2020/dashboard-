@@ -31,7 +31,7 @@ export default function ApiDashboard() {
   }
 
   return (
-    <div style={styles.page}>
+    <div className="workspace-page" style={styles.page}>
       <h2 style={styles.title}>Dashboard API (beta)</h2>
       <p style={styles.help}>Esta solapa clona el dashboard para empezar a traer indicadores directo desde API.</p>
 
@@ -64,15 +64,14 @@ export default function ApiDashboard() {
               title='Asistencia Sacramental'
               meta={resultado.asistencia.meta}
               actual={resultado.asistencia.total}
-              potencial={resultado.asistencia.total}
               comentario='Promedio por unidad y luego suma total.'
               color={resultado.asistencia.porcentaje_logro >= 80 ? '#10b981' : resultado.asistencia.porcentaje_logro >= 50 ? '#f59e0b' : '#ef4444'}
             />
             <KPICard
               title='Jóvenes con Recomendación'
               meta={resultado.jovenes_recomendacion.meta}
-              actual={resultado.jovenes_recomendacion.porcentaje}
-              potencial={resultado.jovenes_recomendacion.porcentaje}
+              actual={resultado.jovenes_recomendacion.activos_mas_vence_pronto}
+              potencial={resultado.jovenes_recomendacion.total_jovenes}
               unit='%'
               comentario={`Activos + vence pronto: ${resultado.jovenes_recomendacion.activos_mas_vence_pronto} / ${resultado.jovenes_recomendacion.total_jovenes}`}
               color={resultado.jovenes_recomendacion.porcentaje >= 80 ? '#10b981' : resultado.jovenes_recomendacion.porcentaje >= 50 ? '#f59e0b' : '#ef4444'}
@@ -112,14 +111,14 @@ const styles = {
   page: { maxWidth: 1200, margin: '0 auto', padding: 20 },
   title: { marginBottom: 6 },
   help: { marginTop: 0, color: '#555' },
-  formCard: { background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' },
+  formCard: { background: '#fff', borderRadius: 18, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: 12, marginBottom: 12 },
   field: { display: 'flex', flexDirection: 'column', gap: 6, fontWeight: 600, fontSize: 14 },
   input: { padding: '8px 10px', borderRadius: 8, border: '1px solid #d0d7de', fontSize: 14 },
   button: { padding: '10px 16px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer', fontWeight: 600 },
   error: { marginTop: 12, background: '#fee2e2', color: '#991b1b', padding: 12, borderRadius: 8 },
   grid: { marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 },
-  tableCard: { marginTop: 20, background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' },
+  tableCard: { marginTop: 20, background: '#fff', borderRadius: 18, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '8px 6px' },
   td: { borderBottom: '1px solid #f1f5f9', padding: '8px 6px' }

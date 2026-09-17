@@ -58,9 +58,9 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div style={{ ...styles.container, ...(isMobile ? styles.containerMobile : null) }}>
+    <div className="login-page" style={{ ...styles.container, ...(isMobile ? styles.containerMobile : null) }}>
       <div style={{ ...styles.card, ...(isMobile ? styles.cardMobile : null) }}>
-        <h2 style={styles.title}>Iniciar sesión</h2>
+        <span className="page-eyebrow">ESTACA MAROÑAS</span><h2 style={styles.title}>Bienvenido</h2>
         <p style={styles.subtitle}>Seleccione rol y contraseña</p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -113,8 +113,8 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(135deg, #00587c 0%, #0b7ea8 100%)',
-    fontFamily: 'Arial, sans-serif'
+    background: 'var(--brand)',
+    fontFamily: 'var(--font-ui)'
   },
   containerMobile: {
     alignItems: 'stretch'
