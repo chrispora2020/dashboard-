@@ -588,7 +588,7 @@ export default function Dashboard() {
                 <strong style={{fontSize:13,color:'#374151'}}>Desglose por barrio:</strong>
                 <table style={{width:'100%',borderCollapse:'collapse',marginTop:6,fontSize:13}}>
                   <tbody>
-                    {Object.entries(kpiAsistencia?.desglose || {}).map(([barrio, valor]) => (
+                    {Object.entries(kpiAsistencia?.desglose || {}).sort(([a, cantidadA], [b, cantidadB]) => cantidadB - cantidadA || a.localeCompare(b, 'es')).map(([barrio, valor]) => (
                       <tr key={barrio} style={{borderBottom:'1px solid #e5e7eb'}}>
                         <td style={{padding:'4px 0',color:'#555'}}>{barrio}</td>
                         <td style={{padding:'4px 0',textAlign:'right',fontWeight:600,color:'#1e40af'}}>{valor}</td>
@@ -660,9 +660,9 @@ export default function Dashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {(data.units || []).slice(1).map((u, i) => (
+                            {(data.units || []).slice(1).map((u, i) => ({ ...u, nombreUnidad: getMinisteringUnitName(u.unidad, i) })).sort((a, b) => b.percent - a.percent || a.nombreUnidad.localeCompare(b.nombreUnidad, 'es')).map((u, i) => (
                               <tr key={`${section.key}-${i}`} style={{borderBottom:'1px solid #eef2f7'}}>
-                                <td style={{padding:'4px 6px'}}>{getMinisteringUnitName(u.unidad, i)}</td>
+                                <td style={{padding:'4px 6px'}}>{u.nombreUnidad}</td>
                                 <td style={{padding:'4px 6px',textAlign:'right',fontWeight:600,color:section.color}}>{u.percent}%</td>
                                 <td style={{padding:'4px 6px',textAlign:'right'}}>{u.interviewed}/{u.total}</td>
                               </tr>

@@ -63,7 +63,10 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .kpi-progress--compact .kpi-progress__values>div:last-child { border: 0; }
 .kpi-progress--compact .kpi-progress__values strong { font-size: 17px; }
 .kpi-progress__label { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: #74829a; margin-bottom: 9px; }
-.kpi-progress__label strong { color: #405884; font-weight: 600; }
+.kpi-progress__label strong { color: #946015; background: #fff7e8; padding: 3px 8px; border-radius: 7px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kpi-progress__label { align-items: center; }
+.kpi-progress--progress .kpi-progress__label strong { color: #496aa8; background: #edf3ff; }
+.kpi-progress--success .kpi-progress__label strong { color: #18765f; background: #eaf7f1; }
 .kpi-track { height: 7px; border-radius: 10px; background: #edf1f7; overflow: hidden; }
 .kpi-track>span { display: block; height: 100%; border-radius: inherit; background: #b59354; }
 .kpi-track--success>span { background: #4eaa91; }

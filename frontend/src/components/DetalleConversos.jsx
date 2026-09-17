@@ -7,7 +7,7 @@ function agruparPorUnidad(personas) {
     if (!grupos.has(unidad)) grupos.set(unidad, [])
     grupos.get(unidad).push(persona)
   })
-  return [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b, 'es'))
+  return [...grupos.entries()].sort(([a, personasA], [b, personasB]) => personasB.length - personasA.length || a.localeCompare(b, 'es'))
 }
 
 export default function DetalleConversos({ detalle }) {
@@ -26,7 +26,7 @@ export default function DetalleConversos({ detalle }) {
   return (
     <div className="conversos-detail">
       <section className="detalle-section">
-        <h3>{titulo}</h3><p>{grupos.length} unidades con registros</p>
+        <h3>{titulo}</h3><p>{grupos.length} unidades · De mayor a menor cantidad</p>
         {personas.length > 0 ? (
           <table className="detalle-units">
             <thead><tr><th scope="col">Unidad</th><th scope="col">Cantidad</th></tr></thead>

@@ -5,7 +5,7 @@ export default function KPICard({ title, meta, actual = 0, potencial, comentario
   const metric = getKpiMetrics({ actual, potencial, meta, unit })
   return (
     <article className="kpi-card">
-      <div className="kpi-card__top"><span className="kpi-card__eyebrow">{metric.porcentual ? 'Cobertura' : 'Resultado'}</span><span className={`kpi-status kpi-status--${metric.estado}`}><i />{metric.estado === 'success' ? 'Meta alcanzada' : metric.estado === 'progress' ? 'En progreso' : 'Por avanzar'}</span></div>
+      <div className="kpi-card__top"><span className="kpi-card__eyebrow">{metric.porcentual ? 'Cobertura' : 'Resultado'}</span><span className={`kpi-status kpi-status--${metric.estado}`}><i />{metric.avance >= 100 ? 'Meta alcanzada' : metric.estado === 'success' ? 'Cerca de la meta' : metric.estado === 'progress' ? 'En progreso' : 'Por avanzar'}</span></div>
       {title && <h3>{title}</h3>}
       <div className="kpi-card__number">{formatKpi(metric.valor)}<span>{metric.porcentual ? '%' : ''}</span></div>
       <KPIProgress actual={actual} potencial={potencial} meta={meta} unit={unit} compact />

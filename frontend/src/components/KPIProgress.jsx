@@ -2,7 +2,7 @@ import { formatKpi, getKpiMetrics } from '../utils/kpiMetrics'
 export default function KPIProgress({ actual = 0, potencial, meta = 0, unit = '', pendientes, compact = false }) {
   const metric = getKpiMetrics({ actual, potencial, meta, unit })
   return (
-    <div className={`kpi-progress ${compact ? 'kpi-progress--compact' : ''}`}>
+    <div className={`kpi-progress kpi-progress--${metric.estado} ${compact ? 'kpi-progress--compact' : ''}`}>
       <div className="kpi-progress__values">
         <div><span>Real</span><strong>{formatKpi(actual)}{unit === '%' && potencial == null ? '%' : ''}</strong></div>
         {potencial != null && <div><span>Potencial</span><strong>{formatKpi(potencial)}</strong></div>}
