@@ -1,5 +1,13 @@
 # KPI PDF Extractor - Dashboard
 
+## Asignaciones del Sumo Consejo
+
+- Se conserva el login existente por rol y contraseña. La pantalla de edición se habilita para Presidencia mediante el rol de la sesión actual en el frontend; la API de asignaciones no exige JWT ni valida ese rol en el servidor.
+- Consulta: `/#/asignaciones/sumo-consejo`, con las ocho columnas del Excel, y `/#/asignaciones/comites`.
+- Edición: `/#/asignaciones/editar`, exclusiva de Presidencia. Permite agregar y quitar miembros y modificar sus asignaciones, responsabilidades, referente y observaciones.
+- Los 11 miembros de `Asignaciones_Sumo_Consejo_Ampliadas.xlsx` están incluidos como datos iniciales. Si ya existe un plan guardado, se conserva. Para reemplazarlo, usar **Cargar datos del Excel**, revisar y pulsar **Guardar asignaciones**. El botón utiliza la copia incorporada de este archivo; no importa archivos nuevos. `B14` se corresponde con `Montevideo 14` de la hoja Listas.
+- Verificación de API: desde `backend`, ejecutar `python -m unittest discover -s tests -p test_council_assignments.py` con las dependencias del backend y `httpx==0.24.1` instalados.
+
 Aplicación web para seguimiento de indicadores (KPI) a partir de PDFs cargados por el usuario.
 
 ## Arquitectura

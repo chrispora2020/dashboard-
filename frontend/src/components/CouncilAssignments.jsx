@@ -1,451 +1,174 @@
 import axios from 'axios'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import API_BASE from '../config'
-import {
-    COUNCIL_ASSIGNMENTS_STORAGE_KEY,
-    DEFAULT_COUNCIL_ASSIGNMENTS_PLAN,
-    normalizeCouncilAssignmentsPayload
-} from '../utils/councilAssignments'
+import { COUNCIL_ASSIGNMENTS_STORAGE_KEY, DEFAULT_COUNCIL_ASSIGNMENTS_PLAN, normalizeCouncilAssignmentsPayload } from '../utils/councilAssignments'
 
 const API_PATH = '/api/council-assignments'
-
-function slugifyLeaderId(value) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-function LeaderCard({ leader, unitNames, committeesMap }) {
-  return (
-    <article style={styles.leaderCard}>
-      <p style={styles.leaderName}>
-        {leader.name}
-        {leader.isTraveler ? <span title="Miembro viajante" style={styles.travelerIcon}>🧭</span> : null}
-      </p>
-      {leader.assignmentTitle ? <p style={styles.leaderSubtitle}>{leader.assignmentTitle}</p> : null}
-      <p style={styles.metaText}>Barrios: {unitNames.length ? unitNames.join(', ') : 'Sin barrios asignados'}</p>
-      <p style={styles.metaText}>
-        Comité: {leader.committeeIds.map((id) => committeesMap[id]).filter(Boolean).join(', ') || 'Sin comité'}
-      </p>
-    </article>
-  )
-}
+const textFields = [
+  ['name', 'Miembro'], ['assignmentTitle', 'Llamamientos'],
+  ['additionalResponsibility', 'Responsabilidad adicional'],
+  ['referent', 'Referente'], ['observations', 'Observaciones']
+]
 
 export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
   const [plan, setPlan] = useState(DEFAULT_COUNCIL_ASSIGNMENTS_PLAN)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
-  const [newLeaderName, setNewLeaderName] = useState('')
-  const [newLeaderTitle, setNewLeaderTitle] = useState('')
-  const [newLeaderType, setNewLeaderType] = useState('high-council')
-
-  const unitsMap = useMemo(() => Object.fromEntries(plan.units.map((unit) => [unit.id, unit.name])), [plan.units])
-  const committeesMap = useMemo(() => Object.fromEntries(plan.committees.map((committee) => [committee.id, committee.name])), [plan.committees])
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
-    async function loadPlan() {
+    let active = true
+    async function load() {
       try {
         const { data } = await axios.get(`${API_BASE}${API_PATH}`)
-        const normalized = normalizeCouncilAssignmentsPayload(data?.plan)
-        setPlan(normalized)
-        localStorage.setItem(COUNCIL_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(normalized))
-      } catch (error) {
-        const cached = localStorage.getItem(COUNCIL_ASSIGNMENTS_STORAGE_KEY)
-        if (cached) {
-          setPlan(normalizeCouncilAssignmentsPayload(JSON.parse(cached)))
-        }
+        if (!active) return
+        const next = normalizeCouncilAssignmentsPayload(data.plan)
+        setPlan(next)
+        localStorage.setItem(COUNCIL_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(next))
+      } catch {
+        if (!active) return
+        setLoadFailed(true)
+        setStatus('No se pudo cargar el servidor. Se muestra una copia local o los datos del Excel; la edición está deshabilitada. Recarga para reintentar.')
+        try {
+          const cached = localStorage.getItem(COUNCIL_ASSIGNMENTS_STORAGE_KEY)
+          if (cached) setPlan(normalizeCouncilAssignmentsPayload(JSON.parse(cached)))
+        } catch { /* La copia dañada no reemplaza los datos iniciales. */ }
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
-
-    loadPlan()
+    load()
+    return () => { active = false }
   }, [])
 
-  const leaders = useMemo(
-    () => plan.leaders.map((leader) => ({ ...leader, unitIds: Array.isArray(leader.unitIds) ? leader.unitIds : [] })),
-    [plan.leaders]
-  )
+  useEffect(() => {
+    const warn = event => { if (dirty) { event.preventDefault(); event.returnValue = '' } }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
 
-  const highCouncilLeaders = useMemo(() => leaders.filter((leader) => leader.isHighCouncil), [leaders])
-
-  const highCouncilByUnit = useMemo(() => {
-    return plan.units.map((unit) => ({
-      ...unit,
-      leaders: highCouncilLeaders.filter((leader) => leader.unitIds.includes(unit.id))
-    }))
-  }, [highCouncilLeaders, plan.units])
-
-  const committeesWithLeaders = useMemo(() => {
-    return plan.committees.map((committee) => ({
-      ...committee,
-      leaders: leaders.filter((leader) => leader.committeeIds.includes(committee.id))
-    }))
-  }, [leaders, plan.committees])
-
-  function toggleLeaderUnit(leaderId, unitId) {
-    setPlan((prev) => ({
-      ...prev,
-      leaders: prev.leaders.map((leader) => {
-        if (leader.id !== leaderId || !leader.isHighCouncil) return leader
-
-        const currentUnitIds = Array.isArray(leader.unitIds)
-          ? leader.unitIds
-          : (leader.unitId ? [leader.unitId] : [])
-        const isAssigned = currentUnitIds.includes(unitId)
-        const nextUnitIds = isAssigned
-          ? currentUnitIds.filter((id) => id !== unitId)
-          : [...currentUnitIds, unitId]
-
-        return {
-          ...leader,
-          unitIds: nextUnitIds,
-          unitId: nextUnitIds[0] || ''
-        }
-      })
-    }))
+  function change(next) {
+    setPlan(next)
+    setDirty(true)
+    setStatus('Cambios pendientes de guardar.')
   }
-
-  function toggleTraveler(leaderId) {
-    setPlan((prev) => ({
-      ...prev,
-      leaders: prev.leaders.map((leader) => (leader.id === leaderId ? { ...leader, isTraveler: !leader.isTraveler } : leader))
-    }))
+  function update(id, field, value) {
+    change({ ...plan, leaders: plan.leaders.map(leader => leader.id === id ? { ...leader, [field]: value } : leader) })
   }
-
-  function toggleCommittee(leaderId, committeeId) {
-    setPlan((prev) => ({
-      ...prev,
-      leaders: prev.leaders.map((leader) => {
-        if (leader.id !== leaderId) return leader
-
-        const hasCommittee = leader.committeeIds.includes(committeeId)
-        return {
-          ...leader,
-          committeeIds: hasCommittee
-            ? leader.committeeIds.filter((id) => id !== committeeId)
-            : [...leader.committeeIds, committeeId]
-        }
-      })
-    }))
+  function toggle(id, field, value) {
+    const leader = plan.leaders.find(item => item.id === id)
+    const current = leader[field] || []
+    const next = current.includes(value) ? current.filter(item => item !== value) : [...current, value]
+    change({ ...plan, leaders: plan.leaders.map(item => item.id === id
+      ? { ...item, [field]: next, ...(field === 'unitIds' ? { unitId: next[0] || '' } : {}) } : item) })
   }
-
-
-  function updateLeaderField(leaderId, field, value) {
-    setPlan((prev) => ({
-      ...prev,
-      leaders: prev.leaders.map((leader) => (leader.id === leaderId ? { ...leader, [field]: value } : leader))
-    }))
+  function add() {
+    change({ ...plan, leaders: [...plan.leaders, {
+      id: crypto.randomUUID(), name: '', assignmentTitle: '', additionalResponsibility: '',
+      isHighCouncil: true, isTraveler: false, unitId: '', unitIds: [], committeeIds: [],
+      assignments: [], referent: '', observations: ''
+    }] })
   }
-
-  function addLeader() {
-    const cleanName = newLeaderName.trim()
-    if (!cleanName) {
-      setStatus('⚠️ Escribe el nombre del miembro para agregarlo.')
+  function remove(leader) {
+    if (window.confirm(`¿Quitar a ${leader.name || 'este miembro'}? Se aplicará al guardar.`)) {
+      change({ ...plan, leaders: plan.leaders.filter(item => item.id !== leader.id) })
+    }
+  }
+  async function save() {
+    if (plan.leaders.some(leader => !leader.name.trim())) {
+      setStatus('Completa el nombre de todos los miembros antes de guardar.')
       return
     }
-
-    const baseId = slugifyLeaderId(cleanName) || `lider-${Date.now()}`
-    const idExists = plan.leaders.some((leader) => leader.id === baseId)
-    const nextId = idExists ? `${baseId}-${Date.now()}` : baseId
-
-    const leaderToAdd = {
-      id: nextId,
-      name: cleanName,
-      assignmentTitle: newLeaderTitle.trim(),
-      isHighCouncil: newLeaderType === 'high-council',
-      isTraveler: false,
-      unitId: '',
-      unitIds: [],
-      committeeIds: []
-    }
-
-    setPlan((prev) => ({ ...prev, leaders: [...prev.leaders, leaderToAdd] }))
-    setNewLeaderName('')
-    setNewLeaderTitle('')
-    setNewLeaderType('high-council')
-    setStatus(`✅ Se agregó a ${cleanName}.`)
-  }
-
-  async function savePlan() {
     setSaving(true)
-    setStatus('')
-
     try {
-      await axios.post(`${API_BASE}${API_PATH}`, { plan })
-      localStorage.setItem(COUNCIL_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(plan))
-      setStatus('✅ Asignaciones guardadas correctamente.')
+      const { data } = await axios.post(`${API_BASE}${API_PATH}`, { plan })
+      const next = normalizeCouncilAssignmentsPayload(data.plan)
+      setPlan(next)
+      localStorage.setItem(COUNCIL_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(next))
+      setDirty(false)
+      setStatus('Asignaciones guardadas correctamente.')
     } catch (error) {
-      setStatus(`❌ No se pudo guardar: ${error.response?.data?.detail || error.message}`)
-    } finally {
-      setSaving(false)
+      setStatus(error.response?.data?.detail || 'No se pudo guardar. Tus cambios siguen en pantalla; vuelve a intentarlo.')
+    } finally { setSaving(false) }
+  }
+  function loadExcel() {
+    if (window.confirm('¿Cargar los 11 miembros y las asignaciones del Excel? Reemplazará el contenido del editor. Revisa los datos y pulsa Guardar para aplicarlos.')) {
+      change(normalizeCouncilAssignmentsPayload(structuredClone(DEFAULT_COUNCIL_ASSIGNMENTS_PLAN)))
     }
   }
+  const names = (ids, options) => (ids || []).map(id => options.find(option => option.id === id)?.name || id).join(', ') || '—'
+  const visible = plan.leaders.filter(leader => (viewSection === 'committees' || leader.isHighCouncil)
+    && `${leader.name} ${leader.assignmentTitle} ${leader.referent} ${(leader.assignments || []).join(' ')}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
+  const leave = event => { if (dirty && !window.confirm('Hay cambios sin guardar. ¿Salir y descartarlos?')) event.preventDefault() }
 
-  async function restoreBackup() {
-    if (!window.confirm('¿Restaurar los datos de respaldo? Esto reemplazará las asignaciones actuales con la lista original.')) return
-    setSaving(true)
-    setStatus('')
-    try {
-      await axios.post(`${API_BASE}${API_PATH}`, { plan: DEFAULT_COUNCIL_ASSIGNMENTS_PLAN })
-      localStorage.setItem(COUNCIL_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(DEFAULT_COUNCIL_ASSIGNMENTS_PLAN))
-      setPlan(DEFAULT_COUNCIL_ASSIGNMENTS_PLAN)
-      setStatus('✅ Datos de respaldo restaurados y guardados.')
-    } catch {
-      setPlan(DEFAULT_COUNCIL_ASSIGNMENTS_PLAN)
-      localStorage.setItem(COUNCIL_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(DEFAULT_COUNCIL_ASSIGNMENTS_PLAN))
-      setStatus('⚠️ Respaldo cargado localmente (no se pudo guardar en el servidor).')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  if (loading) {
-    return <div className="workspace-page" style={styles.page}>Cargando asignaciones...</div>
-  }
-
-  const showHighCouncilSection = canEdit || viewSection === 'all' || viewSection === 'high-council'
-  const showCommitteesSection = canEdit || viewSection === 'all' || viewSection === 'committees'
-
-  return (
-    <div className="workspace-page" style={styles.page}>
-      <div className="workspace-surface" style={styles.headerCard}>
-        <h2 style={styles.title}>Asignación de Sumo Consejo y comités</h2>
-        <p style={styles.subtitle}>
-          {canEdit
-            ? 'Pantalla de edición de asignaciones para Presidencia.'
-            : showHighCouncilSection && !showCommitteesSection
-              ? 'Vista dedicada a la asignación del Sumo Consejo por barrio.'
-              : !showHighCouncilSection && showCommitteesSection
-                ? 'Vista dedicada a la asignación por comités.'
-                : 'Vista consolidada de asignaciones.'}
-        </p>
-        <p style={styles.legend}>Referencia: 🧭 indica que el miembro está marcado como viajante.</p>
+  if (loading) return <div className="workspace-page" style={styles.page}>Cargando asignaciones...</div>
+  return <div className="workspace-page" style={styles.page}>
+    <header className="workspace-surface" style={styles.headerCard}>
+      <h2 style={styles.title}>{canEdit ? 'Editar asignaciones' : 'Asignaciones del Sumo Consejo'}</h2>
+      <p style={styles.subtitle}>{canEdit ? 'Administración de miembros y asignaciones · Solo Presidencia' : 'Consulta de llamamientos, barrios, comités y responsabilidades.'}</p>
+      <div style={styles.actionsRow}>
+        <Link to="/asignaciones/sumo-consejo" onClick={leave}>Ver asignaciones</Link>
+        {localStorage.getItem('dashboard_role') === 'presidencia' && <Link to="/asignaciones/editar">Editar asignaciones</Link>}
       </div>
-
-      {canEdit ? (
-        <div style={styles.sectionCard}>
-          <h3 style={styles.sectionTitle}>Editor para Presidencia</h3>
-          <p style={styles.hint}>Ahora puedes asignar varios barrios al mismo miembro del Sumo Consejo y marcar si es viajante.</p>
-
-          <div style={styles.addLeaderBox}>
-            <h4 style={styles.unitTitle}>Agregar miembro</h4>
-            <div style={styles.addLeaderGrid}>
-              <label style={styles.inputLabel}>
-                Nombre
-                <input
-                  type="text"
-                  value={newLeaderName}
-                  onChange={(event) => setNewLeaderName(event.target.value)}
-                  placeholder="Nombre completo"
-                  style={styles.textInput}
-                />
-              </label>
-
-              <label style={styles.inputLabel}>
-                Llamamiento / asignación
-                <input
-                  type="text"
-                  value={newLeaderTitle}
-                  onChange={(event) => setNewLeaderTitle(event.target.value)}
-                  placeholder="Ej: Presidente de ..."
-                  style={styles.textInput}
-                />
-              </label>
-
-              <label style={styles.inputLabel}>
-                Tipo de miembro
-                <select
-                  value={newLeaderType}
-                  onChange={(event) => setNewLeaderType(event.target.value)}
-                  style={styles.selectInput}
-                >
-                  <option value="high-council">Miembro del Sumo Consejo</option>
-                  <option value="other-leader">Otro líder (solo comités)</option>
-                </select>
-              </label>
-            </div>
-            <button type="button" style={styles.addBtn} onClick={addLeader}>Agregar miembro</button>
-          </div>
-
-          {showHighCouncilSection ? <div style={styles.committeeBox}>
-            <h4 style={styles.unitTitle}>Asignaciones de barrios (solo Sumo Consejo)</h4>
-            {leaders.map((leader) => (
-              <div key={`units-${leader.id}`} style={styles.committeeRow}>
-                <div style={styles.committeeHeader}>
-                  <div style={styles.leaderInfoInputs}>
-                    <label style={styles.inputLabel}>
-                      Nombre
-                      <input
-                        type="text"
-                        value={leader.name}
-                        onChange={(event) => updateLeaderField(leader.id, 'name', event.target.value)}
-                        style={styles.textInput}
-                      />
-                    </label>
-                    <label style={styles.inputLabel}>
-                      Llamamiento / asignación
-                      <input
-                        type="text"
-                        value={leader.assignmentTitle}
-                        onChange={(event) => updateLeaderField(leader.id, 'assignmentTitle', event.target.value)}
-                        style={styles.textInput}
-                      />
-                    </label>
-                  </div>
-                  <label style={styles.checkLabel}>
-                    <input
-                      type="checkbox"
-                      checked={leader.isTraveler}
-                      onChange={() => toggleTraveler(leader.id)}
-                    />
-                    Viajante
-                  </label>
-                </div>
-
-                {leader.isHighCouncil ? (
-                  <div style={styles.committeeChecks}>
-                    {plan.units.map((unit) => (
-                      <label key={`${leader.id}-${unit.id}`} style={styles.checkLabel}>
-                        <input
-                          type="checkbox"
-                          checked={leader.unitIds.includes(unit.id)}
-                          onChange={() => toggleLeaderUnit(leader.id, unit.id)}
-                        />
-                        {unit.name}
-                      </label>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={styles.emptyHint}>Este miembro no se asigna a barrios; solo participa en comités.</p>
-                )}
-              </div>
-            ))}
-          </div> : null}
-
-          {showCommitteesSection ? <div style={styles.committeeBox}>
-            <h4 style={styles.unitTitle}>Asignaciones de comités</h4>
-            {leaders.map((leader) => (
-              <div key={`committee-${leader.id}`} style={styles.committeeRow}>
-                <div style={styles.committeeHeader}>
-                  <div style={styles.leaderInfoInputs}>
-                    <label style={styles.inputLabel}>
-                      Nombre
-                      <input
-                        type="text"
-                        value={leader.name}
-                        onChange={(event) => updateLeaderField(leader.id, 'name', event.target.value)}
-                        style={styles.textInput}
-                      />
-                    </label>
-                    <label style={styles.inputLabel}>
-                      Llamamiento / asignación
-                      <input
-                        type="text"
-                        value={leader.assignmentTitle}
-                        onChange={(event) => updateLeaderField(leader.id, 'assignmentTitle', event.target.value)}
-                        style={styles.textInput}
-                      />
-                    </label>
-                    <label style={styles.inputLabel}>
-                      Tipo
-                      <select
-                        value={leader.isHighCouncil ? 'high-council' : 'other-leader'}
-                        onChange={(event) => updateLeaderField(leader.id, 'isHighCouncil', event.target.value === 'high-council')}
-                        style={styles.selectInput}
-                      >
-                        <option value="high-council">Sumo Consejo</option>
-                        <option value="other-leader">Otro líder</option>
-                      </select>
-                    </label>
-                  </div>
-                </div>
-                <div style={styles.committeeChecks}>
-                  {plan.committees.map((committee) => (
-                    <label key={`${leader.id}-${committee.id}`} style={styles.checkLabel}>
-                      <input
-                        type="checkbox"
-                        checked={leader.committeeIds.includes(committee.id)}
-                        onChange={() => toggleCommittee(leader.id, committee.id)}
-                      />
-                      {committee.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div> : null}
-
-          <div style={styles.actionsRow}>
-            <button type="button" style={styles.saveBtn} onClick={savePlan} disabled={saving}>
-              {saving ? 'Guardando...' : 'Guardar asignaciones'}
-            </button>
-            <button type="button" style={styles.restoreBtn} onClick={restoreBackup} disabled={saving}>
-              🔄 Restaurar datos de respaldo
-            </button>
-            {status ? <span style={styles.status}>{status}</span> : null}
-          </div>
+    </header>
+    {status && <p role="status" style={styles.status}>{status}</p>}
+    {canEdit ? <fieldset disabled={saving || loadFailed} style={styles.sectionCard}>
+      <legend>Editor para Presidencia</legend>
+      <p>Los cambios se aplican al pulsar Guardar asignaciones.</p>
+      <div style={styles.actionsRow}>
+        <button type="button" style={styles.addBtn} onClick={add}>Agregar miembro</button>
+        <button type="button" style={styles.restoreBtn} onClick={loadExcel}>Cargar datos del Excel</button>
+      </div>
+      <datalist id="council-referents">{plan.referentOptions.map(option => <option key={option} value={option} />)}</datalist>
+      <datalist id="council-assignments">{plan.assignmentOptions.map(option => <option key={option} value={option} />)}</datalist>
+      {plan.leaders.map(leader => <article key={leader.id} style={styles.committeeBox}>
+        <div style={styles.addLeaderGrid}>
+          {textFields.map(([field, label]) => <label key={field} style={styles.inputLabel}>{label}
+            {field === 'observations' ? <textarea style={styles.textInput} value={leader[field] || ''} onChange={event => update(leader.id, field, event.target.value)} />
+              : <input style={styles.textInput} value={leader[field] || ''} list={field === 'referent' ? 'council-referents' : undefined} onChange={event => update(leader.id, field, event.target.value)} />}
+          </label>)}
+          <label style={styles.inputLabel}>Tipo de miembro<select style={styles.selectInput} value={leader.isHighCouncil ? 'council' : 'other'} onChange={event => update(leader.id, 'isHighCouncil', event.target.value === 'council')}>
+            <option value="council">Sumo Consejo</option><option value="other">Otro líder (comités)</option>
+          </select></label>
         </div>
-      ) : (
-        <div style={styles.sectionCard}>
-          <h3 style={styles.sectionTitle}>Vista de asignaciones</h3>
-          <p style={styles.hint}>Estas asignaciones pueden ser consultadas tanto por Consejo como por Presidencia.</p>
-
-          {showHighCouncilSection ? <div style={styles.committeeBox}>
-            <h4 style={styles.unitTitle}>Asignaciones de barrios (Sumo Consejo)</h4>
-            <div style={styles.unitsGrid}>
-              {highCouncilByUnit.map((unit) => (
-                <section key={unit.id} style={styles.unitColumn}>
-                  <h5 style={styles.unitTitle}>{unit.name}</h5>
-                  {unit.leaders.length ? (
-                    unit.leaders.map((leader) => (
-                      <LeaderCard
-                        key={`${unit.id}-${leader.id}`}
-                        leader={leader}
-                        unitNames={leader.unitIds.map((id) => unitsMap[id]).filter(Boolean)}
-                        committeesMap={committeesMap}
-                      />
-                    ))
-                  ) : (
-                    <p style={styles.emptyHint}>Sin miembros asignados.</p>
-                  )}
-                </section>
-              ))}
-            </div>
-          </div> : null}
-
-          {showCommitteesSection ? <div style={styles.committeeBox}>
-            <h4 style={styles.unitTitle}>Asignaciones de comités</h4>
-            <div style={styles.committeesGrid}>
-              {committeesWithLeaders.map((committee) => (
-                <section key={committee.id} style={styles.unitColumn}>
-                  <h5 style={styles.committeeNameTitle}>{committee.name}</h5>
-                  {committee.leaders.length ? (
-                    <div style={styles.leaderCardsGrid}>
-                      {committee.leaders.map((leader) => (
-                        <LeaderCard
-                          key={`${committee.id}-${leader.id}`}
-                          leader={leader}
-                          unitNames={leader.unitIds.map((id) => unitsMap[id]).filter(Boolean)}
-                          committeesMap={committeesMap}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <p style={styles.emptyHint}>Sin miembros asignados.</p>
-                  )}
-                </section>
-              ))}
-            </div>
-          </div> : null}
-        </div>
-      )}
-    </div>
-  )
+        <p>Asignaciones (hasta tres; puedes escribir otra opción)</p>
+        <div style={styles.addLeaderGrid}>{Array.from({ length: Math.max(3, (leader.assignments || []).length) }, (_, index) => <label key={index} style={styles.inputLabel}>Asignación {index + 1}
+          <input style={styles.textInput} list="council-assignments" value={leader.assignments?.[index] || ''} onChange={event => {
+            const values = [...(leader.assignments || [])]; values[index] = event.target.value; update(leader.id, 'assignments', values)
+          }} />
+        </label>)}</div>
+        {leader.isHighCouncil && <fieldset style={styles.committeeBox}><legend>Barrios y ramas</legend><div style={styles.committeeChecks}>{plan.units.map(unit => <label key={unit.id} style={styles.checkLabel}>
+          <input type="checkbox" checked={leader.unitIds.includes(unit.id)} onChange={() => toggle(leader.id, 'unitIds', unit.id)} />{unit.name}
+        </label>)}</div></fieldset>}
+        <fieldset style={styles.committeeBox}><legend>Comités</legend><div style={styles.committeeChecks}>{plan.committees.map(committee => <label key={committee.id} style={styles.checkLabel}>
+          <input type="checkbox" checked={leader.committeeIds.includes(committee.id)} onChange={() => toggle(leader.id, 'committeeIds', committee.id)} />{committee.name}
+        </label>)}</div></fieldset>
+        <div style={styles.actionsRow}><label style={styles.checkLabel}><input type="checkbox" checked={leader.isTraveler} onChange={event => update(leader.id, 'isTraveler', event.target.checked)} />Viajante</label>
+          <button type="button" style={styles.restoreBtn} onClick={() => remove(leader)}>Quitar miembro</button></div>
+      </article>)}
+      {!plan.leaders.length && <p>No hay miembros. Puedes agregar uno o cargar los datos del Excel.</p>}
+      <div style={styles.actionsRow}><button type="button" style={styles.saveBtn} onClick={save} disabled={!dirty || saving}>{saving ? 'Guardando...' : 'Guardar asignaciones'}</button></div>
+    </fieldset> : <section style={styles.sectionCard}>
+      <label style={styles.inputLabel}>Buscar miembro, llamamiento, asignación o referente<input type="search" value={search} onChange={event => setSearch(event.target.value)} style={styles.textInput} /></label>
+      <p>{visible.length} miembros · 🧭 Viajante</p>
+      <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
+        <thead><tr>{['Miembro', 'Llamamientos', 'Responsabilidad adicional', 'Barrio asignado', 'Comité', 'Asignación', 'Referente', 'Observaciones'].map(title => <th key={title} scope="col" style={{ padding: 12, background: '#f1f5f9', minWidth: 140 }}>{title}</th>)}</tr></thead>
+        <tbody>{visible.map(leader => <tr key={leader.id}>{[
+          leader.name + (leader.isTraveler ? ' 🧭' : ''), leader.assignmentTitle,
+          leader.additionalResponsibility, names(leader.unitIds, plan.units), names(leader.committeeIds, plan.committees),
+          (leader.assignments || []).filter(Boolean).join(', '), leader.referent, leader.observations
+        ].map((value, index) => <td key={index} style={{ padding: 12, borderBottom: '1px solid #e2e8f0', verticalAlign: 'top', whiteSpace: 'pre-wrap' }}>{value || '—'}</td>)}</tr>)}</tbody>
+      </table></div>
+      {!visible.length && <p>No hay miembros para mostrar.</p>}
+      {viewSection === 'committees' && plan.committees.map(committee => <section key={committee.id} style={styles.committeeBox}>
+        <h3>{committee.name}</h3><p>{visible.filter(leader => leader.committeeIds.includes(committee.id)).map(leader => leader.name).join(', ') || 'Sin miembros asignados.'}</p>
+      </section>)}
+    </section>}
+  </div>
 }
 
 const styles = {

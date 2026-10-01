@@ -1,0 +1,285 @@
+{
+  "units": [
+    {
+      "id": "barrio-14",
+      "name": "Montevideo 14"
+    },
+    {
+      "id": "libia",
+      "name": "Libia"
+    },
+    {
+      "id": "belloni",
+      "name": "Belloni"
+    },
+    {
+      "id": "bella-italia",
+      "name": "Bella Italia"
+    },
+    {
+      "id": "los-ceibos",
+      "name": "Los Ceibos"
+    },
+    {
+      "id": "pando",
+      "name": "Pando"
+    },
+    {
+      "id": "toledo",
+      "name": "Toledo"
+    },
+    {
+      "id": "camino-maldonado",
+      "name": "Camino Maldonado"
+    }
+  ],
+  "committees": [
+    {
+      "id": "adultos",
+      "name": "Comité de Adultos"
+    },
+    {
+      "id": "jovenes",
+      "name": "Comité de Jóvenes"
+    }
+  ],
+  "assignmentOptions": [
+    "Obra Misional - Futuros Misoneros",
+    "Templo e Historia Familiar",
+    "Hombres Jóvenes",
+    "Mujeres Jóvenes",
+    "Primaria",
+    "Escuela Dominical",
+    "JAS/Adultos Solteros",
+    "Seminario e Instituto",
+    "Autosuficiencia/Bienestar",
+    "Comunicaciones",
+    "Música",
+    "Actividades",
+    "Edificios - Tecnologia",
+    "Discapacidad/necesidades especiales"
+  ],
+  "referentOptions": [
+    "Presidente Profeti",
+    "Presidente Zapatta",
+    "Presidente Silva"
+  ],
+  "leaders": [
+    {
+      "id": "mauricio-alvez",
+      "name": "Mauricio Alvez",
+      "assignmentTitle": "Secretario de Estaca",
+      "additionalResponsibility": "Consejero de Hombres Jóvenes",
+      "unitId": "belloni",
+      "unitIds": [
+        "belloni"
+      ],
+      "committeeIds": [
+        "jovenes"
+      ],
+      "assignments": [],
+      "referent": "Presidente Silva",
+      "observations": "",
+      "isHighCouncil": true,
+      "isTraveler": false
+    },
+    {
+      "id": "andres-benitez",
+      "name": "Andrés Benítez",
+      "assignmentTitle": "Secretario ejecutivo",
+      "additionalResponsibility": "Presidente de Hombres Jóvenes",
+      "unitId": "belloni",
+      "unitIds": [
+        "belloni"
+      ],
+      "committeeIds": [
+        "jovenes"
+      ],
+      "assignments": [],
+      "referent": "Presidente Silva",
+      "observations": "",
+      "isHighCouncil": true,
+      "isTraveler": false
+    },
+    {
+      "id": "jairo-paladino",
+      "name": "Jairo Paladino",
+      "assignmentTitle": "",
+      "additionalResponsibility": "",
+      "unitId": "bella-italia",
+      "unitIds": [
+        "bella-italia"
+      ],
+      "committeeIds": [
+        "jovenes"
+      ],
+      "assignments": [
+        "Edificios - Tecnologia"
+      ],
+      "referent": "Presidente Silva",
+      "observations": "",
+      "isHighCouncil": true,
+      "isTraveler": false
+    },
+    {
+      "id": "wualter-punales",
+      "name": "Wualter Puñales",
+      "assignmentTitle": "Segundo consejero de Hombres Jóvenes",
+      "additionalResponsibility": "",
+      "unitId": "barrio-14",
+      "unitIds": [
+        "barrio-14"
+      ],
+      "committeeIds": [
+        "jovenes"
+      ],
+      "assignments": [
+        "Comunicaciones"
+      ],
+      "referent": "Presidente Profeti",
+      "observations": "",
+      "isHighCouncil": true,
+      "isTraveler": false
+    },
+    {
+      "id": "juan-carlos",
+      "name": "Juan Carlos",
+      "assignmentTitle": "",
+      "additionalResponsibility": "",
+      "unitId": "camino-maldonado",
+      "unitIds": [
+        "camino-maldonado"
+      ],
+      "committeeIds": [
+        "jovenes"
+      ],
+      "assignments": [
+        "Obra Misional -Futuros Misoneros"
+      ],
+      "referent": "Presidente Profeti",
+      "observations": "",
+      "isHighCouncil": true,
+      "isTraveler": false
+    },
+    {
+      "id": "jose-gabarrin",
+      "name": "José Gabarrín",
+      "assignmentTitle": "",
+      "additionalResponsibility": "",
+      "unitId": "bella-italia",
+      "unitIds": [
+        "bella-italia"
+      ],
+      "committeeIds": [
+        "adultos"
+      ],
+      "assignments": [
+        "Templo e Historia Familiar"
+      ],
+      "referent": "Presidente Zapatta",
+      "observations": "",
+      "isHighCouncil": true,
+      "isTraveler": false
+    },
+    {
+      "id": "pablo-morales",
+      "name": "Pablo Morales",
+      "assignmentTitle": "",
+      "additionalResponsibility": "",
+      "unitId": "libia",
+      "unitIds": [
+        "libia"
+      ],
+      "committeeIds": [
+        "adultos"
+      ],
+      "assignments": [
+        "Autosuficiencia/Bienestar"
+      ],
+      "referent": "Presidente Zapatta",
+      "observations": "",
+      "isHighCouncil": true,
+      "isTraveler": false
+    },
+    {
+      "id": "ricardo-martinez",
+      "name": "Ricardo Martínez",
+      "assignmentTitle": "Presidente de Escuela Dominical",
+      "additionalResponsibility": "",
+      "unitId": "los-ceibos",
+      "unitIds": [
+        "los-ceibos"
+      ],
+      "committeeIds": [
+        "adultos"
+      ],
+      "assignments": [
+        "Seminario e Instituto"
+      ],
+      "referent": "Presidente Silva",
+      "observations": "",
+      "isHighCouncil": true,
+      "isTraveler": false
+    },
+    {
+      "id": "richard-alvez",
+      "name": "Richard Alvez",
+      "assignmentTitle": "Historiador",
+      "additionalResponsibility": "",
+      "unitId": "toledo",
+      "unitIds": [
+        "toledo"
+      ],
+      "committeeIds": [
+        "adultos"
+      ],
+      "assignments": [
+        "Primaria"
+      ],
+      "referent": "Presidente Silva",
+      "observations": "",
+      "isHighCouncil": true,
+      "isTraveler": false
+    },
+    {
+      "id": "joaquin-acosta",
+      "name": "Joaquín Acosta",
+      "assignmentTitle": "Consejero de Rama",
+      "additionalResponsibility": "",
+      "unitId": "toledo",
+      "unitIds": [
+        "toledo"
+      ],
+      "committeeIds": [
+        "adultos"
+      ],
+      "assignments": [
+        "Música"
+      ],
+      "referent": "Presidente Silva",
+      "observations": "",
+      "isHighCouncil": true,
+      "isTraveler": false
+    },
+    {
+      "id": "antonio-gonzalez",
+      "name": "Antonio González",
+      "assignmentTitle": "Lider AS",
+      "additionalResponsibility": "",
+      "unitId": "pando",
+      "unitIds": [
+        "pando"
+      ],
+      "committeeIds": [
+        "adultos"
+      ],
+      "assignments": [
+        "JAS/Adultos Solteros"
+      ],
+      "referent": "Presidente Zapatta",
+      "observations": "",
+      "isHighCouncil": true,
+      "isTraveler": false
+    }
+  ]
+}

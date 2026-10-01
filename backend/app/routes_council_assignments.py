@@ -1,6 +1,7 @@
 import json
+from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -12,131 +13,7 @@ router = APIRouter()
 COUNCIL_ASSIGNMENTS_KEY = 'council_assignments_plan'
 COUNCIL_ASSIGNMENTS_SCOPE = 'default'
 
-DEFAULT_PLAN = {
-    'units': [
-        {'id': 'libia', 'name': 'Libia'},
-        {'id': 'barrio-14', 'name': 'Barrio 14'},
-        {'id': 'los-ceibos', 'name': 'Los Ceibos'},
-        {'id': 'belloni', 'name': 'Belloni'},
-        {'id': 'bella-italia', 'name': 'Bella Italia'},
-        {'id': 'pando', 'name': 'Pando'},
-        {'id': 'toledo', 'name': 'Toledo'},
-    ],
-    'committees': [
-        {'id': 'jovenes', 'name': 'Comité de Jóvenes'},
-        {'id': 'adultos', 'name': 'Comité de Adultos'},
-    ],
-    'leaders': [
-        {
-            'id': 'richard-alvez',
-            'name': 'Richard Alvez',
-            'assignmentTitle': 'Historiador',
-            'isHighCouncil': True,
-            'isTraveler': False,
-            'unitId': '',
-            'committeeIds': [],
-        },
-        {
-            'id': 'mauricio-alvez',
-            'name': 'Mauricio Alvez',
-            'assignmentTitle': 'Secretario de Estaca',
-            'isHighCouncil': True,
-            'isTraveler': True,
-            'unitId': '',
-            'committeeIds': [],
-        },
-        {
-            'id': 'fabian-arias',
-            'name': 'Fabian Arias',
-            'assignmentTitle': 'Presidente de Hombres Jóvenes',
-            'isHighCouncil': True,
-            'isTraveler': True,
-            'unitId': '',
-            'committeeIds': ['jovenes'],
-        },
-        {
-            'id': 'andres-benitez',
-            'name': 'Andrés Benítez',
-            'assignmentTitle': 'Primer Consejero Hombres Jóvenes',
-            'isHighCouncil': True,
-            'isTraveler': True,
-            'unitId': '',
-            'committeeIds': ['jovenes'],
-        },
-        {
-            'id': 'juan-carlos-gonzalez',
-            'name': 'Juan Carlos Gonzalez',
-            'assignmentTitle': '',
-            'isHighCouncil': True,
-            'isTraveler': False,
-            'unitId': '',
-            'committeeIds': [],
-        },
-        {
-            'id': 'antonio-gonzalez',
-            'name': 'Antonio Gonzalez',
-            'assignmentTitle': '',
-            'isHighCouncil': True,
-            'isTraveler': True,
-            'unitId': '',
-            'committeeIds': [],
-        },
-        {
-            'id': 'pablo-morales',
-            'name': 'Pablo Morales',
-            'assignmentTitle': '',
-            'isHighCouncil': True,
-            'isTraveler': False,
-            'unitId': '',
-            'committeeIds': [],
-        },
-        {
-            'id': 'jairo-paladino',
-            'name': 'Jairo Paladino',
-            'assignmentTitle': '',
-            'isHighCouncil': True,
-            'isTraveler': False,
-            'unitId': '',
-            'committeeIds': [],
-        },
-        {
-            'id': 'walter-punales',
-            'name': 'Walter Puñales',
-            'assignmentTitle': 'Presidente de Escuela Dominical',
-            'isHighCouncil': True,
-            'isTraveler': True,
-            'unitId': '',
-            'committeeIds': ['adultos'],
-        },
-        {
-            'id': 'joaquin-acota',
-            'name': 'Joaquin Acota',
-            'assignmentTitle': 'Primer Consejero de Rama',
-            'isHighCouncil': True,
-            'isTraveler': False,
-            'unitId': '',
-            'committeeIds': [],
-        },
-        {
-            'id': 'fany-peraca',
-            'name': 'Fany Peraca',
-            'assignmentTitle': 'Presidenta Sociedad de Socorro',
-            'isHighCouncil': False,
-            'isTraveler': False,
-            'unitId': '',
-            'committeeIds': ['adultos'],
-        },
-        {
-            'id': 'ruth-santos',
-            'name': 'Ruth Santos',
-            'assignmentTitle': 'Presidenta Mujeres Jóvenes',
-            'isHighCouncil': False,
-            'isTraveler': False,
-            'unitId': '',
-            'committeeIds': ['jovenes'],
-        },
-    ],
-}
+DEFAULT_PLAN = json.loads(Path(__file__).with_name('council_assignments_seed.json').read_text(encoding='utf-8'))
 
 
 class CouncilAssignmentsPayload(BaseModel):
@@ -158,6 +35,10 @@ def _normalize_plan_payload(plan: dict):
         normalized_leaders.append({
             'id': str(leader.get('id') or ''),
             'name': str(leader.get('name') or ''),
+            'additionalResponsibility': str(leader.get('additionalResponsibility') or ''),
+            'assignments': [str(value) for value in leader.get('assignments', [])] if isinstance(leader.get('assignments'), list) else [],
+            'referent': str(leader.get('referent') or ''),
+            'observations': str(leader.get('observations') or ''),
             'assignmentTitle': str(leader.get('assignmentTitle') or ''),
             'isHighCouncil': bool(leader.get('isHighCouncil', False)),
             'isTraveler': bool(leader.get('isTraveler', False)),
@@ -174,10 +55,9 @@ def _normalize_plan_payload(plan: dict):
             'committeeIds': leader.get('committeeIds') if isinstance(leader.get('committeeIds'), list) else [],
         })
 
-    if not normalized_leaders:
-        normalized_leaders = DEFAULT_PLAN['leaders']
-
     return {
+        'assignmentOptions': plan.get('assignmentOptions') if isinstance(plan.get('assignmentOptions'), list) else DEFAULT_PLAN['assignmentOptions'],
+        'referentOptions': plan.get('referentOptions') if isinstance(plan.get('referentOptions'), list) else DEFAULT_PLAN['referentOptions'],
         'units': units,
         'committees': committees,
         'leaders': normalized_leaders,
@@ -208,6 +88,11 @@ def get_council_assignments(session: Session = Depends(db.get_db)):
 @router.post('/council-assignments')
 def save_council_assignments(payload: CouncilAssignmentsPayload, session: Session = Depends(db.get_db)):
     normalized_plan = _normalize_plan_payload(payload.plan)
+    seen_ids = set()
+    for leader in normalized_plan['leaders']:
+        if not leader['id'] or leader['id'] in seen_ids or not leader['name'].strip():
+            raise HTTPException(status_code=422, detail='Cada miembro debe tener nombre e identificador único.')
+        seen_ids.add(leader['id'])
 
     row = session.query(CouncilAssignmentsPlan).filter(CouncilAssignmentsPlan.scope_key == COUNCIL_ASSIGNMENTS_SCOPE).first()
     if not row:
