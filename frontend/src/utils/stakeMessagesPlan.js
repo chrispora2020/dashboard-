@@ -1,6 +1,38 @@
 export const PLAN_STORAGE_KEY = 'stake_messages_plan_cache'
 
 export const DEFAULT_QUARTER_ID = '2026-q3'
+export function addQuarter(plan, yearValue, quarterValue, template) {
+  const year = Number(yearValue)
+  const quarter = Number(quarterValue)
+  if (!Number.isInteger(year) || year < 2000 || year > 2100 || ![1, 2, 3, 4].includes(quarter)) {
+    throw new Error('Selecciona un año entre 2000 y 2100 y un trimestre válido.')
+  }
+  const id = `${year}-q${quarter}`
+  const firstMonth = (quarter - 1) * 3
+  const exists = Object.entries(plan.quarters).some(([key, value]) => key === id ||
+    (value.months?.[0]?.sundayDate && Number(value.months[0].sundayDate.slice(0, 4)) === year &&
+      Math.floor((Number(value.months[0].sundayDate.slice(5, 7)) - 1) / 3) + 1 === quarter))
+  if (exists) throw new Error('Ese trimestre ya existe. Selecciónalo en la lista para editarlo.')
+  const labels = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+  const unitNames = [...new Set(template?.months?.flatMap(month => month.units.map(unit => unit.unit)) || DEFAULT_UNITS)]
+  const months = Array.from({ length: 3 }, (_, offset) => {
+    const month = firstMonth + offset
+    const thirdSunday = 15 + (7 - new Date(year, month, 1).getDay()) % 7
+    return {
+      ...buildEditableMonth(`${year}-${String(month + 1).padStart(2, '0')}`, labels[month], `${year}-${String(month + 1).padStart(2, '0')}-${thirdSunday}`),
+      units: unitNames.map(unit => ({ unit, speaker: '' }))
+    }
+  })
+  return {
+    ...plan,
+    activeQuarterId: id,
+    quarters: { ...plan.quarters, [id]: {
+      year, quarter,
+      quarterLabel: `Plan trimestral ${labels[firstMonth]} - ${labels[firstMonth + 2]} ${year}`,
+      introMessage: template?.introMessage || '', closingMessage: template?.closingMessage || '', months
+    } }
+  }
+}
 const PREVIOUS_DEFAULT_QUARTER_ID = '2026-q2'
 
 const DEFAULT_UNITS = [

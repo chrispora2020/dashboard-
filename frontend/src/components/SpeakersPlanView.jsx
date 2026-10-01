@@ -103,6 +103,7 @@ export default function SpeakersPlanView() {
             <div style={styles.headerRow}>
               <h3 style={styles.planLabel}>{activeQuarter.quarterLabel}</h3>
               <select
+                aria-label="Trimestre de mensajes"
                 style={styles.quarterSelect}
                 value={planData.activeQuarterId}
                 onChange={(event) => setPlanData((prev) => ({ ...prev, activeQuarterId: event.target.value }))}

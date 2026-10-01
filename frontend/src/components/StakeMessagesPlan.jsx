@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useEffect, useMemo, useState } from 'react'
 import API_BASE from '../config'
-import { DEFAULT_PLAN, normalizePlanPayload, PLAN_STORAGE_KEY } from '../utils/stakeMessagesPlan'
+import { addQuarter, DEFAULT_PLAN, normalizePlanPayload, PLAN_STORAGE_KEY } from '../utils/stakeMessagesPlan'
 
 const API_PATH = '/api/stake-messages-plan'
 const PREVIEW_API_PATH = '/api/stake-messages-link-preview'
@@ -49,10 +49,6 @@ function buildReminderText(plan, month, daysBefore, options = {}) {
   return lines.join('\n')
 }
 
-function buildQuarterId(monthStartLabel) {
-  return `${monthStartLabel.toLowerCase().replaceAll(' ', '-')}-${Date.now()}`
-}
-
 function parseDateAtMidnight(isoDate) {
   if (!isoDate) return null
   const date = new Date(`${isoDate}T00:00:00`)
@@ -80,6 +76,8 @@ export default function StakeMessagesPlan({ canEdit = true }) {
   const [selectedMonthId, setSelectedMonthId] = useState('abril')
   const [previewLoadingId, setPreviewLoadingId] = useState('')
   const [isMobile, setIsMobile] = useState(false)
+  const [newYear, setNewYear] = useState(new Date().getFullYear())
+  const [newQuarter, setNewQuarter] = useState(Math.floor(new Date().getMonth() / 3) + 1)
 
   const quarterOptions = useMemo(
     () => Object.entries(planData.quarters).map(([id, value]) => ({ id, label: value.quarterLabel || id })),
@@ -223,17 +221,15 @@ export default function StakeMessagesPlan({ canEdit = true }) {
   }
 
   function createNewQuarterFromCurrent() {
-    if (!activeQuarter) return
-    const quarterId = buildQuarterId(activeQuarter.months?.[0]?.monthLabel || 'trimestre')
-
-    setPlanData((prev) => ({
-      activeQuarterId: quarterId,
-      quarters: {
-        ...prev.quarters,
-        [quarterId]: JSON.parse(JSON.stringify(activeQuarter))
-      }
-    }))
-    setStatus('✅ Nuevo trimestre creado a partir del trimestre actual. Ya puedes editarlo y guardarlo.')
+    if (!canEdit || saving) return
+    try {
+      const next = addQuarter(planData, newYear, newQuarter, activeQuarter)
+      setPlanData(next)
+      setSelectedMonthId(next.quarters[next.activeQuarterId].months[0].id)
+      setStatus('Nuevo trimestre preparado. Completa sus mensajes y guarda el plan para que aparezca en la consulta.')
+    } catch (error) {
+      setStatus(error.message)
+    }
   }
 
   async function fetchLinkPreview(monthId) {
@@ -389,8 +385,16 @@ export default function StakeMessagesPlan({ canEdit = true }) {
             </select>
           </div>
           <div style={styles.col}>
-            <label style={styles.label}>Acciones de trimestre</label>
-            <button type="button" style={styles.secondaryBtn} onClick={createNewQuarterFromCurrent} disabled={!canEdit}>Duplicar trimestre para nuevo periodo</button>
+            {canEdit && <fieldset disabled={saving} style={{ border: '1px solid #cbd5e1', borderRadius: 12, padding: 12 }}>
+              <legend>Alta de trimestre</legend>
+              <label style={styles.label}>Año<input type="number" min="2000" max="2100" value={newYear} onChange={event => setNewYear(event.target.value)} style={styles.input} /></label>
+              <label style={styles.label}>Periodo<select value={newQuarter} onChange={event => setNewQuarter(event.target.value)} style={styles.input}>
+                <option value="1">Enero – Marzo</option><option value="2">Abril – Junio</option>
+                <option value="3">Julio – Septiembre</option><option value="4">Octubre – Diciembre</option>
+              </select></label>
+              <button type="button" style={styles.secondaryBtn} onClick={createNewQuarterFromCurrent}>Crear trimestre</button>
+              <p style={styles.note}>Se crean tres meses con el tercer domingo como fecha sugerida, editable. Los temas y discursantes quedan pendientes. Guarda el plan para verlo en Mensajes.</p>
+            </fieldset>}
           </div>
         </div>
 

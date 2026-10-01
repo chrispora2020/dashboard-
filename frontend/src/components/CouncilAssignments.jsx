@@ -2,6 +2,7 @@ import axios from 'axios'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import API_BASE from '../config'
+import { groupCouncilMembers } from '../utils/councilGroups'
 import { COUNCIL_ASSIGNMENTS_STORAGE_KEY, DEFAULT_COUNCIL_ASSIGNMENTS_PLAN, normalizeCouncilAssignmentsPayload } from '../utils/councilAssignments'
 
 const API_PATH = '/api/council-assignments'
@@ -19,6 +20,7 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
   const [loadFailed, setLoadFailed] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [search, setSearch] = useState('')
+  const [groupByCommittee, setGroupByCommittee] = useState(viewSection === 'committees')
 
   useEffect(() => {
     let active = true
@@ -104,6 +106,7 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
   const visible = plan.leaders.filter(leader => (viewSection === 'committees' || leader.isHighCouncil)
     && `${leader.name} ${leader.assignmentTitle} ${leader.referent} ${(leader.assignments || []).join(' ')}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
   const leave = event => { if (dirty && !window.confirm('Hay cambios sin guardar. ¿Salir y descartarlos?')) event.preventDefault() }
+  const groups = groupByCommittee ? groupCouncilMembers(visible, plan.committees) : [{ id: 'all', name: '', leaders: visible }]
 
   if (loading) return <div className="workspace-page" style={styles.page}>Cargando asignaciones...</div>
   return <div className="workspace-page" style={styles.page}>
@@ -155,18 +158,20 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
     </fieldset> : <section style={styles.sectionCard}>
       <label style={styles.inputLabel}>Buscar miembro, llamamiento, asignación o referente<input type="search" value={search} onChange={event => setSearch(event.target.value)} style={styles.textInput} /></label>
       <p>{visible.length} miembros · 🧭 Viajante</p>
+      <label style={styles.checkLabel}><input type="checkbox" checked={groupByCommittee} onChange={event => setGroupByCommittee(event.target.checked)} />Agrupar por comité</label>
+      {groupByCommittee && <p style={styles.hint}>Los miembros con varios comités aparecen en cada uno de sus grupos.</p>}
+      {groups.map(group => <section key={group.id} style={{ marginTop: 16 }}>
+      {groupByCommittee && <h3>{group.name} · {group.leaders.length} miembros</h3>}
       <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
         <thead><tr>{['Miembro', 'Llamamientos', 'Responsabilidad adicional', 'Barrio asignado', 'Comité', 'Asignación', 'Referente', 'Observaciones'].map(title => <th key={title} scope="col" style={{ padding: 12, background: '#f1f5f9', minWidth: 140 }}>{title}</th>)}</tr></thead>
-        <tbody>{visible.map(leader => <tr key={leader.id}>{[
+        <tbody>{group.leaders.map(leader => <tr key={leader.id}>{[
           leader.name + (leader.isTraveler ? ' 🧭' : ''), leader.assignmentTitle,
           leader.additionalResponsibility, names(leader.unitIds, plan.units), names(leader.committeeIds, plan.committees),
           (leader.assignments || []).filter(Boolean).join(', '), leader.referent, leader.observations
         ].map((value, index) => <td key={index} style={{ padding: 12, borderBottom: '1px solid #e2e8f0', verticalAlign: 'top', whiteSpace: 'pre-wrap' }}>{value || '—'}</td>)}</tr>)}</tbody>
       </table></div>
-      {!visible.length && <p>No hay miembros para mostrar.</p>}
-      {viewSection === 'committees' && plan.committees.map(committee => <section key={committee.id} style={styles.committeeBox}>
-        <h3>{committee.name}</h3><p>{visible.filter(leader => leader.committeeIds.includes(committee.id)).map(leader => leader.name).join(', ') || 'Sin miembros asignados.'}</p>
       </section>)}
+      {!visible.length && <p>No hay miembros para mostrar.</p>}
     </section>}
   </div>
 }
