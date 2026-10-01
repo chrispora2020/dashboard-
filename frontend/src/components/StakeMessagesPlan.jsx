@@ -78,6 +78,8 @@ export default function StakeMessagesPlan({ canEdit = true }) {
   const [isMobile, setIsMobile] = useState(false)
   const [newYear, setNewYear] = useState(new Date().getFullYear())
   const [newQuarter, setNewQuarter] = useState(Math.floor(new Date().getMonth() / 3) + 1)
+  const [newUnitName, setNewUnitName] = useState('')
+  const [unitStatus, setUnitStatus] = useState('')
 
   const quarterOptions = useMemo(
     () => Object.entries(planData.quarters).map(([id, value]) => ({ id, label: value.quarterLabel || id })),
@@ -218,6 +220,33 @@ export default function StakeMessagesPlan({ canEdit = true }) {
         }
       }
     }))
+  }
+
+  function addUnitToQuarter(event) {
+    event.preventDefault()
+    if (!canEdit || saving || !activeQuarter) return
+    const name = newUnitName.trim().replace(/\s+/g, ' ')
+    if (!name) {
+      setUnitStatus('Escribe el nombre de la unidad.')
+      return
+    }
+    const normalizeName = value => value.trim().replace(/\s+/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es')
+    const alreadyPresent = month => month.units.some(unit => normalizeName(unit.unit) === normalizeName(name))
+    if (!activeQuarter.months.length) {
+      setUnitStatus('Primero crea un trimestre con sus meses.')
+      return
+    }
+    if (activeQuarter.months.every(alreadyPresent)) {
+      setUnitStatus('Esa unidad ya está incluida en todos los meses de este trimestre.')
+      return
+    }
+    updateActiveQuarter({
+      months: activeQuarter.months.map(month => alreadyPresent(month) ? month : {
+        ...month, units: [...month.units, { unit: name, speaker: '' }]
+      })
+    })
+    setNewUnitName('')
+    setUnitStatus(`Se agregó ${name} a los meses donde faltaba. Asigna sus discursantes y guarda el plan trimestral.`)
   }
 
   function createNewQuarterFromCurrent() {
@@ -375,6 +404,8 @@ export default function StakeMessagesPlan({ canEdit = true }) {
               onChange={(event) => {
                 if (!canEdit) return
                 const quarterId = event.target.value
+                setNewUnitName('')
+                setUnitStatus('')
                 setPlanData((prev) => ({ ...prev, activeQuarterId: quarterId }))
                 setSelectedMonthId(planData.quarters[quarterId]?.months?.[0]?.id || 'abril')
               }}
@@ -397,6 +428,19 @@ export default function StakeMessagesPlan({ canEdit = true }) {
             </fieldset>}
           </div>
         </div>
+
+        {canEdit && <form onSubmit={addUnitToQuarter} style={{ marginBottom: 20 }}>
+          <fieldset disabled={saving} style={{ border: '1px solid #cbd5e1', borderRadius: 12, padding: 12 }}>
+            <legend>Agregar nueva unidad</legend>
+            <p style={styles.note}>Se incluirá en todos los meses del trimestre seleccionado, con el discursante pendiente.</p>
+            <label htmlFor="new-message-unit" style={styles.label}>Nombre de la unidad</label>
+            <div style={styles.row}>
+              <input id="new-message-unit" value={newUnitName} onChange={event => setNewUnitName(event.target.value)} style={{ ...styles.input, flex: 1 }} placeholder="Ej.: Camino Maldonado" />
+              <button type="submit" style={styles.secondaryBtn}>Agregar unidad</button>
+            </div>
+            {unitStatus && <p role="status" style={styles.note}>{unitStatus}</p>}
+          </fieldset>
+        </form>}
 
         <label style={styles.label}>Título del plan</label>
         <input

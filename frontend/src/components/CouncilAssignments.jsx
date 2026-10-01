@@ -21,6 +21,8 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
   const [dirty, setDirty] = useState(false)
   const [search, setSearch] = useState('')
   const [groupByCommittee, setGroupByCommittee] = useState(viewSection === 'committees')
+  const [newUnitName, setNewUnitName] = useState('')
+  const [unitStatus, setUnitStatus] = useState('')
 
   useEffect(() => {
     let active = true
@@ -75,6 +77,23 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
       assignments: [], referent: '', observations: ''
     }] })
   }
+  function addUnit(event) {
+    event.preventDefault()
+    if (!canEdit || saving || loadFailed) return
+    const name = newUnitName.trim().replace(/\s+/g, ' ')
+    if (!name) {
+      setUnitStatus('Escribe el nombre de la unidad.')
+      return
+    }
+    const normalizeName = value => value.trim().replace(/\s+/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es')
+    if (plan.units.some(unit => normalizeName(unit.name) === normalizeName(name))) {
+      setUnitStatus('Esa unidad ya existe. Puedes seleccionarla en los miembros.')
+      return
+    }
+    change({ ...plan, units: [...plan.units, { id: crypto.randomUUID(), name }] })
+    setNewUnitName('')
+    setUnitStatus(`Se agregó ${name}. Ya puedes asignarla a los miembros del Sumo Consejo y comités. Pulsa Guardar asignaciones para conservar los cambios.`)
+  }
   function remove(leader) {
     if (window.confirm(`¿Quitar a ${leader.name || 'este miembro'}? Se aplicará al guardar.`)) {
       change({ ...plan, leaders: plan.leaders.filter(item => item.id !== leader.id) })
@@ -122,6 +141,15 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
     {canEdit ? <fieldset disabled={saving || loadFailed} style={styles.sectionCard}>
       <legend>Editor para Presidencia</legend>
       <p>Los cambios se aplican al pulsar Guardar asignaciones.</p>
+      <form onSubmit={addUnit} style={styles.addLeaderBox}>
+        <h3 style={styles.unitTitle}>Agregar nueva unidad</h3>
+        <label style={styles.inputLabel} htmlFor="new-council-unit">Nombre del barrio o rama</label>
+        <div style={styles.actionsRow}>
+          <input id="new-council-unit" value={newUnitName} onChange={event => setNewUnitName(event.target.value)} style={styles.textInput} placeholder="Ej.: Camino Maldonado" />
+          <button type="submit" style={styles.addBtn}>Agregar unidad</button>
+        </div>
+        {unitStatus && <p role="status" style={styles.metaText}>{unitStatus}</p>}
+      </form>
       <div style={styles.actionsRow}>
         <button type="button" style={styles.addBtn} onClick={add}>Agregar miembro</button>
         <button type="button" style={styles.restoreBtn} onClick={loadExcel}>Cargar datos del Excel</button>
@@ -144,9 +172,9 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
             const values = [...(leader.assignments || [])]; values[index] = event.target.value; update(leader.id, 'assignments', values)
           }} />
         </label>)}</div>
-        {leader.isHighCouncil && <fieldset style={styles.committeeBox}><legend>Barrios y ramas</legend><div style={styles.committeeChecks}>{plan.units.map(unit => <label key={unit.id} style={styles.checkLabel}>
+        <fieldset style={styles.committeeBox}><legend>Barrios y ramas</legend><div style={styles.committeeChecks}>{plan.units.map(unit => <label key={unit.id} style={styles.checkLabel}>
           <input type="checkbox" checked={leader.unitIds.includes(unit.id)} onChange={() => toggle(leader.id, 'unitIds', unit.id)} />{unit.name}
-        </label>)}</div></fieldset>}
+        </label>)}</div></fieldset>
         <fieldset style={styles.committeeBox}><legend>Comités</legend><div style={styles.committeeChecks}>{plan.committees.map(committee => <label key={committee.id} style={styles.checkLabel}>
           <input type="checkbox" checked={leader.committeeIds.includes(committee.id)} onChange={() => toggle(leader.id, 'committeeIds', committee.id)} />{committee.name}
         </label>)}</div></fieldset>
