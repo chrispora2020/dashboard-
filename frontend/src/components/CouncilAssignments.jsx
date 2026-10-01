@@ -185,7 +185,7 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
       <div style={styles.actionsRow}><button type="button" style={styles.saveBtn} onClick={save} disabled={!dirty || saving}>{saving ? 'Guardando...' : 'Guardar asignaciones'}</button></div>
     </fieldset> : <section style={styles.sectionCard}>
       <label style={styles.inputLabel}>Buscar miembro, llamamiento, asignación o referente<input type="search" value={search} onChange={event => setSearch(event.target.value)} style={styles.textInput} /></label>
-      <p>{visible.length} miembros · 🧭 Viajante</p>
+      <p>{visible.length} miembros</p>
       <label style={styles.checkLabel}><input type="checkbox" checked={groupByCommittee} onChange={event => setGroupByCommittee(event.target.checked)} />Agrupar por comité</label>
       {groupByCommittee && <p style={styles.hint}>Los miembros con varios comités aparecen en cada uno de sus grupos.</p>}
       {groups.map(group => <section key={group.id} style={{ marginTop: 16 }}>
@@ -193,7 +193,10 @@ export default function CouncilAssignments({ canEdit, viewSection = 'all' }) {
       <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
         <thead><tr>{['Miembro', 'Llamamientos', 'Responsabilidad adicional', 'Barrio asignado', 'Comité', 'Asignación', 'Referente', 'Observaciones'].map(title => <th key={title} scope="col" style={{ padding: 12, background: '#f1f5f9', minWidth: 140 }}>{title}</th>)}</tr></thead>
         <tbody>{group.leaders.map(leader => <tr key={leader.id}>{[
-          leader.name + (leader.isTraveler ? ' 🧭' : ''), leader.assignmentTitle,
+          <span style={styles.memberIdentity}>
+            <span>{leader.name}</span>
+            {leader.isTraveler && <span style={styles.travelerBadge}>Viajante</span>}
+          </span>, leader.assignmentTitle,
           leader.additionalResponsibility, names(leader.unitIds, plan.units), names(leader.committeeIds, plan.committees),
           (leader.assignments || []).filter(Boolean).join(', '), leader.referent, leader.observations
         ].map((value, index) => <td key={index} style={{ padding: 12, borderBottom: '1px solid #e2e8f0', verticalAlign: 'top', whiteSpace: 'pre-wrap' }}>{value || '—'}</td>)}</tr>)}</tbody>
@@ -264,7 +267,20 @@ const styles = {
     boxShadow: '0 4px 14px rgba(30, 64, 175, 0.08)'
   },
   leaderName: { margin: 0, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#0f172a' },
-  travelerIcon: { fontSize: '15px' },
+  memberIdentity: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' },
+  travelerBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '3px 9px',
+    borderRadius: '999px',
+    border: '1px solid #cbd5e1',
+    background: '#f1f5f9',
+    color: '#334155',
+    fontSize: '11px',
+    fontWeight: 600,
+    lineHeight: 1.4,
+    whiteSpace: 'nowrap'
+  },
   leaderSubtitle: { margin: '3px 0 0', color: '#334155', fontSize: '13px' },
   metaText: { margin: '4px 0 0', color: '#475569', fontSize: '12px' },
   committeeBox: { marginTop: '18px', borderTop: '1px solid #e2e8f0', paddingTop: '14px' },
