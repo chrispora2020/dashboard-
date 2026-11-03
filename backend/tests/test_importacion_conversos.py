@@ -38,6 +38,24 @@ class ImportacionConversosTest(unittest.TestCase):
         with Session(self.engine) as session:
             return asyncio.run(obtener_resumen_kpis('2026', None, session))
 
+    def test_mujeres_no_suman_en_sacerdocio(self):
+        self.importar([
+            'Persona A,20,M,No ha sido ordenado,Activa,Norte,01/02/2026',
+            'Persona B,20, m ,Diácono,Activa,Norte,01/02/2026',
+            'Persona C,20,V,No ha sido ordenado,Activa,Norte,01/02/2026',
+            'Persona D,20,V,Diácono,Activa,Norte,01/02/2026',
+        ])
+        from app.calculador_indicadores import CalculadorIndicadores
+        from app.models import PeriodoKPI
+        from datetime import date
+        with Session(self.engine) as session:
+            self.assertEqual(session.query(PersonaConverso).filter_by(sexo='F').count(), 2)
+            periodo = PeriodoKPI(nombre='2026', fecha_inicio=date(2026, 1, 1), fecha_fin=date(2026, 12, 31))
+            resultado = CalculadorIndicadores(session).calcular_conversos_ordenados(periodo)
+            self.assertEqual(resultado['resumen']['potencial'], 2)
+            self.assertEqual(resultado['resumen']['real'], 1)
+            self.assertEqual([p['nombre'] for p in resultado['faltantes']], ['Persona C'])
+
     def test_reemplazo_visible_en_otra_sesion(self):
         self.importar(['Anterior,20,V,Diácono,Activa,Norte,01/02/2026'])
         resultado = self.importar([

@@ -18,7 +18,7 @@ from .schemas import (
     ImportacionConfirmada, ValidacionFila
 )
 from .normalizacion import (
-    normalizar_estado_recomendacion, normalizar_sacerdocio, normalizar_sexo,
+    normalizar_estado_recomendacion, normalizar_sacerdocio, normalizar_sexo, normalizar_sexo_importado,
     calcular_edad, validar_fecha_confirmacion, calcular_completitud
 )
 
@@ -403,7 +403,7 @@ async def confirmar_importacion(
                     datos['estado_recomendacion_raw'] = cell_str
                     rec_actual = cell_lower
 
-            sexo_norm = normalizar_sexo(datos.get('sexo'))
+            sexo_norm = normalizar_sexo_importado(datos.get('sexo'))
             sacerdocio_raw = str(datos.get('sacerdocio') or '').strip()
 
             # Si sacerdocio cell tiene un valor de recomendación (columna desplazada), moverlo
@@ -629,7 +629,7 @@ async def import_conversos_directo(
                         datos['estado_recomendacion_raw'] = cell_str
                         rec_actual = cell_lower
 
-                sexo_norm = normalizar_sexo(datos.get('sexo'))
+                sexo_norm = normalizar_sexo_importado(datos.get('sexo'))
                 sacerdocio_raw = str(datos.get('sacerdocio') or '').strip()
                 rec_raw_actual = str(datos.get('estado_recomendacion_raw') or '').strip().lower()
                 if sacerdocio_raw.lower() in PALABRAS_RECOMENDACION and not rec_raw_actual:

@@ -121,6 +121,13 @@ def normalizar_sexo(valor_raw: Optional[str]) -> Optional[str]:
     return None
 
 
+def normalizar_sexo_importado(valor_raw: Optional[str]) -> Optional[str]:
+    """La lista usa M=mujer y V=varón; internamente usamos F/M."""
+    if str(valor_raw or "").strip().casefold() == "m":
+        return "F"
+    return normalizar_sexo(valor_raw)
+
+
 def calcular_edad(fecha_nacimiento: Optional[date], fecha_referencia: Optional[date] = None) -> Optional[int]:
     """
     Calcula edad en años
